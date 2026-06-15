@@ -2,6 +2,7 @@ interface HaggleButtonProps {
   text: string;
   onClick: () => void;
   fullWidth?: boolean;
+  disabled?: boolean;
   size?: "sm" | "md" | "lg";
 }
 
@@ -15,6 +16,7 @@ const HaggleButton = ({
   text,
   onClick,
   fullWidth = true,
+  disabled= false,
   size = "md",
 }: HaggleButtonProps) => {
   return (
@@ -28,6 +30,7 @@ const HaggleButton = ({
         active:scale-[0.98] focus:outline-none focus:ring-2 focus:ring-primary/50
         ${sizeClasses[size]} ${fullWidth ? "w-full" : "px-6"} cursor-pointer
       `}
+      disabled={disabled}
     >
       {text}
     </button>

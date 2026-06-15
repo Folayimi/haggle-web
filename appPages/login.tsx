@@ -48,7 +48,7 @@ const LoginPage = () => {
 
   return (
     <div className="relative min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
-      {loading && <Loader />}
+      {loading && <Loader type={"login"} />}
       <div className="w-full max-w-md">
         <div className="bg-white rounded-3xl shadow-xl p-8 md:p-10 transition-all duration-300">
           {/* Logo */}

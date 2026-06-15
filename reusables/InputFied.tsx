@@ -8,6 +8,7 @@ interface InputFieldProps {
   type: string;
   icon?: React.ReactNode;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onBlur?: any;
 }
 
 const InputField = ({
@@ -17,6 +18,7 @@ const InputField = ({
   type,
   icon,
   onChange,
+  onBlur,
 }: InputFieldProps) => {
   const [focused, setFocused] = useState(false);
 
@@ -35,7 +37,10 @@ const InputField = ({
         placeholder={placeholder}
         onChange={onChange}
         onFocus={() => setFocused(true)}
-        onBlur={() => setFocused(false)}
+        onBlur={() => {
+          setFocused(false);
+          onBlur();
+        }}
         className="w-full py-3 px-4 bg-transparent outline-none text-gray-700 placeholder-gray-400 rounded-xl"
       />
       {icon && <div className="pr-3">{icon}</div>}
