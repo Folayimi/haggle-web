@@ -70,6 +70,7 @@ const ResetPasswordOtp = ({
 
     // Check if OTP is complete
     if (newOtp.every((digit) => digit !== "") && index === 5 && value) {
+      console.log("new_reset_otp: ", newOtp);
       const otpString = newOtp.join("");
       if (otpString.length === 6) {
         onComplete(otpString);
@@ -166,7 +167,7 @@ const ResetPasswordOtp = ({
               onKeyDown={(e) => handleKeyDown(index, e)}
               onPaste={handlePaste}
               className={`
-                w-12 h-12 md:w-14 md:h-14 
+                w-12 h-12 md:w-14 md:h-14 text-black
                 text-center text-xl md:text-2xl font-semibold
                 bg-white border-2 rounded-xl
                 focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/20

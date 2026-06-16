@@ -121,6 +121,35 @@ export const verifyOtp = async (data: { email: string; otp: string }) => {
   return result;
 };
 
+export const verifyResetOtp = async (data: { email: string; otp: string }) => {
+  let result = {};
+
+  await axios
+    .post(`${baseUrl}/auth/verify-reset-otp`, {
+      email: data?.email,
+      otp_code: data?.otp,
+    })
+    .then((response: any) => {
+      if (response?.data?.success === true) {
+        notify(response?.data?.message || "Email verified successfully!");
+        result = response;
+      } else {
+        notifyError(response?.data?.message || "Verification failed");
+        throw new Error(response?.data?.message || "Verification failed");
+      }
+    })
+    .catch((err) => {
+      const errorMessage =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        "Invalid verification code";
+      notifyError(errorMessage);
+      throw err;
+    });
+
+  return result;
+};
+
 export const resendOtp = async (data: { email: string }) => {
   let result = {};
 
@@ -151,9 +180,8 @@ export const sendResetOtp = async (email: string) => {
   let result = {};
 
   await axios
-    .post(`${baseUrl}/auth/send-verification`, {
+    .post(`${baseUrl}/auth/verify-email`, {
       email,
-      type: "otp",
     })
     .then((response: any) => {
       if (response?.data?.success === true) {

@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation";
 import ResetPasswordForm from "./ResetPasswordForm";
 import ResetPasswordOtp from "./ResetPasswordOtp";
 import NewPasswordForm from "./NewPasswordForm";
-import { sendResetOtp, verifyOtp , resetPassword } from "@/services/request";
+import { sendResetOtp, verifyResetOtp } from "@/services/request";
 
 const ForgotPasswordPage = () => {
   const router = useRouter();
@@ -30,8 +30,8 @@ const ForgotPasswordPage = () => {
   const handleVerifyOtp = async (otp: string) => {
     try {
       setLoading(true);
-      const result = await verifyOtp({ email, otp });
-      setResetToken(result.data.token); // Assuming API returns a reset token
+      const result = await verifyResetOtp({ email, otp });
+      // setResetToken(result.data.token); // Assuming API returns a reset token
       setStep(3);
     } catch (err: any) {
       console.error("OTP verification error:", err);
@@ -43,7 +43,7 @@ const ForgotPasswordPage = () => {
   const handleResetPassword = async (newPassword: string) => {
     try {
       setLoading(true);
-      await resetPassword({ email, token: resetToken, newPassword });
+      // await resetPassword({ email, token: resetToken, newPassword });
       // Redirect to login after successful password reset
       router.push("/login");
     } catch (err: any) {
@@ -100,9 +100,9 @@ const ForgotPasswordPage = () => {
           {step === 1 && (
             <ResetPasswordForm onSubmit={handleSendOtp} isLoading={loading} />
           )}
-          
+
           {step === 2 && (
-            <ResetPasswordOtp 
+            <ResetPasswordOtp
               onComplete={handleVerifyOtp}
               onBack={handleBack}
               onResendCode={handleResendOtp}
@@ -111,9 +111,9 @@ const ForgotPasswordPage = () => {
               isResending={resending}
             />
           )}
-          
+
           {step === 3 && (
-            <NewPasswordForm 
+            <NewPasswordForm
               onSubmit={handleResetPassword}
               onBack={handleBack}
               isLoading={loading}
