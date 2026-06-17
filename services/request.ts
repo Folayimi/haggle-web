@@ -62,14 +62,8 @@ export const userSignup = async (data: {
         }
         if (response.data.tokens?.accessToken) {
           localStorage.setItem(
-            "haggleAccessToken",
+            "haggleAuthAccessToken",
             response.data.tokens.accessToken,
-          );
-        }
-        if (response.data.tokens?.refreshToken) {
-          localStorage.setItem(
-            "haggleRefreshToken",
-            response.data.tokens.refreshToken,
           );
         }
 
@@ -92,14 +86,22 @@ export const userSignup = async (data: {
   return result;
 };
 
-export const verifyOtp = async (data: { email: string; otp: string }) => {
+export const verifyOtp = async (data: {
+  email: string;
+  otp: string;
+  token: string;
+}) => {
   let result = {};
 
   await axios
-    .post(`${baseUrl}/auth/verify-otp`, {
-      email: data?.email,
-      otp_code: data?.otp,
-    })
+    .post(
+      `${baseUrl}/auth/verify-otp`,
+      {
+        email: data?.email,
+        otp_code: data?.otp,
+      },
+      setConfig(data?.token),
+    )
     .then((response: any) => {
       if (response?.data?.success === true) {
         notify(response?.data?.message || "Email verified successfully!");
@@ -121,14 +123,22 @@ export const verifyOtp = async (data: { email: string; otp: string }) => {
   return result;
 };
 
-export const verifyResetOtp = async (data: { email: string; otp: string }) => {
+export const verifyResetOtp = async (data: {
+  email: string;
+  otp: string;
+  token: string;
+}) => {
   let result = {};
 
   await axios
-    .post(`${baseUrl}/auth/verify-reset-otp`, {
-      email: data?.email,
-      otp_code: data?.otp,
-    })
+    .post(
+      `${baseUrl}/auth/verify-reset-otp`,
+      {
+        email: data?.email,
+        otp_code: data?.otp,
+      },
+      setConfig(data?.token),
+    )
     .then((response: any) => {
       if (response?.data?.success === true) {
         notify(response?.data?.message || "Email verified successfully!");
