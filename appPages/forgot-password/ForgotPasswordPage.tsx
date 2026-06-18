@@ -16,9 +16,10 @@ const ForgotPasswordPage = () => {
 
   const handleSendOtp = async (userEmail: string) => {
     try {
+      const token = localStorage.getItem("haggleAuthAccessToken");
       setLoading(true);
       setEmail(userEmail);
-      await sendResetOtp(userEmail);
+      await sendResetOtp({ email: userEmail, token: token ?? "" });
       setStep(2);
     } catch (err: any) {
       console.error("Send OTP error:", err);
@@ -29,8 +30,9 @@ const ForgotPasswordPage = () => {
 
   const handleVerifyOtp = async (otp: string) => {
     try {
+      const token = localStorage.getItem("haggleAuthResetToken");
       setLoading(true);
-      const result = await verifyResetOtp({ email, otp });
+      await verifyResetOtp({ email, otp, token: token ?? "" });
       // setResetToken(result.data.token); // Assuming API returns a reset token
       setStep(3);
     } catch (err: any) {
@@ -55,8 +57,9 @@ const ForgotPasswordPage = () => {
 
   const handleResendOtp = async () => {
     try {
+      const token = localStorage.getItem("haggleAuthResetToken");
       setResending(true);
-      await sendResetOtp(email);
+      await sendResetOtp({ email, token: token ?? "" });
     } catch (err: any) {
       console.error("Resend OTP error:", err);
     } finally {

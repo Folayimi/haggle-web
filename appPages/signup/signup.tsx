@@ -19,7 +19,11 @@ const SignupPage = () => {
   });
 
   const handleStep1Next = (data: { fullName: string; email: string }) => {
-    setUserData((prev) => ({ ...prev, fullName: data.fullName, email: data.email }));
+    setUserData((prev) => ({
+      ...prev,
+      fullName: data.fullName,
+      email: data.email,
+    }));
     setStep(2);
   };
 
@@ -31,7 +35,7 @@ const SignupPage = () => {
     try {
       setLoading(true);
       setUserData((prev) => ({ ...prev, password }));
-      
+
       const signupData = {
         fullName: userData.fullName,
         email: userData.email,
@@ -40,7 +44,7 @@ const SignupPage = () => {
 
       const result = await userSignup(signupData);
       console.log("Signup successful, sending OTP:", result);
-      
+
       // Move to OTP verification step
       setStep(3);
     } catch (err: any) {
@@ -51,16 +55,18 @@ const SignupPage = () => {
   };
 
   const handleOtpComplete = async (otp: string) => {
+    const token = localStorage.getItem("haggleAuthAccessToken");
     try {
       setLoading(true);
+
       const verificationData = {
         email: userData.email,
         otp: otp,
+        token: token ?? "",
       };
-      
       const result = await verifyOtp(verificationData);
       console.log("OTP verified:", result);
-      
+
       // Redirect to login after successful verification
       router.push("/login");
     } catch (err: any) {
@@ -75,7 +81,7 @@ const SignupPage = () => {
       const resendData = {
         email: userData.email,
       };
-      
+
       await resendOtp(resendData);
       console.log("OTP resent successfully");
     } catch (err: any) {
@@ -92,7 +98,10 @@ const SignupPage = () => {
   return (
     <div className="relative min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
       {/* Loading overlay */}
-      {(loading || resending) && ( <Loader type={resending ? "resending" : step === 2 ? "signup" : 'verify' }/>        
+      {(loading || resending) && (
+        <Loader
+          type={resending ? "resending" : step === 2 ? "signup" : "verify"}
+        />
       )}
 
       <div className="w-full max-w-md">
@@ -117,7 +126,7 @@ const SignupPage = () => {
                 </span>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-1.5">
-                <div 
+                <div
                   className="bg-primary h-1.5 rounded-full transition-all duration-300"
                   style={{ width: step === 1 ? "50%" : "100%" }}
                 />
@@ -161,20 +170,26 @@ const SignupPage = () => {
 
           {/* Step components */}
           {step === 1 && (
-            <SignupStep1 onNext={handleStep1Next} initialData={{ fullName: userData.fullName, email: userData.email }} />
+            <SignupStep1
+              onNext={handleStep1Next}
+              initialData={{
+                fullName: userData.fullName,
+                email: userData.email,
+              }}
+            />
           )}
-          
+
           {step === 2 && (
-            <SignupStep2 
+            <SignupStep2
               onBack={handleStep2Back}
               onSubmit={handleSignupSubmit}
               email={userData.email}
               isLoading={loading}
             />
           )}
-          
+
           {step === 3 && (
-            <OtpInput 
+            <OtpInput
               onComplete={handleOtpComplete}
               onBack={handleOtpBack}
               onResendCode={handleResendCode}

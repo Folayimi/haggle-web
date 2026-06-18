@@ -186,15 +186,23 @@ export const resendOtp = async (data: { email: string }) => {
   return result;
 };
 
-export const sendResetOtp = async (email: string) => {
+export const sendResetOtp = async (data: { email: string; token: string }) => {
   let result = {};
 
   await axios
     .post(`${baseUrl}/auth/verify-email`, {
-      email,
+      email: data.email,
+      token: data.token,
     })
     .then((response: any) => {
       if (response?.data?.success === true) {
+        if (response.data.tokens?.accessToken) {
+          localStorage.setItem(
+            "haggleAuthResetToken",
+            response.data.tokens.resetToken,
+          );
+        }
+
         notify(
           response?.data?.message ||
             "Verification Code has been sent to your email!",
