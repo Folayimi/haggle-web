@@ -60,10 +60,10 @@ export const userSignup = async (data: {
         if (response.data.user) {
           localStorage.setItem("userData", JSON.stringify(response.data.user));
         }
-        if (response.data.tokens?.accessToken) {
+        if (response.data.tokens?.resetToken) {
           localStorage.setItem(
-            "haggleAuthAccessToken",
-            response.data.tokens.accessToken,
+            "haggleAuthResetToken",
+            response.data.tokens.resetToken,
           );
         }
 
@@ -186,17 +186,16 @@ export const resendOtp = async (data: { email: string }) => {
   return result;
 };
 
-export const sendResetOtp = async (data: { email: string; token: string }) => {
+export const sendResetOtp = async (data: { email: string }) => {
   let result = {};
 
   await axios
     .post(`${baseUrl}/auth/verify-email`, {
       email: data.email,
-      token: data.token,
     })
     .then((response: any) => {
       if (response?.data?.success === true) {
-        if (response.data.tokens?.accessToken) {
+        if (response.data.tokens?.resetToken) {
           localStorage.setItem(
             "haggleAuthResetToken",
             response.data.tokens.resetToken,
@@ -207,6 +206,43 @@ export const sendResetOtp = async (data: { email: string; token: string }) => {
           response?.data?.message ||
             "Verification Code has been sent to your email!",
         );
+        result = response;
+      } else {
+        notifyError(response?.data?.message || "Password Reset failed");
+        throw new Error(response?.data?.message || "Password Reset failed");
+      }
+    })
+    .catch((err) => {
+      const errorMessage =
+        err?.response?.data?.error ||
+        err?.response?.data?.message ||
+        "Invalid verification code";
+      notifyError(errorMessage);
+      throw err;
+    });
+
+  return result;
+};
+
+export const resetPassword = async (data: {
+  newPassword: string;
+  confirmPassword: string;
+  token: string;
+}) => {
+  let result = {};
+
+  await axios
+    .post(
+      `${baseUrl}/auth/password-reset`,
+      {
+        newPassword: data?.newPassword,
+        confirmPassword: data?.confirmPassword,
+      },
+      setConfig(data?.token),
+    )
+    .then((response: any) => {
+      if (response?.data?.success === true) {
+        notify(response?.data?.message || "Password Updated successfully!");
         result = response;
       } else {
         notifyError(response?.data?.message || "Password Reset failed");

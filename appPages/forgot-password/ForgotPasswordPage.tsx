@@ -4,7 +4,11 @@ import { useRouter } from "next/navigation";
 import ResetPasswordForm from "./ResetPasswordForm";
 import ResetPasswordOtp from "./ResetPasswordOtp";
 import NewPasswordForm from "./NewPasswordForm";
-import { sendResetOtp, verifyResetOtp } from "@/services/request";
+import {
+  resetPassword,
+  sendResetOtp,
+  verifyResetOtp,
+} from "@/services/request";
 
 const ForgotPasswordPage = () => {
   const router = useRouter();
@@ -16,7 +20,7 @@ const ForgotPasswordPage = () => {
 
   const handleSendOtp = async (userEmail: string) => {
     try {
-      const token = localStorage.getItem("haggleAuthAccessToken");
+      const token = localStorage.getItem("haggleAuthResetToken");
       setLoading(true);
       setEmail(userEmail);
       await sendResetOtp({ email: userEmail, token: token ?? "" });
@@ -33,7 +37,7 @@ const ForgotPasswordPage = () => {
       const token = localStorage.getItem("haggleAuthResetToken");
       setLoading(true);
       await verifyResetOtp({ email, otp, token: token ?? "" });
-      // setResetToken(result.data.token); // Assuming API returns a reset token
+      setResetToken(token ?? ""); // Assuming API returns a reset token
       setStep(3);
     } catch (err: any) {
       console.error("OTP verification error:", err);
@@ -42,10 +46,13 @@ const ForgotPasswordPage = () => {
     }
   };
 
-  const handleResetPassword = async (newPassword: string) => {
+  const handleResetPassword = async (
+    newPassword: string,
+    confirmPassword: string,
+  ) => {
     try {
       setLoading(true);
-      // await resetPassword({ email, token: resetToken, newPassword });
+      await resetPassword({ newPassword, confirmPassword, token: resetToken });
       // Redirect to login after successful password reset
       router.push("/login");
     } catch (err: any) {

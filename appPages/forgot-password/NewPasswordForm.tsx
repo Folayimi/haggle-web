@@ -5,7 +5,7 @@ import InputField from "@/reusables/InputFied";
 import HaggleButton from "@/reusables/haggleButton";
 
 interface NewPasswordFormProps {
-  onSubmit: (password: string) => void;
+  onSubmit: (password: string, confirmPassword: string) => void;
   isLoading?: boolean;
   onBack: () => void;
 }
@@ -140,7 +140,7 @@ const NewPasswordForm = ({ onSubmit, isLoading = false, onBack }: NewPasswordFor
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isFormValid && !isLoading) {
-      onSubmit(password);
+      onSubmit(password, confirmPassword);
     }
   };
 
