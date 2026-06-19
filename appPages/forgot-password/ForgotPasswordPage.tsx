@@ -23,7 +23,7 @@ const ForgotPasswordPage = () => {
       const token = localStorage.getItem("haggleAuthResetToken");
       setLoading(true);
       setEmail(userEmail);
-      await sendResetOtp({ email: userEmail, token: token ?? "" });
+      await sendResetOtp({ email: userEmail });
       setStep(2);
     } catch (err: any) {
       console.error("Send OTP error:", err);
@@ -66,7 +66,7 @@ const ForgotPasswordPage = () => {
     try {
       const token = localStorage.getItem("haggleAuthResetToken");
       setResending(true);
-      await sendResetOtp({ email, token: token ?? "" });
+      await sendResetOtp({ email });
     } catch (err: any) {
       console.error("Resend OTP error:", err);
     } finally {
