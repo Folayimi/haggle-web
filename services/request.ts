@@ -61,8 +61,9 @@ export const userSignup = async (data: {
           localStorage.setItem("userData", JSON.stringify(response.data.user));
         }
         if (response.data.tokens?.resetToken) {
+          localStorage.removeItem("haggleAuthToken");
           localStorage.setItem(
-            "haggleAuthResetToken",
+            "haggleAuthToken",
             response.data.tokens.resetToken,
           );
         }
@@ -196,6 +197,7 @@ export const sendResetOtp = async (data: { email: string }) => {
     .then((response: any) => {
       if (response?.data?.success === true) {
         if (response.data.tokens?.resetToken) {
+          localStorage.removeItem("haggleAuthResetToken");
           localStorage.setItem(
             "haggleAuthResetToken",
             response.data.tokens.resetToken,

@@ -20,7 +20,6 @@ const ForgotPasswordPage = () => {
 
   const handleSendOtp = async (userEmail: string) => {
     try {
-      const token = localStorage.getItem("haggleAuthResetToken");
       setLoading(true);
       setEmail(userEmail);
       await sendResetOtp({ email: userEmail });
@@ -36,6 +35,7 @@ const ForgotPasswordPage = () => {
     try {
       const token = localStorage.getItem("haggleAuthResetToken");
       setLoading(true);
+      console.log('reset-token:',token)
       await verifyResetOtp({ email, otp, token: token ?? "" });
       setResetToken(token ?? ""); // Assuming API returns a reset token
       setStep(3);
@@ -81,7 +81,7 @@ const ForgotPasswordPage = () => {
       setStep(2);
     }
   };
-
+                                                                                            
   return (
     <div className="relative min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
       {/* Loading overlay */}

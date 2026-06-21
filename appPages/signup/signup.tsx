@@ -55,7 +55,7 @@ const SignupPage = () => {
   };
 
   const handleOtpComplete = async (otp: string) => {
-    const token = localStorage.getItem("haggleAuthResetToken");
+    const token = localStorage.getItem("haggleAuthToken");
     try {
       setLoading(true);
 

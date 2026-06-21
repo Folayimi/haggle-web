@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { ToastContainer } from "react-toastify";
 import "./globals.css";
 import { ThemeProvider } from "@/components/theme-provider";
+import SideNav from "@/components/SideNav";
 
 export const metadata: Metadata = {
   title: "Haggle | Live Negotiation Marketplace",
@@ -24,7 +25,14 @@ export default function RootLayout({
     <html lang="en" suppressHydrationWarning>
       <body>
         <ToastContainer />
-        <ThemeProvider>{children}</ThemeProvider>
+        <ThemeProvider>
+          <div className="w-full flexss h-screen">
+            <div className="w-[100px] h-full">
+              <SideNav />
+            </div>
+            <div className="w-[calc(100vw-100px)] h-full overflow-y-auto">{children}</div>
+          </div>
+        </ThemeProvider>
       </body>
     </html>
   );
