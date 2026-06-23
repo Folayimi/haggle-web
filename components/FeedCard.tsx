@@ -10,17 +10,7 @@ interface FeedCardProps {
 const FeedCard = ({ imageUrl, username, onJoin }: FeedCardProps) => {
   return (
     <div
-      className="relative w-full h-[90vh] rounded-2xl overflow-hidden shadow-xl border border-white/10"
-      style={{
-        background: "rgba(255, 255, 255, 0.92)",
-        backdropFilter: "blur(4px)",
-        borderRadius: "20px",
-        border: "1px solid rgba(255, 255, 255, 0.2)",
-        boxShadow: "0 8px 32px rgba(0, 0, 0, 0.08)",
-        // margin: "12px 16px",
-        overflow: "hidden",
-        transition: "all 0.3s ease;",
-      }}
+      className="relative w-full h-[95vh] rounded-2xl overflow-hidden shadow-xl"
     >
       {/* Background Image */}
       <img

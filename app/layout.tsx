@@ -27,7 +27,7 @@ export default function RootLayout({
         <ToastContainer />
         <ThemeProvider>
           <div className="w-full flexss h-screen">
-            <div className="absolute z-10 w-[80px] h-full">
+            <div className="absolute z-50 w-[80px] h-full">
               <SideNav />
             </div>
             <div className="w-[calc(100vw-80px)] ml-[80px] h-full overflow-y-auto">{children}</div>

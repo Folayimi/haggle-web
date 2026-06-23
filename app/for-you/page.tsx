@@ -16,6 +16,7 @@ import {
 import FeedCard from "@/components/FeedCard";
 import Background from "@/components/Background";
 import { url } from "inspector";
+import Image from "next/image";
 
 // Sample feed data with images from the web
 const feedData = [
@@ -103,28 +104,23 @@ const ForYou = () => {
 
   return (
     <div
-      className="w-full h-screen relative"
+      className="relative w-full h-screen relative"
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
+      <Image src={"/road-4.png"} alt="road-background" width={1000} height={1000} className="w-full h-full opacity-[0.8] object-cover"/>
       <div
-        className="relative w-full h-full flex items-center justify-center px-[20px] py-[40px]"
-        // style={{
-        //   backgroundImage: "url(/road-cloud.png)",
-        //   backgroundRepeat: "no-repeat",
-        //   backgroundPosition: "center",
-        //   backgroundSize: "cover",
-        // }}
+        className="absolute top-0 left-0 z-20 w-full h-full flex items-center justify-center px-[20px] py-[40px]"
       >
         {/* <Background /> */}
         <div className="flex items-start gap-[20px]">
           {/* Feed Container */}
           <div
             ref={feedContainerRef}
-            className="w-[420px] transition-all duration-500 ease-out"
+            className="w-[400px] transition-all duration-500 ease-out"
           >
             <FeedCard
               key={currentFeed.id}
