@@ -14,25 +14,31 @@ import {
   Settings,
   Bell,
 } from "lucide-react";
+import Link from "next/link";
 
 const SideNav = () => {
   const [tab, setTab] = useState("home");
   const [collapsed, setCollapsed] = useState(false);
 
   const navItems = [
-    { id: "home", label: "Home", icon: HomeIcon },
-    { id: "explore", label: "Explore", icon: Compass },
-    { id: "market", label: "Market", icon: ShoppingBag },
-    { id: "add", label: "Add", icon: PlusCircle },
-    { id: "message", label: "Messages", icon: MessageCircle },
+    { id: "for-you", label: "For You", icon: HomeIcon, path: "/for-you" },
+    { id: "explore", label: "Explore", icon: Compass, path: "/for-you" },
+    { id: "market", label: "Market", icon: ShoppingBag, path: "/market" },
+    { id: "add", label: "Add", icon: PlusCircle, path: "/create" },
+    {
+      id: "message",
+      label: "Messages",
+      icon: MessageCircle,
+      path: "/messages",
+    },
   ];
 
   return (
-    <div
+    <aside
       className={`
-        relative h-screen bg-white border-r border-neutral-200 shadow-sm
+        relative h-screen bg-background-elevated text-foreground border-r border-neutral-200 shadow-sm
         transition-all duration-300 ease-in-out
-        ${collapsed ? "w-[80px]" : "w-[260px]"}
+        ${collapsed ? "w-[80px]" : "w-[220px]"}
         flex flex-col
       `}
     >
@@ -88,62 +94,70 @@ const SideNav = () => {
             const isActive = tab === item.id;
 
             return (
-              <button
-                key={item.id}
-                onClick={() => setTab(item.id)}
-                className={`
-                  group relative flex items-center gap-3 px-3 py-2.5 rounded-xl
+              <Link href={item.path}>
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setTab(item.id);
+                  }}
+                  className={`
+                  group relative flex items-center gap-3 px-3 py-2.5 rounded-xl w-full
                   transition-all duration-200
                   ${
                     isActive
                       ? "bg-primary-50 text-primary"
-                      : "text-neutral-600 hover:bg-neutral-50 hover:text-dark-800"
+                      : "text-foreground hover:bg-surface hover:text-dark-800"
                   }
                   ${collapsed ? "justify-center px-0" : ""}
                 `}
-              >
-                {/* Active Indicator */}
-                {isActive && (
-                  <div
-                    className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 
+                >
+                  {/* Active Indicator */}
+                  {isActive && (
+                    <div
+                      className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 
                     bg-primary rounded-r-full"
-                  ></div>
-                )}
+                    ></div>
+                  )}
 
-                <div
-                  className={`
+                  <div
+                    className={`
                   flex items-center justify-center w-8 h-8 rounded-lg
                   transition-all duration-200
                   ${
                     isActive
                       ? "bg-primary text-white shadow-sm shadow-primary/20"
-                      : "text-current group-hover:bg-neutral-100"
+                      : "text-current group-hover:bg-surface"
                   }
                 `}
-                >
-                  <Icon size={18} strokeWidth={isActive ? 2.5 : 2} />
-                </div>
+                  >
+                    <Icon
+                      size={18}
+                      strokeWidth={isActive ? 2.5 : 2}
+                      className={`${isActive ? 'text-white' : 'text-foreground'}`}
+                    />
+                  </div>
 
-                <span
-                  className={`
+                  <span
+                    className={`
                   font-medium text-sm transition-all duration-300
-                  ${isActive ? "text-primary" : "text-neutral-600"}
+                  ${isActive && "text-primary"}
                   ${collapsed ? "w-0 opacity-0 absolute" : "w-auto opacity-100"}
                 `}
-                >
-                  {item.label}
-                </span>
-
-                {/* Notification badge on Messages */}
-                {item.id === "message" && !collapsed && (
-                  <span className="ml-auto w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
-                    3
+                  >
+                    {item.label}
                   </span>
-                )}
-                {item.id === "message" && collapsed && (
-                  <span className="absolute -top-0.5 right-0 w-2.5 h-2.5 rounded-full bg-primary"></span>
-                )}
-              </button>
+
+                  {/* Notification badge on Messages */}
+                  {item.id === "message" && !collapsed && (
+                    <span className="ml-auto w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
+                      3
+                    </span>
+                  )}
+                  {item.id === "message" && collapsed && (
+                    <span className="absolute -top-0.5 right-0 w-2.5 h-2.5 rounded-full bg-primary"></span>
+                  )}
+                </button>
+              </Link>
             );
           })}
         </div>
@@ -208,7 +222,7 @@ const SideNav = () => {
           </button>
         </div>
       </div>
-    </div>
+    </aside>
   );
 };
 

@@ -1337,12 +1337,12 @@ export function CreateHubPage() {
       />
       <ContentSection>
         <div className="grid gap-5 xl:grid-cols-[0.64fr_0.36fr]">
-          <div className="panel rounded-[34px] bg-[#1d1718] p-6 text-white">
-            <p className="text-xs font-semibold uppercase tracking-[0.28em] text-white/60">
+          <div className="panel rounded-[34px] p-6">
+            <p className="text-xs font-semibold uppercase tracking-[0.28em]">
               Seller studio card
             </p>
             <h2 className="mt-4 text-4xl font-semibold">Build a room buyers want to stay in.</h2>
-            <p className="mt-4 max-w-2xl text-sm leading-7 text-white/72">
+            <p className="mt-4 max-w-2xl text-sm leading-7">
               From listing copy to atmosphere presets, the create hub is designed
               to make live commerce feel intentional and premium rather than rushed.
             </p>
@@ -1356,7 +1356,7 @@ export function CreateHubPage() {
                 <Link
                   key={href}
                   href={href}
-                  className="rounded-[26px] bg-white/8 px-5 py-5 text-lg font-semibold backdrop-blur"
+                  className="rounded-[26px] px-5 py-5 text-lg font-semibold backdrop-blur"
                 >
                   {label}
                 </Link>

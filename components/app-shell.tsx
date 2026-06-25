@@ -53,9 +53,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground overflow-y-auto">
       <div className="mx-auto flex min-h-screen w-full max-w-[1600px]">
-        <aside className="sticky top-0 hidden h-screen w-[290px] shrink-0 flex-col justify-between border-r border-border bg-background-elevated/85 px-5 py-5 backdrop-blur xl:flex">
+        {/* <aside className="sticky top-0 hidden h-screen w-[290px] shrink-0 flex-col justify-between border-r border-border bg-background-elevated/85 px-5 py-5 backdrop-blur xl:flex">
           <div className="space-y-6">
             <div className="panel rounded-[28px] px-5 py-5">
               <div className="flex items-center justify-between">
@@ -187,7 +187,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
               </span>
             </button>
           </div>
-        </aside>
+        </aside> */}
 
         <div className="flex min-h-screen flex-1 flex-col">
           <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur xl:hidden">

@@ -1,5 +1,5 @@
-import { CreateHubPage } from "@/components/workspace-pages";
+import CreatePage from "@/components/CreatePage";
 
 export default function Page() {
-  return <CreateHubPage />;
+  return <CreatePage />;
 }
