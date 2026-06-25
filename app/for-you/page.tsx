@@ -111,10 +111,14 @@ const ForYou = () => {
       onKeyDown={handleKeyDown}
       tabIndex={0}
     >
-      <Image src={"/road-4.png"} alt="road-background" width={1000} height={1000} className="w-full h-full opacity-[0.8] object-cover"/>
-      <div
-        className="absolute top-0 left-0 z-20 w-full h-full flex items-center justify-center px-[20px] py-[40px]"
-      >
+      {/* <Image
+        src={"/road-4.png"}
+        alt="road-background"
+        width={1000}
+        height={1000}
+        className="w-full h-full opacity-[0.8] object-cover"
+      /> */}
+      <div className="absolute top-0 left-0 z-20 w-full h-full flex items-center justify-center px-[20px] py-[40px]">
         {/* <Background /> */}
         <div className="flex items-start gap-[20px]">
           {/* Feed Container */}

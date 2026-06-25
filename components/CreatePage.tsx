@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useState, useEffect } from "react";
 import {
@@ -26,8 +27,9 @@ import {
   Layers,
   Play,
   Handshake,
-  Target,
-  Gem,
+  Flame,
+  Gift,
+  Star,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -39,47 +41,115 @@ type CarouselImage = {
   id: number;
   src: string;
   alt: string;
-  label: string;
+  dynamicLabel: string;
+  icon: React.ReactNode;
 };
 
 // ============================================
-// CONSTANTS - Carousel Images
+// CONSTANTS - Carousel Images with Dynamic Labels
 // ============================================
 const CAROUSEL_IMAGES: CarouselImage[] = [
   {
     id: 1,
-    src: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=800&h=500&fit=crop&q=80",
+    src: "/img1.jpg",
     alt: "Marketplace negotiation",
-    label: "Live Negotiation",
+    dynamicLabel: "🔥 27 Offers Today",
+    icon: <Flame className="h-4 w-4 text-orange-400" />,
   },
   {
     id: 2,
-    src: "https://images.unsplash.com/photo-1567446537708-ac4f75e3eb5a?w=800&h=500&fit=crop&q=80",
-    alt: "Seller interacting with buyers",
-    label: "Seller Interaction",
+    src: "/img2.jpg",
+    alt: "Marketplace negotiation",
+    dynamicLabel: "💬 14 Active Negotiations",
+    icon: <MessageCircle className="h-4 w-4 text-blue-400" />,
   },
   {
     id: 3,
-    src: "https://images.unsplash.com/photo-1581091226825-a6a2a5aee158?w=800&h=500&fit=crop&q=80",
-    alt: "Live shopping stream",
-    label: "Live Shopping",
+    src: "/img3.webp",
+    alt: "Marketplace negotiation",
+    dynamicLabel: "📈 ₦84.5k Earned This Week",
+    icon: <TrendingUp className="h-4 w-4 text-green-400" />,
   },
   {
     id: 4,
-    src: "https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=800&h=500&fit=crop&q=80",
+    src: "/img4.jpg",
+    alt: "Marketplace negotiation",
+    dynamicLabel: "⭐ 4.8 Seller Rating",
+    icon: <Star className="h-4 w-4 text-yellow-400" />,
+  },
+  {
+    id: 5,
+    src: "/img5.jpg",
+    alt: "Marketplace negotiation",
+    dynamicLabel: "🎯 32 Products Listed",
+    icon: <Package className="h-4 w-4 text-purple-400" />,
+  },
+  {
+    id: 6,
+    src: "/img6.jpg",
+    alt: "Marketplace negotiation",
+    dynamicLabel: "🤝 6 Deals Closed Today",
+    icon: <Handshake className="h-4 w-4 text-green-400" />,
+  },
+  {
+    id: 7,
+    src: "/img7.jpg",
+    alt: "Marketplace negotiation",
+    dynamicLabel: "📅 4 Upcoming Lives",
+    icon: <Calendar className="h-4 w-4 text-blue-400" />,
+  },
+  {
+    id: 8,
+    src: "/img8.jpg",
+    alt: "Marketplace negotiation",
+    dynamicLabel: "🚀 Top 5% Seller",
+    icon: <Award className="h-4 w-4 text-yellow-400" />,
+  },
+  {
+    id: 9,
+    src: "/img9.jpg",
+    alt: "Marketplace negotiation",
+    dynamicLabel: "📦 2.4k Products Sold",
+    icon: <ShoppingBag className="h-4 w-4 text-orange-400" />,
+  },
+  {
+    id: 10,
+    src: "/img10.jpg",
+    alt: "Marketplace negotiation",
+    dynamicLabel: "⏰ 92% Response Rate",
+    icon: <Clock className="h-4 w-4 text-green-400" />,
+  },
+  {
+    id: 11,
+    src: "/img11.jpg",
+    alt: "Marketplace negotiation",
+    dynamicLabel: "💰 68% Offer Acceptance",
+    icon: <CheckCircle className="h-4 w-4 text-teal-400" />,
+  },
+  {
+    id: 12,
+    src: "/img12.webp",
+    alt: "Marketplace negotiation",
+    dynamicLabel: "👥 12 Active Buyers",
+    icon: <Users className="h-4 w-4 text-blue-400" />,
+  },
+  {
+    id: 13,
+    src: "/img13.jpg",
     alt: "Shopping marketplace",
-    label: "Haggle Studio",
+    dynamicLabel: "🏪 Haggle Studio",
+    icon: <Sparkles className="h-4 w-4 text-yellow-400" />,
   },
 ];
 
 // ============================================
-// CONSTANTS - Right Column Cards with Workflow
+// CONSTANTS - Right Column Cards (Shortened Descriptions)
 // ============================================
 const RIGHT_CARDS = [
   {
     id: "seller-studio",
     title: "Seller Studio",
-    description: "Set the look, feel, and room of your live session.",
+    description: "Configure your live room.",
     icon: <Layers className="h-6 w-6" />,
     href: "/room-styling",
     color: "primary" as const,
@@ -90,7 +160,7 @@ const RIGHT_CARDS = [
   {
     id: "post-product",
     title: "Post Product",
-    description: "List items with photos, price, and negotiation settings.",
+    description: "List items with pricing and negotiation settings.",
     icon: <Package className="h-6 w-6" />,
     href: "/post-product",
     color: "success" as const,
@@ -101,7 +171,7 @@ const RIGHT_CARDS = [
   {
     id: "add-service",
     title: "Add Service",
-    description: "Offer services with pricing tiers and portfolio samples.",
+    description: "Create service listings and packages.",
     icon: <Sparkles className="h-6 w-6" />,
     href: "/add-service",
     color: "warning" as const,
@@ -112,7 +182,7 @@ const RIGHT_CARDS = [
   {
     id: "host-live",
     title: "Host Live Shopping",
-    description: "Schedule and host live shopping sessions.",
+    description: "Schedule and manage live sessions.",
     icon: <Play className="h-6 w-6" />,
     href: "/schedule-live",
     color: "secondary" as const,
@@ -123,7 +193,7 @@ const RIGHT_CARDS = [
 ];
 
 // ============================================
-// CAROUSEL COMPONENT
+// CAROUSEL COMPONENT (With Dynamic Labels)
 // ============================================
 function LiveCarousel() {
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -138,25 +208,54 @@ function LiveCarousel() {
 
   const currentImage = CAROUSEL_IMAGES[currentIndex];
 
+  const imageVariants = {
+    enter: { opacity: 0, scale: 1.02 },
+    center: { opacity: 1, scale: 1 },
+    exit: { opacity: 0, scale: 0.98 },
+  };
+
   return (
     <div className="relative w-full h-full">
-      <div className="absolute inset-0">
-        <Image
-          src={currentImage.src}
-          alt={currentImage.alt}
-          fill
-          className="object-cover transition-opacity duration-700"
-          priority
-          unoptimized
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-black/30 to-transparent" />
-      </div>
-      <div className="absolute top-4 left-4 z-10">
-        <span className="rounded-full bg-black/30 backdrop-blur-sm px-3 py-1 text-xs font-medium text-white border border-white/10">
-          {currentImage.label}
-        </span>
-      </div>
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={currentIndex}
+          variants={imageVariants}
+          initial="enter"
+          animate="center"
+          exit="exit"
+          transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
+          className="absolute inset-0"
+        >
+          <Image
+            src={`/images/${currentImage.src}`}
+            alt={currentImage.alt}
+            fill
+            className="object-cover"
+            priority
+            unoptimized
+          />
+          {/* STRONGER OVERLAY - ensures readability */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
+        </motion.div>
+      </AnimatePresence>
+
+      {/* Dynamic Label - Top Left */}
+      <motion.div
+        key={currentIndex}
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: -10 }}
+        transition={{ duration: 0.5, delay: 0.2 }}
+        className="absolute top-6 left-6 z-10 flex items-center gap-2"
+      >
+        <div className="rounded-full bg-black/40 backdrop-blur-sm px-4 py-2 border border-white/10">
+          <span className="text-sm font-semibold text-white flex items-center gap-2">
+            {currentImage.icon}
+            {currentImage.dynamicLabel}
+          </span>
+        </div>
+      </motion.div>
     </div>
   );
 }
@@ -201,16 +300,16 @@ function TooltipButton({
 }
 
 // ============================================
-// LIVE ROOM PREVIEW CARD
+// LIVE ROOM PREVIEW CARD - Enhanced with larger radius + subtle glow
 // ============================================
 function LiveRoomPreview() {
   return (
     <div
       className="
-        relative overflow-hidden rounded-3xl
+        relative overflow-hidden rounded-[32px]
         border border-border
         bg-surface-strong
-        shadow-card
+        shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_20px_60px_rgba(0,0,0,0.35)]
         flex-1
         min-h-[300px]
       "
@@ -221,50 +320,6 @@ function LiveRoomPreview() {
 
       <div className="relative z-10 flex h-full flex-col justify-between p-6">
         <div />
-
-        {/* PREMIUM STATS BUBBLES - Apple Vision Pro Style */}
-        <div className="flex flex-wrap items-center justify-center gap-4 mb-4">
-          {[
-            {
-              value: "₦84.5k",
-              label: "Earned",
-              icon: <TrendingUp className="h-3 w-3" />,
-            },
-            {
-              value: "12",
-              label: "Active Buyers",
-              icon: <Users className="h-3 w-3" />,
-            },
-            {
-              value: "27",
-              label: "Offers Today",
-              icon: <Handshake className="h-3 w-3" />,
-            },
-          ].map((item) => (
-            <div
-              key={item.label}
-              className="
-                flex flex-col items-center justify-center
-                w-24 h-24 rounded-full
-                backdrop-blur-xl
-                border border-white/10
-                shadow-[0_8px_32px_rgba(0,0,0,0.4)]
-                transition-transform duration-300 hover:scale-105
-              "
-              style={{
-                background: "rgba(20, 20, 20, 0.72)",
-              }}
-            >
-              <span className="text-xl font-bold text-white flex items-center gap-0.5">
-                {item.value}
-                <span className="text-[10px] text-white/50">{item.icon}</span>
-              </span>
-              <span className="text-[9px] font-medium text-white/60 uppercase tracking-[0.08em] text-center px-1 leading-tight">
-                {item.label}
-              </span>
-            </div>
-          ))}
-        </div>
 
         {/* Controls */}
         <div className="space-y-2">
@@ -291,27 +346,26 @@ function LiveRoomPreview() {
               />
             </div>
 
-            <Link
-              href="/instant-live"
-              className="
-                relative group inline-flex items-center gap-2.5
-                rounded-full bg-primary px-7 py-3.5
-                text-base font-bold text-white
-                shadow-[0_0_40px_rgba(244,77,36,0.5)]
-                hover:shadow-[0_0_60px_rgba(244,77,36,0.7)]
-                transition-all duration-300
-                hover:scale-105 hover:bg-primary-strong
-                before:absolute before:inset-0 before:rounded-full
-                before:bg-gradient-to-r before:from-primary before:via-primary/80 before:to-primary
-                before:blur-xl before:opacity-70 before:-z-10
-                animate-pulse-slow
-                border-2 border-white/20
-                flex-shrink-0
-              "
-            >
-              <Zap className="h-5 w-5 fill-white/30" />
-              <span>Go Live</span>
-            </Link>
+            {/* REFINED GO LIVE BUTTON */}
+            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+              <Link
+                href="/instant-live"
+                className="
+      inline-flex items-center gap-2.5
+      rounded-full bg-primary px-7 py-3.5
+      text-base font-bold text-white
+      shadow-lg shadow-primary/25
+      hover:shadow-xl hover:shadow-primary/35
+      transition-all duration-300
+      hover:bg-primary-strong
+      border border-primary/20
+      relative
+    "
+              >
+                <Zap className="h-5 w-5" />
+                <span>Go Live</span>
+              </Link>
+            </motion.div>
           </div>
         </div>
       </div>
@@ -320,9 +374,9 @@ function LiveRoomPreview() {
 }
 
 // ============================================
-// BRAND-COLORED GLASSY ACTION CARD (With Workflow)
+// GLASSY ACTION CARD (With Hierarchy Support)
 // ============================================
-function BrandGlassyActionCard({
+function GlassyActionCard({
   title,
   description,
   icon,
@@ -331,6 +385,8 @@ function BrandGlassyActionCard({
   stat,
   step,
   label,
+  index,
+  isTop = false,
 }: {
   title: string;
   description: string;
@@ -340,113 +396,116 @@ function BrandGlassyActionCard({
   stat: string;
   step: string;
   label: string;
+  index: number;
+  isTop?: boolean;
 }) {
-  const colorConfig = {
+  const colorMap = {
     primary: {
-      bg: "bg-primary/15",
-      border: "border-primary/25",
-      hoverBorder: "hover:border-primary/50",
-      iconBg: "bg-primary/20",
-      text: "text-primary",
-      glow: "hover:shadow-[0_0_30px_rgba(244,77,36,0.15)]",
-      shadow: "shadow-primary/10",
-      labelBg: "bg-primary/20",
-      labelText: "text-primary",
+      icon: "text-primary",
+      badge: "text-primary border-primary/20 bg-primary/5",
+      arrow: "text-primary",
+      border: "hover:border-primary/20",
     },
     secondary: {
-      bg: "bg-secondary/15",
-      border: "border-secondary/25",
-      hoverBorder: "hover:border-secondary/50",
-      iconBg: "bg-secondary/20",
-      text: "text-secondary",
-      glow: "hover:shadow-[0_0_30px_rgba(107,78,255,0.15)]",
-      shadow: "shadow-secondary/10",
-      labelBg: "bg-secondary/20",
-      labelText: "text-secondary",
+      icon: "text-secondary",
+      badge: "text-secondary border-secondary/20 bg-secondary/5",
+      arrow: "text-secondary",
+      border: "hover:border-secondary/20",
     },
     success: {
-      bg: "bg-success/15",
-      border: "border-success/25",
-      hoverBorder: "hover:border-success/50",
-      iconBg: "bg-success/20",
-      text: "text-success",
-      glow: "hover:shadow-[0_0_30px_rgba(76,175,80,0.15)]",
-      shadow: "shadow-success/10",
-      labelBg: "bg-success/20",
-      labelText: "text-success",
+      icon: "text-success",
+      badge: "text-success border-success/20 bg-success/5",
+      arrow: "text-success",
+      border: "hover:border-success/20",
     },
     warning: {
-      bg: "bg-warning/15",
-      border: "border-warning/25",
-      hoverBorder: "hover:border-warning/50",
-      iconBg: "bg-warning/20",
-      text: "text-warning",
-      glow: "hover:shadow-[0_0_30px_rgba(255,193,7,0.15)]",
-      shadow: "shadow-warning/10",
-      labelBg: "bg-warning/20",
-      labelText: "text-warning",
+      icon: "text-warning",
+      badge: "text-warning border-warning/20 bg-warning/5",
+      arrow: "text-warning",
+      border: "hover:border-warning/20",
     },
   };
 
-  const config = colorConfig[color];
+  const config = colorMap[color];
+
+  const cardVariants = {
+    hidden: { opacity: 0, y: 20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      y: 0,
+      transition: {
+        delay: i * 0.1,
+        duration: 0.5,
+        ease: [0.25, 0.1, 0.25, 1],
+      },
+    }),
+  };
 
   return (
-    <Link
-      href={href}
-      className={`
-        group flex flex-col items-start gap-1.5 rounded-2xl
-        border ${config.border} ${config.hoverBorder}
-        ${config.bg}
-        backdrop-blur-md backdrop-saturate-150
-        p-4 transition-all duration-200
-        shadow-card hover:shadow-soft ${config.glow}
-        hover:-translate-y-0.5
-        h-full
-        overflow-hidden
-        relative
-      `}
+    <motion.div
+      custom={index}
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      whileHover={{ y: -2 }}
+      className="h-full"
     >
-      {/* Step + Label Badge */}
-      <div className="flex items-center gap-2 mb-1">
-        <span className={`text-xs font-bold ${config.text} opacity-60`}>
-          {step}
-        </span>
-        <span
-          className={`text-[8px] font-semibold uppercase tracking-[0.12em] px-2 py-0.5 rounded-full ${config.labelBg} ${config.labelText}`}
-        >
-          {label}
-        </span>
-      </div>
-
       <div
         className={`
-          flex h-10 w-10 shrink-0 items-center justify-center rounded-xl
-          ${config.iconBg} ${config.text}
-          transition-all duration-300 group-hover:scale-105
+          h-full rounded-2xl
+          border border-border/40
+          bg-background-elevated/70 backdrop-blur-md backdrop-saturate-150
+          transition-all duration-200
+          shadow-card hover:shadow-soft
+          hover:border-border
+          ${config.border}
+          overflow-hidden
+          relative
+          ${!isTop ? 'opacity-85' : ''}
         `}
       >
-        {icon}
+        <Link
+          href={href}
+          className="flex flex-col items-start gap-1.5 p-4 h-full"
+        >
+          <div className="flex items-center gap-2 mb-1">
+            <span className="text-xs font-bold text-muted/40">{step}</span>
+            <span
+              className={`text-[8px] font-medium uppercase tracking-[0.12em] px-2 py-0.5 rounded-full border ${config.badge}`}
+            >
+              {label}
+            </span>
+          </div>
+
+          <div
+            className={`${config.icon} transition-all duration-300 group-hover:scale-105`}
+          >
+            {icon}
+          </div>
+
+          <div className="flex-1 min-w-0 w-full mt-1">
+            <p className="font-semibold text-sm text-foreground truncate">
+              {title}
+            </p>
+            <p className="text-xs text-muted/70 line-clamp-2 leading-relaxed">
+              {description}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-1.5 text-xs text-muted/50 mt-auto pt-1">
+            <span>{stat}</span>
+            <ArrowRight
+              className={`h-3.5 w-3.5 ${config.arrow} transition-transform group-hover:translate-x-1`}
+            />
+          </div>
+        </Link>
       </div>
-      <div className="flex-1 min-w-0 w-full">
-        <p className={`font-semibold text-sm ${config.text} truncate`}>
-          {title}
-        </p>
-        <p className="text-xs text-foreground/70 line-clamp-2 leading-relaxed">
-          {description}
-        </p>
-      </div>
-      <div className="flex items-center gap-1.5 text-xs text-foreground/50 mt-auto pt-1">
-        <span>{stat}</span>
-        <ArrowRight
-          className={`h-3.5 w-3.5 ${config.text} transition-transform group-hover:translate-x-1`}
-        />
-      </div>
-    </Link>
+    </motion.div>
   );
 }
 
 // ============================================
-// CIRCULAR PROGRESS INDICATOR (With Trends)
+// CIRCULAR PROGRESS INDICATOR (With Sparkline + Visible Time Labels)
 // ============================================
 function CircularProgress({
   label,
@@ -456,6 +515,8 @@ function CircularProgress({
   icon,
   trend,
   trendValue,
+  timeLabel,
+  sparkline = [],
 }: {
   label: string;
   value: string;
@@ -464,6 +525,8 @@ function CircularProgress({
   icon?: React.ReactNode;
   trend?: "up" | "down";
   trendValue?: string;
+  timeLabel?: string;
+  sparkline?: number[];
 }) {
   const radius = 40;
   const circumference = 2 * Math.PI * radius;
@@ -477,8 +540,29 @@ function CircularProgress({
     gold: "text-amber-500 stroke-amber-500",
   };
 
+  // Generate sparkline path
+  const sparklinePath = sparkline.length > 0
+    ? sparkline.map((value, i) => {
+        const x = (i / (sparkline.length - 1)) * 40;
+        const y = 16 - (value / 100) * 14;
+        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+      }).join(' ')
+    : '';
+
   return (
-    <div className="flex flex-col items-center rounded-2xl border border-border bg-background-elevated p-4 shadow-card">
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ delay: 0.3, duration: 0.5 }}
+      className="flex flex-col items-center rounded-2xl border border-border/40 bg-background-elevated/30 p-4 shadow-card backdrop-blur-sm relative"
+    >
+      {/* Time label - More visible */}
+      {timeLabel && (
+        <span className="absolute top-2 right-3 text-[11px] font-medium uppercase tracking-[0.15em] text-muted/60">
+          {timeLabel}
+        </span>
+      )}
+
       <div className="relative">
         <svg className="h-24 w-24 -rotate-90">
           <circle
@@ -504,7 +588,7 @@ function CircularProgress({
           />
         </svg>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          {icon && <span className="text-muted/50">{icon}</span>}
+          {icon && <span className="text-muted/30">{icon}</span>}
           <span className="text-lg font-bold text-foreground">{value}</span>
           {trend && trendValue && (
             <div
@@ -522,8 +606,32 @@ function CircularProgress({
           )}
         </div>
       </div>
-      <p className="mt-2 text-xs font-medium text-muted">{label}</p>
-    </div>
+
+      {/* Sparkline chart */}
+      {sparkline.length > 0 && (
+        <div className="mt-1 w-16 h-5">
+          <svg viewBox="0 0 40 16" className="w-full h-full">
+            <polyline
+              points={sparklinePath}
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.2"
+              className={`${colorMap[color]}`}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            {/* Area fill under sparkline */}
+            <polygon
+              points={`0,16 ${sparklinePath} 40,16`}
+              fill="currentColor"
+              className={`${colorMap[color]} opacity-10`}
+            />
+          </svg>
+        </div>
+      )}
+
+      <p className="mt-1 text-xs font-medium text-muted/70">{label}</p>
+    </motion.div>
   );
 }
 
@@ -539,15 +647,15 @@ const CreatePage = () => {
           backgroundColor: "var(--page-bg, #190C05)",
         }}
       >
-        <div className="flex-1 mx-auto max-w-7xl w-full px-4 py-5 lg:px-8 flex flex-col">
+        <div className="flex-1 mx-auto max-w-7xl w-full px-3 py-5 lg:px-6 flex flex-col">
           {/* MAIN SPLIT LAYOUT */}
           <div className="flex-1 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
             <LiveRoomPreview />
 
-            {/* RIGHT COLUMN - 2x2 Grid with Workflow Cards */}
-            <div className="grid grid-cols-2 grid-rows-2 gap-4">
-              {RIGHT_CARDS.map((card) => (
-                <BrandGlassyActionCard
+            {/* RIGHT CARDS - 2x2 Grid with Hierarchy */}
+            <div className="grid grid-cols-2 grid-rows-[1.2fr_0.8fr] gap-4">
+              {RIGHT_CARDS.map((card, index) => (
+                <GlassyActionCard
                   key={card.id}
                   title={card.title}
                   description={card.description}
@@ -557,12 +665,14 @@ const CreatePage = () => {
                   stat={card.stat}
                   step={card.step}
                   label={card.label}
+                  index={index}
+                  isTop={index < 2}
                 />
               ))}
             </div>
           </div>
 
-          {/* METRICS */}
+          {/* METRICS - KPI with Time Labels & Sparklines */}
           <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 flex-shrink-0">
             <CircularProgress
               label="Total Earnings"
@@ -572,6 +682,8 @@ const CreatePage = () => {
               icon={<DollarSign className="h-4 w-4" />}
               trend="up"
               trendValue="12%"
+              timeLabel="This Week"
+              sparkline={[30, 45, 38, 55, 62, 70, 78]}
             />
 
             <CircularProgress
@@ -582,6 +694,8 @@ const CreatePage = () => {
               icon={<MessageCircle className="h-4 w-4" />}
               trend="up"
               trendValue="4%"
+              timeLabel="Today"
+              sparkline={[88, 89, 90, 91, 92, 92, 93]}
             />
 
             <CircularProgress
@@ -592,6 +706,8 @@ const CreatePage = () => {
               icon={<CheckCircle className="h-4 w-4" />}
               trend="down"
               trendValue="2%"
+              timeLabel="This Month"
+              sparkline={[72, 70, 68, 69, 68, 67, 68]}
             />
 
             <CircularProgress
@@ -602,19 +718,21 @@ const CreatePage = () => {
               icon={<Users className="h-4 w-4" />}
               trend="up"
               trendValue="8%"
+              timeLabel="Last 30 Days"
+              sparkline={[60, 62, 65, 68, 70, 72, 74]}
             />
           </div>
 
-          {/* BOTTOM BAR - Enhanced with stronger presence */}
+          {/* BOTTOM BAR */}
           <div
             className="
-  mt-4 flex flex-wrap items-center justify-between gap-3 
-  rounded-2xl border border-border/50 
-  bg-surface-strong 
-  px-4 py-3 
-  shadow-card
-  flex-shrink-0
-"
+            mt-4 flex flex-wrap items-center justify-between gap-3 
+            rounded-2xl border border-border/50 
+            bg-surface-strong 
+            px-4 py-3 
+            shadow-card
+            flex-shrink-0
+          "
           >
             <div className="flex items-center gap-4 text-xs text-muted">
               <span className="flex items-center gap-1.5">

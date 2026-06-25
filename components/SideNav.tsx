@@ -36,11 +36,14 @@ const SideNav = () => {
   return (
     <aside
       className={`
-        relative h-screen bg-background-elevated text-foreground border-r border-neutral-200 shadow-sm
+        relative h-screen bg-background-elevated text-foreground border-r-[0.5px] border-neutral-200 shadow-sm
         transition-all duration-300 ease-in-out
         ${collapsed ? "w-[80px]" : "w-[220px]"}
         flex flex-col
       `}
+      style={{
+        backgroundColor: "var(--page-bg, #190C05)",
+      }}
     >
       {/* Collapse Toggle Button */}
       <button
@@ -133,7 +136,7 @@ const SideNav = () => {
                     <Icon
                       size={18}
                       strokeWidth={isActive ? 2.5 : 2}
-                      className={`${isActive ? 'text-white' : 'text-foreground'}`}
+                      className={`${isActive ? "text-white" : "text-foreground"}`}
                     />
                   </div>
 
