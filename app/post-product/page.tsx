@@ -1,4 +1,4 @@
-import { PostProductPage } from "@/components/workspace-pages";
+import PostProductPage from "@/appPages/PostProductPage";
 
 export default function Page() {
   return <PostProductPage />;
