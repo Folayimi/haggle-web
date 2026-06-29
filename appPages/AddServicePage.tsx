@@ -59,7 +59,12 @@ import { cn } from "@/lib/utils";
 // ============================================
 type TabId = "tell" | "offer" | "show";
 type WorkLocation = "home" | "workshop";
-type TargetAudience = "businesses" | "individuals" | "creators" | "students" | "startups";
+type TargetAudience =
+  | "businesses"
+  | "individuals"
+  | "creators"
+  | "students"
+  | "startups";
 
 // ============================================
 // CONSTANTS
@@ -153,7 +158,9 @@ function GlassyField({
   icon?: React.ReactNode;
   prominent?: boolean;
   value?: string;
-  onChange?: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void;
+  onChange?: (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+  ) => void;
   helper?: React.ReactNode;
   className?: string;
 }) {
@@ -163,7 +170,7 @@ function GlassyField({
         <span
           className={cn(
             "font-medium text-foreground/80",
-            prominent ? "text-base" : "text-sm"
+            prominent ? "text-base" : "text-sm",
           )}
         >
           {label}
@@ -193,7 +200,7 @@ function GlassyField({
             resize-none
             shadow-sm
           `,
-            prominent && "text-base py-3.5"
+            prominent && "text-base py-3.5",
           )}
           {...props}
         />
@@ -214,7 +221,7 @@ function GlassyField({
             focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
             shadow-sm
           `,
-            prominent && "text-base py-3.5"
+            prominent && "text-base py-3.5",
           )}
           {...props}
         />
@@ -322,7 +329,9 @@ function TargetAudiencePicker({
 
   return (
     <div className="space-y-1.5">
-      <span className="text-sm font-medium text-foreground/80">Who is this service for?</span>
+      <span className="text-sm font-medium text-foreground/80">
+        Who is this service for?
+      </span>
       <p className="text-[10px] text-muted/40">Select all that apply</p>
       <div className="flex flex-wrap gap-2">
         {TARGET_AUDIENCES.map((audience) => {
@@ -344,20 +353,18 @@ function TargetAudiencePicker({
               <Icon
                 className={cn(
                   "h-4 w-4",
-                  isSelected ? "text-primary" : "text-muted/40"
+                  isSelected ? "text-primary" : "text-muted/40",
                 )}
               />
               <span
                 className={cn(
                   "text-sm font-medium",
-                  isSelected ? "text-foreground" : "text-muted/60"
+                  isSelected ? "text-foreground" : "text-muted/60",
                 )}
               >
                 {audience.label}
               </span>
-              {isSelected && (
-                <Check className="h-3.5 w-3.5 text-primary" />
-              )}
+              {isSelected && <Check className="h-3.5 w-3.5 text-primary" />}
             </button>
           );
         })}
@@ -378,7 +385,9 @@ function WorkLocationToggle({
 }) {
   return (
     <div className="space-y-1.5">
-      <span className="text-sm font-medium text-foreground/80">Where do you work?</span>
+      <span className="text-sm font-medium text-foreground/80">
+        Where do you work?
+      </span>
       <div className="grid grid-cols-2 gap-2">
         <button
           onClick={() => onChange("home")}
@@ -394,7 +403,9 @@ function WorkLocationToggle({
           <div
             className={cn(
               "rounded-full p-1.5",
-              value === "home" ? "bg-primary/20 text-primary" : "bg-background-elevated/40 text-muted/40"
+              value === "home"
+                ? "bg-primary/20 text-primary"
+                : "bg-background-elevated/40 text-muted/40",
             )}
           >
             <Home className="h-4 w-4" />
@@ -403,12 +414,14 @@ function WorkLocationToggle({
             <p
               className={cn(
                 "text-sm font-medium",
-                value === "home" ? "text-foreground" : "text-muted/60"
+                value === "home" ? "text-foreground" : "text-muted/60",
               )}
             >
               From Home
             </p>
-            <p className="text-[10px] text-muted/40">Work remotely or from home</p>
+            <p className="text-[10px] text-muted/40">
+              Work remotely or from home
+            </p>
           </div>
         </button>
         <button
@@ -427,7 +440,7 @@ function WorkLocationToggle({
               "rounded-full p-1.5",
               value === "workshop"
                 ? "bg-primary/20 text-primary"
-                : "bg-background-elevated/40 text-muted/40"
+                : "bg-background-elevated/40 text-muted/40",
             )}
           >
             <Building2 className="h-4 w-4" />
@@ -436,12 +449,14 @@ function WorkLocationToggle({
             <p
               className={cn(
                 "text-sm font-medium",
-                value === "workshop" ? "text-foreground" : "text-muted/60"
+                value === "workshop" ? "text-foreground" : "text-muted/60",
               )}
             >
               Workshop / Studio
             </p>
-            <p className="text-[10px] text-muted/40">Physical location for clients</p>
+            <p className="text-[10px] text-muted/40">
+              Physical location for clients
+            </p>
           </div>
         </button>
       </div>
@@ -506,7 +521,9 @@ function ServiceMediaUpload({
 }) {
   const [images, setImages] = useState<Record<string, string>>({});
   const [mode, setMode] = useState<MediaMode>("choose");
-  const [connectionStatus, setConnectionStatus] = useState<"idle" | "scanning" | "connected">("idle");
+  const [connectionStatus, setConnectionStatus] = useState<
+    "idle" | "scanning" | "connected"
+  >("idle");
   const [deviceName, setDeviceName] = useState<string | null>(null);
 
   useEffect(() => {
@@ -517,7 +534,10 @@ function ServiceMediaUpload({
     document.getElementById(`file-upload-service-${slotId}`)?.click();
   };
 
-  const handleFileChange = (slotId: string, e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (
+    slotId: string,
+    e: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = e.target.files?.[0];
     if (file) {
       const reader = new FileReader();
@@ -552,15 +572,20 @@ function ServiceMediaUpload({
     setDeviceName(null);
   };
 
-  const uploadedCount = PORTFOLIO_SLOTS.filter((slot) => images[slot.id]).length;
+  const uploadedCount = PORTFOLIO_SLOTS.filter(
+    (slot) => images[slot.id],
+  ).length;
   const totalSlots = PORTFOLIO_SLOTS.length;
 
   // Portfolio Strength calculation
   const getStrength = () => {
     const ratio = uploadedCount / totalSlots;
-    if (ratio >= 0.8) return { label: "Excellent", emoji: "🌟", color: "text-success" };
-    if (ratio >= 0.5) return { label: "Good", emoji: "👍", color: "text-primary" };
-    if (ratio >= 0.3) return { label: "Getting there", emoji: "📈", color: "text-warning" };
+    if (ratio >= 0.8)
+      return { label: "Excellent", emoji: "🌟", color: "text-success" };
+    if (ratio >= 0.5)
+      return { label: "Good", emoji: "👍", color: "text-primary" };
+    if (ratio >= 0.3)
+      return { label: "Getting there", emoji: "📈", color: "text-warning" };
     return { label: "Add more", emoji: "📸", color: "text-muted" };
   };
 
@@ -574,7 +599,9 @@ function ServiceMediaUpload({
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <span className="text-sm">{strength.emoji}</span>
-              <span className="text-sm font-medium text-foreground">Portfolio Strength</span>
+              <span className="text-sm font-medium text-foreground">
+                Portfolio Strength
+              </span>
               <span className={cn("text-sm font-semibold", strength.color)}>
                 {strength.label}
               </span>
@@ -618,7 +645,9 @@ function ServiceMediaUpload({
               onClick={() => setMode("upload")}
             >
               <Upload className="h-5 w-5 text-muted/30" />
-              <p className="mt-1 text-xs font-medium text-foreground/60">Browse Files</p>
+              <p className="mt-1 text-xs font-medium text-foreground/60">
+                Browse Files
+              </p>
               <p className="text-[10px] text-muted/40">Upload from computer</p>
             </div>
 
@@ -633,7 +662,9 @@ function ServiceMediaUpload({
               onClick={startPhoneConnection}
             >
               <Smartphone className="h-5 w-5 text-muted/30" />
-              <p className="mt-1 text-xs font-medium text-foreground/60">Connect Phone</p>
+              <p className="mt-1 text-xs font-medium text-foreground/60">
+                Connect Phone
+              </p>
               <p className="text-[10px] text-muted/40">Scan QR to capture</p>
             </div>
           </motion.div>
@@ -699,8 +730,12 @@ function ServiceMediaUpload({
                     ) : (
                       <div className="text-center">
                         <span className="text-lg">{slot.emoji}</span>
-                        <p className="mt-0.5 text-[9px] font-medium text-muted/40">{slot.label}</p>
-                        <p className="text-[7px] text-muted/30 leading-tight px-1">{slot.tip}</p>
+                        <p className="mt-0.5 text-[9px] font-medium text-muted/40">
+                          {slot.label}
+                        </p>
+                        <p className="text-[7px] text-muted/30 leading-tight px-1">
+                          {slot.tip}
+                        </p>
                         {slot.starred && (
                           <Star className="mx-auto mt-0.5 h-2.5 w-2.5 text-yellow-400/60" />
                         )}
@@ -726,10 +761,14 @@ function ServiceMediaUpload({
                 hover:border-primary/30 transition-all cursor-pointer
                 flex items-center justify-center gap-3
               "
-              onClick={() => document.getElementById("file-upload-global-service")?.click()}
+              onClick={() =>
+                document.getElementById("file-upload-global-service")?.click()
+              }
             >
               <Upload className="h-4 w-4 text-muted/30" />
-              <span className="text-xs text-muted/60">Drop more files or click to browse</span>
+              <span className="text-xs text-muted/60">
+                Drop more files or click to browse
+              </span>
               <input
                 id="file-upload-global-service"
                 type="file"
@@ -739,7 +778,9 @@ function ServiceMediaUpload({
                 onChange={(e) => {
                   const files = e.target.files;
                   if (files) {
-                    const emptySlots = PORTFOLIO_SLOTS.filter((slot) => !images[slot.id]);
+                    const emptySlots = PORTFOLIO_SLOTS.filter(
+                      (slot) => !images[slot.id],
+                    );
                     Array.from(files).forEach((file, index) => {
                       if (index < emptySlots.length) {
                         const reader = new FileReader();
@@ -817,7 +858,9 @@ function ServiceMediaUpload({
                 <div className="flex-1 space-y-1">
                   <p className="text-xs font-medium text-foreground flex items-center gap-1.5">
                     <LinkIcon className="h-3 w-3 text-primary" />
-                    {connectionStatus === "connected" ? "Connected!" : "Waiting for device..."}
+                    {connectionStatus === "connected"
+                      ? "Connected!"
+                      : "Waiting for device..."}
                   </p>
                   {connectionStatus === "connected" && deviceName && (
                     <p className="text-xs text-muted/60 flex items-center gap-2">
@@ -830,15 +873,21 @@ function ServiceMediaUpload({
                   )}
                   <ol className="space-y-0.5 text-[10px] text-muted/50">
                     <li className="flex items-center gap-1.5">
-                      <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/10 text-[7px] font-bold text-primary">1</span>
+                      <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/10 text-[7px] font-bold text-primary">
+                        1
+                      </span>
                       Open Haggle app on your phone
                     </li>
                     <li className="flex items-center gap-1.5">
-                      <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/10 text-[7px] font-bold text-primary">2</span>
+                      <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/10 text-[7px] font-bold text-primary">
+                        2
+                      </span>
                       Tap <strong className="text-foreground/70">Upload</strong>
                     </li>
                     <li className="flex items-center gap-1.5">
-                      <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/10 text-[7px] font-bold text-primary">3</span>
+                      <span className="flex h-3.5 w-3.5 items-center justify-center rounded-full bg-primary/10 text-[7px] font-bold text-primary">
+                        3
+                      </span>
                       Scan this QR code
                     </li>
                   </ol>
@@ -872,12 +921,20 @@ function ServiceMediaUpload({
                     `}
                   >
                     {image ? (
-                      <img src={image} alt={slot.label} className="w-full h-full object-cover" />
+                      <img
+                        src={image}
+                        alt={slot.label}
+                        className="w-full h-full object-cover"
+                      />
                     ) : (
                       <div className="text-center">
                         <span className="text-lg">{slot.emoji}</span>
-                        <p className="mt-0.5 text-[9px] text-muted/40">{slot.label}</p>
-                        <p className="text-[7px] text-muted/30 leading-tight px-1">Waiting...</p>
+                        <p className="mt-0.5 text-[9px] text-muted/40">
+                          {slot.label}
+                        </p>
+                        <p className="text-[7px] text-muted/30 leading-tight px-1">
+                          Waiting...
+                        </p>
                       </div>
                     )}
                   </div>
@@ -889,7 +946,9 @@ function ServiceMediaUpload({
             {connectionStatus === "connected" && (
               <button
                 onClick={() => {
-                  const emptySlot = PORTFOLIO_SLOTS.find((slot) => !images[slot.id]);
+                  const emptySlot = PORTFOLIO_SLOTS.find(
+                    (slot) => !images[slot.id],
+                  );
                   if (emptySlot) {
                     const placeholderImage =
                       "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50' y='110' font-family='Arial' font-size='20' fill='%23999'%3E📸%3C/text%3E%3C/svg%3E";
@@ -942,7 +1001,11 @@ function ConfidenceIndicator({
   message: string;
 }) {
   const config = {
-    empty: { icon: Lightbulb, color: "text-muted/40", bg: "bg-background-elevated/10" },
+    empty: {
+      icon: Lightbulb,
+      color: "text-muted/40",
+      bg: "bg-background-elevated/10",
+    },
     neutral: { icon: MessageCircle, color: "text-warning", bg: "bg-warning/5" },
     good: { icon: ThumbsUp, color: "text-success", bg: "bg-success/5" },
   };
@@ -1015,9 +1078,12 @@ function CompletionSummary({
 
   const getMessage = () => {
     if (percentage === 100) return "🎉 All done! Ready to publish.";
-    if (percentage >= 66) return `🌟 Almost there! ${remaining} step${remaining > 1 ? "s" : ""} left`;
-    if (percentage >= 33) return `📝 You're making progress! ${remaining} step${remaining > 1 ? "s" : ""} left`;
-    if (percentage === 0) return "✨ Start by telling buyers about your service";
+    if (percentage >= 66)
+      return `🌟 Almost there! ${remaining} step${remaining > 1 ? "s" : ""} left`;
+    if (percentage >= 33)
+      return `📝 You're making progress! ${remaining} step${remaining > 1 ? "s" : ""} left`;
+    if (percentage === 0)
+      return "✨ Start by telling buyers about your service";
     return `⏳ ${remaining} step${remaining > 1 ? "s" : ""} remaining`;
   };
 
@@ -1030,7 +1096,9 @@ function CompletionSummary({
 
   return (
     <div className="flex flex-wrap items-center gap-4 px-4 py-2 rounded-full border border-border/40 bg-background-elevated/20 backdrop-blur-sm shadow-sm">
-      <span className="text-xs font-medium text-foreground/60">Service Progress</span>
+      <span className="text-xs font-medium text-foreground/60">
+        Service Progress
+      </span>
       <div className="flex items-center gap-1.5">
         {Array.from({ length: total }).map((_, i) => (
           <div
@@ -1041,9 +1109,15 @@ function CompletionSummary({
           />
         ))}
       </div>
-      <span className="text-xs font-semibold text-foreground">{percentage}%</span>
-      <span className="hidden sm:inline text-[10px] text-muted/40">{getMessage()}</span>
-      <span className="hidden sm:inline text-[10px] text-muted/40">· {getTimeEstimate()}</span>
+      <span className="text-xs font-semibold text-foreground">
+        {percentage}%
+      </span>
+      <span className="hidden sm:inline text-[10px] text-muted/40">
+        {getMessage()}
+      </span>
+      <span className="hidden sm:inline text-[10px] text-muted/40">
+        · {getTimeEstimate()}
+      </span>
     </div>
   );
 }
@@ -1068,7 +1142,9 @@ function SmartSaveButton() {
 
   const getTimeAgo = () => {
     if (!lastSaved) return "";
-    const seconds = Math.floor((new Date().getTime() - lastSaved.getTime()) / 1000);
+    const seconds = Math.floor(
+      (new Date().getTime() - lastSaved.getTime()) / 1000,
+    );
     if (seconds < 60) return `${seconds}s ago`;
     const minutes = Math.floor(seconds / 60);
     return `${minutes}m ago`;
@@ -1086,8 +1162,8 @@ function SmartSaveButton() {
           status === "saved"
             ? "bg-success/10 text-success border-success/30"
             : status === "saving"
-            ? "bg-primary/10 text-primary border-primary/30"
-            : "text-muted/70 hover:bg-surface hover:text-foreground"
+              ? "bg-primary/10 text-primary border-primary/30"
+              : "text-muted/70 hover:bg-surface hover:text-foreground"
         }
         shadow-sm
       `}
@@ -1177,7 +1253,12 @@ function AITitleSuggestion({
       >
         <Sparkles className="h-3 w-3" />
         <span>AI title suggestions available</span>
-        <ChevronDown className={cn("h-3 w-3 transition-transform", showSuggestions && "rotate-180")} />
+        <ChevronDown
+          className={cn(
+            "h-3 w-3 transition-transform",
+            showSuggestions && "rotate-180",
+          )}
+        />
       </button>
       <AnimatePresence>
         {showSuggestions && (
@@ -1194,7 +1275,9 @@ function AITitleSuggestion({
                 className="w-full rounded-xl border border-border/40 bg-background-elevated/20 p-2 text-left text-xs text-foreground/80 hover:border-primary/30 hover:bg-primary/5 transition group flex items-center justify-between"
               >
                 <span>{suggestion}</span>
-                <span className="text-[8px] text-muted/40 group-hover:text-primary transition">Use</span>
+                <span className="text-[8px] text-muted/40 group-hover:text-primary transition">
+                  Use
+                </span>
               </button>
             ))}
           </motion.div>
@@ -1222,7 +1305,9 @@ function PricePackageCard({
     <div className="rounded-xl border border-border/40 bg-background-elevated/20 p-4">
       <div className="flex items-center gap-2 mb-3">
         <Package className="h-4 w-4 text-primary/60" />
-        <span className="text-sm font-medium text-foreground">Base Package</span>
+        <span className="text-sm font-medium text-foreground">
+          Base Package
+        </span>
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
@@ -1292,7 +1377,9 @@ function ServiceCardPreview({
         <div className="text-center">
           <Briefcase className="mx-auto h-8 w-8 text-muted/20" />
           <p className="text-xs text-muted/40 mt-1">
-            {imageCount > 0 ? `${imageCount} images · Ready` : "Add images to preview"}
+            {imageCount > 0
+              ? `${imageCount} images · Ready`
+              : "Add images to preview"}
           </p>
         </div>
         {deliveryTime && (
@@ -1416,7 +1503,8 @@ function StickyHeader({
             </>
           ) : (
             <>
-              Next: {activeTab === "tell" ? "Set your offer" : "Show your work"} →
+              Next: {activeTab === "tell" ? "Set your offer" : "Show your work"}{" "}
+              →
             </>
           )}
         </button>
@@ -1431,7 +1519,9 @@ function StickyHeader({
 const AddServicePage = () => {
   const [activeTab, setActiveTab] = useState<TabId>("tell");
   const [workLocation, setWorkLocation] = useState<WorkLocation>("home");
-  const [targetAudience, setTargetAudience] = useState<TargetAudience[]>(["businesses"]);
+  const [targetAudience, setTargetAudience] = useState<TargetAudience[]>([
+    "businesses",
+  ]);
   const [serviceName, setServiceName] = useState("");
   const [price, setPrice] = useState("");
   const [deliveryTime, setDeliveryTime] = useState("");
@@ -1443,7 +1533,9 @@ const AddServicePage = () => {
   const [serviceArea, setServiceArea] = useState("");
   const [addon1, setAddon1] = useState("");
   const [addon2, setAddon2] = useState("");
-  const [portfolioImages, setPortfolioImages] = useState<Record<string, string>>({});
+  const [portfolioImages, setPortfolioImages] = useState<
+    Record<string, string>
+  >({});
   const [completed, setCompleted] = useState({
     tell: false,
     offer: false,
@@ -1480,8 +1572,10 @@ const AddServicePage = () => {
 
   // Confidence status checks
   const getDetailsConfidence = () => {
-    if (serviceName.length > 10 && serviceDescription.length > 20) return "good";
-    if (serviceName.length > 0 || serviceDescription.length > 0) return "neutral";
+    if (serviceName.length > 10 && serviceDescription.length > 20)
+      return "good";
+    if (serviceName.length > 0 || serviceDescription.length > 0)
+      return "neutral";
     return "empty";
   };
 
@@ -1528,7 +1622,9 @@ const AddServicePage = () => {
                     <Sparkles className="h-4 w-4" />
                   </div>
                   <div>
-                    <p className="text-sm font-medium text-foreground">Service Seller Tip</p>
+                    <p className="text-sm font-medium text-foreground">
+                      Service Seller Tip
+                    </p>
                     <RotatingSellerTip />
                   </div>
                 </div>
@@ -1540,7 +1636,9 @@ const AddServicePage = () => {
                   <div className="rounded-full bg-secondary/10 p-1.5 text-secondary">
                     <ImagePlus className="h-4 w-4" />
                   </div>
-                  <h2 className="text-sm font-semibold text-foreground">Portfolio</h2>
+                  <h2 className="text-sm font-semibold text-foreground">
+                    Portfolio
+                  </h2>
                   <span className="text-[10px] text-muted/40 ml-auto">
                     {imageCount}/{PORTFOLIO_SLOTS.length}
                   </span>
@@ -1587,7 +1685,8 @@ const AddServicePage = () => {
                             Tell buyers about your service
                           </h2>
                           <p className="text-[11px] text-muted/60">
-                            Be clear, warm, and specific. Confidence builds trust.
+                            Be clear, warm, and specific. Confidence builds
+                            trust.
                           </p>
                         </div>
                       </div>
@@ -1598,8 +1697,8 @@ const AddServicePage = () => {
                           detailsConfidence === "good"
                             ? "Great! Buyers prefer detailed descriptions."
                             : detailsConfidence === "neutral"
-                            ? "Add more details to build trust."
-                            : "Tell buyers what makes your service unique."
+                              ? "Add more details to build trust."
+                              : "Tell buyers what makes your service unique."
                         }
                       />
 
@@ -1609,7 +1708,12 @@ const AddServicePage = () => {
                         prominent
                         value={serviceName}
                         onChange={(e) => setServiceName(e.target.value)}
-                        helper={<AITitleSuggestion value={serviceName} onChange={setServiceName} />}
+                        helper={
+                          <AITitleSuggestion
+                            value={serviceName}
+                            onChange={setServiceName}
+                          />
+                        }
                       />
 
                       <div className="grid gap-3 sm:grid-cols-2">
@@ -1696,8 +1800,8 @@ const AddServicePage = () => {
                           pricingConfidence === "good"
                             ? "Clear pricing builds confidence."
                             : pricingConfidence === "neutral"
-                            ? "Consider adding what's included."
-                            : "Set your pricing to start receiving offers."
+                              ? "Consider adding what's included."
+                              : "Set your pricing to start receiving offers."
                         }
                       />
 
@@ -1767,7 +1871,8 @@ const AddServicePage = () => {
                             Show your work
                           </h2>
                           <p className="text-[11px] text-muted/60">
-                            Your portfolio is your reputation. Show your best work first.
+                            Your portfolio is your reputation. Show your best
+                            work first.
                           </p>
                         </div>
                       </div>
@@ -1778,8 +1883,8 @@ const AddServicePage = () => {
                           mediaConfidence === "good"
                             ? "Excellent portfolio! Listings like yours get 2.3× more enquiries."
                             : mediaConfidence === "neutral"
-                            ? "Add more work samples to showcase your expertise."
-                            : "Show your best work first."
+                              ? "Add more work samples to showcase your expertise."
+                              : "Show your best work first."
                         }
                       />
 
@@ -1789,14 +1894,20 @@ const AddServicePage = () => {
                           Your portfolio helps buyers trust your expertise.
                         </p>
 
-                        <ServiceMediaUpload onImagesChange={setPortfolioImages} />
+                        <ServiceMediaUpload
+                          onImagesChange={setPortfolioImages}
+                        />
                       </div>
 
                       <ServiceCardPreview
                         serviceName={serviceName || "Your Service Name"}
                         price={price ? `From ${price}` : "From ₦50,000"}
                         category={category || "Creative Services"}
-                        location={workLocation === "workshop" ? address || "Physical Studio" : "Remote"}
+                        location={
+                          workLocation === "workshop"
+                            ? address || "Physical Studio"
+                            : "Remote"
+                        }
                         rating={4.9}
                         reviews={8}
                         imageCount={imageCount}
