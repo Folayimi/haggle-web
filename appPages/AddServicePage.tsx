@@ -1424,7 +1424,7 @@ function ServiceCardPreview({
 }
 
 // ============================================
-// STICKY HEADER
+// STICKY HEADER (Fixed background & button logic)
 // ============================================
 function StickyHeader({
   activeTab,
@@ -1439,11 +1439,18 @@ function StickyHeader({
   onNext?: () => void;
   title?: string;
 }) {
+  // Button text based on active tab
+  const getButtonText = () => {
+    if (activeTab === "tell") return "Next: Set your offer →";
+    if (activeTab === "offer") return "Next: Show your work →";
+    return "Publish Service";
+  };
+
   return (
     <div
       className="
         sticky top-0 z-30
-        bg-background/80 backdrop-blur-xl
+        bg-[#F2EDE8] dark:bg-[#190C05]
         border-b border-border/40
         px-3 py-3 lg:px-6
         flex items-center justify-between
@@ -1496,17 +1503,8 @@ function StickyHeader({
             bg-secondary hover:bg-secondary-strong
           `}
         >
-          {activeTab === "offer" ? (
-            <>
-              <Sparkles className="h-4 w-4" />
-              Publish Service
-            </>
-          ) : (
-            <>
-              Next: {activeTab === "tell" ? "Set your offer" : "Show your work"}{" "}
-              →
-            </>
-          )}
+          {activeTab === "show" ? <Sparkles className="h-4 w-4" /> : null}
+          {getButtonText()}
         </button>
       </div>
     </div>
@@ -1820,36 +1818,7 @@ const AddServicePage = () => {
                         onChange={(e) => setWhatsIncluded(e.target.value)}
                       />
 
-                      <div className="rounded-xl border border-border/40 bg-background-elevated/20 p-3">
-                        <h3 className="text-xs font-medium text-foreground/70 flex items-center gap-1.5">
-                          <Plus className="h-3 w-3" />
-                          Add-ons / Upgrades
-                        </h3>
-                        <GlassyField
-                          label="Add-on 1"
-                          placeholder="e.g. Express delivery (+₦10,000)"
-                          optional
-                          value={addon1}
-                          onChange={(e) => setAddon1(e.target.value)}
-                          className="mt-2"
-                        />
-                        <GlassyField
-                          label="Add-on 2"
-                          placeholder="e.g. Additional revisions (+₦5,000)"
-                          optional
-                          value={addon2}
-                          onChange={(e) => setAddon2(e.target.value)}
-                          className="mt-2"
-                        />
-                      </div>
-
-                      <GlassyField
-                        label="Service Area"
-                        placeholder="e.g. Lagos, Nigeria (or Remote)"
-                        icon={<MapPin className="h-3 w-3" />}
-                        value={serviceArea}
-                        onChange={(e) => setServiceArea(e.target.value)}
-                      />
+                      {/* ADD-ONS AND SERVICE AREA REMOVED */}
                     </motion.div>
                   )}
 
@@ -1864,15 +1833,15 @@ const AddServicePage = () => {
                     >
                       <div className="flex items-center gap-2 mb-2">
                         <div className="rounded-full bg-secondary/10 p-1.5 text-secondary">
-                          <ImagePlus className="h-4 w-4" />
+                          <Eye className="h-4 w-4" />
                         </div>
                         <div>
                           <h2 className="text-sm font-semibold text-foreground">
                             Show your work
                           </h2>
                           <p className="text-[11px] text-muted/60">
-                            Your portfolio is your reputation. Show your best
-                            work first.
+                            This is how buyers will see your service. Your
+                            portfolio on the left builds trust.
                           </p>
                         </div>
                       </div>
@@ -1888,17 +1857,7 @@ const AddServicePage = () => {
                         }
                       />
 
-                      <div className="rounded-xl border border-border/40 bg-background-elevated/20 p-3">
-                        <p className="text-xs text-muted/40 mb-2">
-                          Upload images and videos to showcase your past work.
-                          Your portfolio helps buyers trust your expertise.
-                        </p>
-
-                        <ServiceMediaUpload
-                          onImagesChange={setPortfolioImages}
-                        />
-                      </div>
-
+                      {/* Only the preview card – no upload area */}
                       <ServiceCardPreview
                         serviceName={serviceName || "Your Service Name"}
                         price={price ? `From ${price}` : "From ₦50,000"}
