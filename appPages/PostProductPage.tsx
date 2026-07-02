@@ -36,25 +36,6 @@ import { cn } from "@/lib/utils";
 type TabId = "details" | "pricing" | "media";
 type NegotiationStyle = "flexible" | "moderate" | "firm";
 
-// ============================================
-// CONSTANTS
-// ============================================
-// const UPLOAD_SLOTS = [
-//   { id: "front", label: "Front", starred: true },
-//   { id: "back", label: "Back", starred: false },
-//   { id: "left", label: "Left", starred: false },
-//   { id: "right", label: "Right", starred: false },
-//   { id: "accessories", label: "Accessories", starred: false },
-//   { id: "packaging", label: "Packaging", starred: false },
-// ];
-
-// const SELLER_TIPS = [
-//   { icon: "📸", text: "Add 4+ high-quality photos" },
-//   { icon: "⚡", text: "Respond within 1 hour" },
-//   { icon: "📦", text: "Show packaging in photos" },
-//   { icon: "🔍", text: "Mention defects honestly" },
-//   { icon: "💰", text: "Use a realistic asking price" },
-// ];
 
 const NEGOTIATION_STYLES: {
   id: NegotiationStyle;
@@ -244,120 +225,6 @@ function GlassySelect({
 }
 
 // ============================================
-// COMPACT UPLOAD ZONE
-// ============================================
-// function CompactUploadZone() {
-//   const [images, setImages] = useState<Record<string, string>>({});
-
-//   const handleFileSelect = (slotId: string) => {
-//     document.getElementById(`file-upload-${slotId}`)?.click();
-//   };
-
-//   const handleFileChange = (
-//     slotId: string,
-//     e: React.ChangeEvent<HTMLInputElement>,
-//   ) => {
-//     const file = e.target.files?.[0];
-//     if (file) {
-//       const reader = new FileReader();
-//       reader.onload = (ev) => {
-//         setImages((prev) => ({
-//           ...prev,
-//           [slotId]: ev.target?.result as string,
-//         }));
-//       };
-//       reader.readAsDataURL(file);
-//     }
-//   };
-
-//   const removeImage = (slotId: string) => {
-//     const newImages = { ...images };
-//     delete newImages[slotId];
-//     setImages(newImages);
-//   };
-
-//   return (
-//     <div className="space-y-2">
-//       <div className="grid grid-cols-3 gap-2">
-//         {UPLOAD_SLOTS.map((slot) => {
-//           const image = images[slot.id];
-//           return (
-//             <div
-//               key={slot.id}
-//               onClick={() => handleFileSelect(slot.id)}
-//               className={`
-//                 relative rounded-lg aspect-square
-//                 border-2 border-dashed transition-all duration-200
-//                 ${
-//                   image
-//                     ? "border-border/40 bg-background-elevated/30"
-//                     : "border-border/30 bg-background-elevated/10 hover:border-primary/30"
-//                 }
-//                 flex items-center justify-center
-//                 overflow-hidden
-//                 cursor-pointer
-//               `}
-//             >
-//               {image ? (
-//                 <>
-//                   <img
-//                     src={image}
-//                     alt={slot.label}
-//                     className="w-full h-full object-cover"
-//                   />
-//                   <button
-//                     onClick={(e) => {
-//                       e.stopPropagation();
-//                       removeImage(slot.id);
-//                     }}
-//                     className="absolute top-0.5 right-0.5 rounded-full bg-danger/90 p-0.5 text-white hover:bg-danger"
-//                   >
-//                     <X className="h-3 w-3" />
-//                   </button>
-//                 </>
-//               ) : (
-//                 <div className="text-center">
-//                   <Upload className="mx-auto h-4 w-4 text-muted/30" />
-//                   <p className="mt-0.5 text-[9px] text-muted/40">
-//                     {slot.label}
-//                   </p>
-//                   {slot.starred && (
-//                     <Star className="mx-auto mt-0.5 h-2.5 w-2.5 text-yellow-400/60" />
-//                   )}
-//                 </div>
-//               )}
-//               <input
-//                 id={`file-upload-${slot.id}`}
-//                 type="file"
-//                 accept="image/*"
-//                 className="hidden"
-//                 onChange={(e) => handleFileChange(slot.id, e)}
-//               />
-//             </div>
-//           );
-//         })}
-//       </div>
-
-//       <div className="flex flex-wrap items-center justify-between gap-1">
-//         <div className="flex items-center gap-1.5">
-//           <span className="text-[9px] text-muted/40">Supported:</span>
-//           <span className="rounded-full bg-background-elevated/40 px-1.5 py-0.5 text-[8px] font-medium text-foreground/60 border border-border/30">
-//             PNG
-//           </span>
-//           <span className="rounded-full bg-background-elevated/40 px-1.5 py-0.5 text-[8px] font-medium text-foreground/60 border border-border/30">
-//             JPG
-//           </span>
-//           <span className="rounded-full bg-background-elevated/40 px-1.5 py-0.5 text-[8px] font-medium text-foreground/60 border border-border/30">
-//             WEBP
-//           </span>
-//         </div>
-//         <span className="text-[8px] text-muted/40">⭐ = Recommended</span>
-//       </div>
-//     </div>
-//   );
-// }
-
-// ============================================
 // TAB COMPONENT
 // ============================================
 function TabButton({
@@ -499,36 +366,6 @@ function SmartSaveButton() {
     </button>
   );
 }
-
-// ============================================
-// ROTATING SELLER TIP
-// ============================================
-// function RotatingSellerTip() {
-//   const [currentIndex, setCurrentIndex] = useState(0);
-
-//   useEffect(() => {
-//     const interval = setInterval(() => {
-//       setCurrentIndex((prev) => (prev + 1) % SELLER_TIPS.length);
-//     }, 5000);
-//     return () => clearInterval(interval);
-//   }, []);
-
-//   const tip = SELLER_TIPS[currentIndex];
-
-//   return (
-//     <motion.div
-//       key={currentIndex}
-//       initial={{ opacity: 0, y: 8 }}
-//       animate={{ opacity: 1, y: 0 }}
-//       exit={{ opacity: 0, y: -8 }}
-//       transition={{ duration: 0.4 }}
-//       className="flex items-center gap-2 text-xs text-muted/60"
-//     >
-//       <span>{tip.icon}</span>
-//       <span>{tip.text}</span>
-//     </motion.div>
-//   );
-// }
 
 // ============================================
 // NEGOTIATION STYLE PICKER (Emotional)
