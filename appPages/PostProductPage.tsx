@@ -517,6 +517,10 @@ const PostProductPage = () => {
     { id: "media", label: "Media & Preview" },
   ];
 
+  const categoryOptions = [
+    
+  ]
+
   const completedCount = Object.values(completed).filter(Boolean).length;
 
   const handleTabChange = (tab: TabId) => {
