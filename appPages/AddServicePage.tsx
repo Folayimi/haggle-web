@@ -50,9 +50,18 @@ import {
   Rocket,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { AppShell } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
+import { SERVICE_CATEGORIES } from "@/types/categories";
 
 // ============================================
 // TYPES
@@ -75,34 +84,6 @@ const SERVICE_TIPS = [
   { icon: "🤝", text: "Your first image is your handshake." },
   { icon: "💰", text: "Specific pricing reduces unnecessary negotiations." },
   { icon: "🎬", text: "A short video can answer questions before buyers ask." },
-];
-
-const SERVICE_CATEGORIES = [
-  "Creative Services",
-  "Consulting",
-  "Digital Marketing",
-  "Design & Branding",
-  "Development & IT",
-  "Photography & Video",
-  "Writing & Translation",
-  "Music & Audio",
-  "Business Services",
-  "Home Services",
-  "Health & Wellness",
-  "Education & Tutoring",
-  "Legal & Financial",
-  "Other",
-];
-
-const SERVICE_TYPES = [
-  "Digital Service",
-  "Physical Service",
-  "Consultation",
-  "Workshop",
-  "Training",
-  "Maintenance",
-  "Repair",
-  "Delivery",
 ];
 
 const TARGET_AUDIENCES = [
@@ -234,29 +215,20 @@ function GlassyField({
 // ============================================
 // GLASSY SELECT
 // ============================================
-function GlassySelect({
+
+function Glassy1Select({
   label,
   options,
   placeholder,
   optional = false,
-  value,
-  onChange,
 }: {
   label: string;
-  options: string[];
+  options: any[];
   placeholder: string;
   optional?: boolean;
-  value?: string;
-  onChange?: (value: string) => void;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState<string | null>(value || null);
-
-  const handleSelect = (option: string) => {
-    setSelected(option);
-    onChange?.(option);
-    setIsOpen(false);
-  };
+  const [selected, setSelected] = useState<string | null>(null);
 
   return (
     <div className="space-y-1.5">
@@ -268,13 +240,13 @@ function GlassySelect({
           </span>
         )}
       </div>
-      <div className="relative">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
+
+      <Select items={options}>
+        <SelectTrigger
           className={`
             relative w-full rounded-xl
             border border-border/60 bg-[#2b2127] dark:bg-[#2b2127]
-            px-4 py-3 text-sm text-foreground
+            px-4 py-6 text-sm text-foreground
             backdrop-blur-sm
             transition-all duration-200
             focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
@@ -282,29 +254,80 @@ function GlassySelect({
             shadow-sm
           `}
         >
-          <span className={selected ? "text-foreground" : "text-muted/40"}>
-            {selected || placeholder}
-          </span>
-          <ChevronDown
-            className={`h-4 w-4 text-muted/40 transition-transform ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-        {isOpen && (
-          <div className="absolute z-20 mt-1 w-full rounded-xl border border-border bg-background-elevated/90 backdrop-blur-xl py-1 shadow-soft max-h-48 overflow-y-auto">
-            {options.map((option) => (
-              <button
-                key={option}
-                onClick={() => handleSelect(option)}
-                className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-primary/5 transition"
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup className={`bg-[#2b2127] dark:bg-[#2b2127]`}>
+            {options.map((item) => (
+              <SelectItem
+                key={item.id}
+                value={item.name}
+                className="w-full px-4 py-2 text-left text-sm text-foreground focus:bg-primary/5 hover:bg-primary/5 transition"
               >
-                {option}
-              </button>
+                {item.name}
+              </SelectItem>
             ))}
-          </div>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+function GlassySelect({
+  label,
+  options,
+  placeholder,
+  optional = false,  
+  onChange,
+}: {
+  label: string;
+  options: any[];
+  placeholder: string;
+  optional?: boolean;
+  value?: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-foreground/80">{label}</span>
+        {optional && (
+          <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted/50">
+            Optional
+          </span>
         )}
       </div>
+      <Select items={options}>
+        <SelectTrigger
+          className={`
+            relative w-full rounded-xl
+            border border-border/60 bg-[#2b2127] dark:bg-[#2b2127]
+            px-4 py-6 text-sm text-foreground
+            backdrop-blur-sm
+            transition-all duration-200
+            focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
+            text-left flex items-center justify-between
+            shadow-sm
+          `}
+        >
+          <SelectValue placeholder={placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup className={`bg-[#2b2127] dark:bg-[#2b2127]`}>
+            {options.map((item) => (
+              <SelectItem
+                key={item.id}
+                value={item.name}
+                onClick={() => onChange(item.name)}
+                className="w-full px-4 py-2 text-left text-sm text-foreground focus:bg-primary/5 hover:bg-primary/5 transition"
+              >
+                {item.name}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -1528,6 +1551,7 @@ const AddServicePage = () => {
   const [address, setAddress] = useState("");
   const [whatsIncluded, setWhatsIncluded] = useState("");
   const [serviceDescription, setServiceDescription] = useState("");
+  const [serviceSubcategories, setServiceSubCategories] = useState<any[]>([]);
   const [serviceArea, setServiceArea] = useState("");
   const [addon1, setAddon1] = useState("");
   const [addon2, setAddon2] = useState("");
@@ -1718,15 +1742,30 @@ const AddServicePage = () => {
                         <GlassySelect
                           label="Category"
                           options={SERVICE_CATEGORIES}
-                          placeholder="Select category"
-                          value={category}
-                          onChange={setCategory}
+                          placeholder="Select category"                          
+                          onChange={(value) => {
+                            console.log('working')
+                            setCategory(value);
+                            setServiceSubCategories(
+                              SERVICE_CATEGORIES[
+                                SERVICE_CATEGORIES.findIndex(
+                                  (cat) => cat.name === value,
+                                )
+                              ].subcategories,
+                            );
+                            console.log(
+                              SERVICE_CATEGORIES[
+                                SERVICE_CATEGORIES.findIndex(
+                                  (cat) => cat.name === value,
+                                )
+                              ].subcategories,
+                            );
+                          }}
                         />
                         <GlassySelect
                           label="Service Type"
-                          options={SERVICE_TYPES}
-                          placeholder="Select type"
-                          value={serviceType}
+                          options={serviceSubcategories}
+                          placeholder="Select type"                          
                           onChange={setServiceType}
                         />
                       </div>

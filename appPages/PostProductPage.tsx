@@ -26,8 +26,17 @@ import {
   ShoppingBag,
   Eye,
 } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 import { AppShell } from "@/components/app-shell";
+import { PRODUCT_CATEGORIES } from "@/types/categories";
 import { cn } from "@/lib/utils";
 
 // ============================================
@@ -35,7 +44,6 @@ import { cn } from "@/lib/utils";
 // ============================================
 type TabId = "details" | "pricing" | "media";
 type NegotiationStyle = "flexible" | "moderate" | "firm";
-
 
 const NEGOTIATION_STYLES: {
   id: NegotiationStyle;
@@ -133,6 +141,7 @@ function GlassyField({
           type="text"
           placeholder={placeholder}
           value={value}
+          required
           onChange={onChange}
           className={cn(
             `
@@ -159,17 +168,20 @@ function GlassyField({
 function GlassySelect({
   label,
   options,
+  value,
   placeholder,
+  type,
   optional = false,
+  onChange,
 }: {
   label: string;
-  options: string[];
+  options: any[];
+  value: string;
   placeholder: string;
+  type?: string;
   optional?: boolean;
+  onChange: (value: string) => void;
 }) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
-
   return (
     <div className="space-y-1.5">
       <div className="flex items-center gap-2">
@@ -180,13 +192,13 @@ function GlassySelect({
           </span>
         )}
       </div>
-      <div className="relative">
-        <button
-          onClick={() => setIsOpen(!isOpen)}
+
+      <Select items={options}>
+        <SelectTrigger
           className={`
             relative w-full rounded-xl
             border border-border/60 bg-[#2b2127] dark:bg-[#2b2127]
-            px-4 py-3 text-sm text-foreground
+            px-4 py-6 text-sm text-foreground
             backdrop-blur-sm
             transition-all duration-200
             focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
@@ -194,32 +206,23 @@ function GlassySelect({
             shadow-sm
           `}
         >
-          <span className={selected ? "text-foreground" : "text-muted/40"}>
-            {selected || placeholder}
-          </span>
-          <ChevronDown
-            className={`h-4 w-4 text-muted/40 transition-transform ${
-              isOpen ? "rotate-180" : ""
-            }`}
-          />
-        </button>
-        {isOpen && (
-          <div className="absolute z-20 mt-1 w-full rounded-xl border border-border bg-background-elevated/90 backdrop-blur-xl py-1 shadow-soft">
-            {options.map((option) => (
-              <button
-                key={option}
-                onClick={() => {
-                  setSelected(option);
-                  setIsOpen(false);
-                }}
-                className="w-full px-4 py-2 text-left text-sm text-foreground hover:bg-primary/5 transition"
+          <SelectValue placeholder={value ? value : placeholder} />
+        </SelectTrigger>
+        <SelectContent>
+          <SelectGroup className={`bg-[#2b2127] dark:bg-[#2b2127]`}>
+            {options.map((item) => (
+              <SelectItem
+                key={type === "tag" ? item : item.id}
+                value={type === "tag" ? item : item.name}
+                className="w-full px-4 py-2 text-left text-sm text-foreground focus:bg-primary/5 hover:bg-primary/5 transition"
+                onClick={() => onChange(type === "tag" ? item : item.name)}
               >
-                {option}
-              </button>
+                {type === "tag" ? item : item.name}
+              </SelectItem>
             ))}
-          </div>
-        )}
-      </div>
+          </SelectGroup>
+        </SelectContent>
+      </Select>
     </div>
   );
 }
@@ -505,6 +508,9 @@ const PostProductPage = () => {
     useState<NegotiationStyle>("flexible");
   const [productName, setProductName] = useState("");
   const [price, setPrice] = useState("");
+  const [category, setCategory] = useState("");
+  const [productSubcategories, setProductSubcategories] = useState<any[]>([]);
+  const [subCategory, setSubCategory] = useState("");
   const [completed, setCompleted] = useState({
     details: false,
     pricing: false,
@@ -517,10 +523,6 @@ const PostProductPage = () => {
     { id: "media", label: "Media & Preview" },
   ];
 
-  const categoryOptions = [
-    
-  ]
-
   const completedCount = Object.values(completed).filter(Boolean).length;
 
   const handleTabChange = (tab: TabId) => {
@@ -531,6 +533,10 @@ const PostProductPage = () => {
       setCompleted((prev) => ({ ...prev, pricing: true }));
     }
   };
+
+  const requiredTags = PRODUCT_CATEGORIES.find(
+    (c) => c.name === category,
+  )?.requiredTags;
 
   return (
     <AppShell>
@@ -663,6 +669,11 @@ const PostProductPage = () => {
                         value={productName}
                         onChange={(e) => setProductName(e.target.value)}
                       />
+                      <GlassyField
+                        label="Short Description"
+                        placeholder="Describe the product in warm, buyer-friendly language..."
+                        multiline
+                      />
                       <div className="space-y-1.5">
                         <p className="text-xs font-medium text-foreground/60">
                           Classification
@@ -670,28 +681,69 @@ const PostProductPage = () => {
                         <div className="grid gap-3 sm:grid-cols-2">
                           <GlassySelect
                             label="Category"
-                            options={[
-                              "Electronics",
-                              "Fashion",
-                              "Home Decor",
-                              "Phones",
-                              "Cars",
-                              "Services",
-                            ]}
+                            options={PRODUCT_CATEGORIES}
                             placeholder="Select category"
+                            value={category}
+                            onChange={(value) => {
+                              setCategory(value);
+                              setSubCategory('');
+                              setProductSubcategories(
+                                PRODUCT_CATEGORIES[
+                                  PRODUCT_CATEGORIES.findIndex(
+                                    (cat) => cat.name === value,
+                                  )
+                                ].subcategories,
+                              );
+                            }}
                           />
                           <GlassySelect
-                            label="Condition"
-                            options={["New", "Like New", "Used", "Refurbished"]}
+                            label="Sub-Category"
+                            options={productSubcategories}
+                            value={subCategory}
                             placeholder="Select condition"
+                            onChange={setSubCategory}
                           />
                         </div>
                       </div>
-                      <GlassyField
-                        label="Short Description"
-                        placeholder="Describe the product in warm, buyer-friendly language..."
-                        multiline
-                      />
+                      {subCategory ? (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-foreground/60">
+                            Requirements
+                          </p>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {requiredTags?.map((item) => {
+                              return (
+                                <>
+                                  {item.type === "select" ? (
+                                    <GlassySelect
+                                      label={item.name}
+                                      options={item?.options ?? []}
+                                      placeholder={item.placeholder ?? "Select"}
+                                      type = 'tag'
+                                      value=""
+                                      onChange={(value) => {
+                                        console.log(value);
+                                      }}
+                                    />
+                                  ) : (
+                                    <>
+                                      <GlassyField
+                                        label={item.name}
+                                        placeholder={item.placeholder ?? ""}
+                                        prominent
+                                        value=""
+                                        onChange={(e) =>
+                                          console.log(e.target.value)
+                                        }
+                                      />
+                                    </>
+                                  )}
+                                </>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : null}
                     </motion.div>
                   )}
 
