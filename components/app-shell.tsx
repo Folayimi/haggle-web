@@ -21,10 +21,10 @@ import {
   Compass,
   ShoppingBag,
   PlusCircle,
-  MessageCircle,  
+  MessageCircle,
   LogOut,
   ChevronLeft,
-  ChevronRight,  
+  ChevronRight,
   Video,
   X,
 } from "lucide-react";
@@ -66,59 +66,57 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     pathname === href || pathname.startsWith(`${href}/`);
 
   return (
-    <div className="h-screen text-foreground">
-      <div className="flex h-full w-full max-w-[1600px]">
-        <SideNav />       
-        <div className="flex h-full overflow-y-auto flex-1 flex-col">
-          <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur xl:hidden">
-            <div className="flex items-center justify-between px-4 py-4">
-              <div>
-                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted">
-                  Haggle
-                </p>
-                <p className="text-lg font-semibold">Marketplace live</p>
-              </div>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={toggleTheme}
-                  className="rounded-full border border-border bg-background-elevated p-2"
-                  aria-label="Toggle theme"
-                >
-                  {theme === "dark" ? (
-                    <Sun className="h-4 w-4 text-warning" />
-                  ) : (
-                    <Moon className="h-4 w-4 text-secondary" />
+    <div className="flex h-screen text-foreground w-full">
+      <SideNav />
+      <div className="flex h-full overflow-y-auto flex-1 flex-col">
+        <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur xl:hidden">
+          <div className="flex items-center justify-between px-4 py-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted">
+                Haggle
+              </p>
+              <p className="text-lg font-semibold">Marketplace live</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={toggleTheme}
+                className="rounded-full border border-border bg-background-elevated p-2"
+                aria-label="Toggle theme"
+              >
+                {theme === "dark" ? (
+                  <Sun className="h-4 w-4 text-warning" />
+                ) : (
+                  <Moon className="h-4 w-4 text-secondary" />
+                )}
+              </button>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 pb-24 xl:pb-0">{children}</main>
+
+        <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/92 px-3 py-3 backdrop-blur xl:hidden">
+          <div className="mx-auto flex max-w-2xl items-center justify-between gap-2">
+            {mainNav.map((item) => {
+              const Icon = item.icon;
+              const active = isActive(item.href);
+
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={cn(
+                    "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold",
+                    active ? "bg-primary text-white" : "text-muted",
                   )}
-                </button>
-              </div>
-            </div>
-          </header>
-
-          <main className="flex-1 pb-24 xl:pb-0">{children}</main>
-
-          <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/92 px-3 py-3 backdrop-blur xl:hidden">
-            <div className="mx-auto flex max-w-2xl items-center justify-between gap-2">
-              {mainNav.map((item) => {
-                const Icon = item.icon;
-                const active = isActive(item.href);
-
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className={cn(
-                      "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold",
-                      active ? "bg-primary text-white" : "text-muted",
-                    )}
-                  >
-                    <Icon className="h-4.5 w-4.5" />
-                    <span className="truncate">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </nav>
-        </div>
+                >
+                  <Icon className="h-4.5 w-4.5" />
+                  <span className="truncate">{item.label}</span>
+                </Link>
+              );
+            })}
+          </div>
+        </nav>
       </div>
     </div>
   );

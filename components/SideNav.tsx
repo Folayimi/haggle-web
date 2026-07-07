@@ -56,7 +56,7 @@ const SideNav = () => {
           flex items-center justify-center
           shadow-md hover:shadow-lg
           transition-all duration-200 hover:scale-105
-          border-2 border-white"
+          border-1 border-white"
       >
         {collapsed ? (
           <ChevronRight size={14} strokeWidth={2.5} />
