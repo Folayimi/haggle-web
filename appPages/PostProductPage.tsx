@@ -633,12 +633,22 @@ const PostProductPage = () => {
               <button
                 className={`
                   rounded-full px-6 py-2.5 text-sm font-semibold text-white
-                  shadow-lg shadow-primary/25
+                  shadow-lg shadow-primary/15
                   transition-all duration-300
-                  hover:shadow-xl hover:shadow-primary/35
+                  hover:shadow-xl hover:shadow-primary/20
                   flex items-center gap-2
                   bg-primary hover:bg-primary-strong
+                  cursor-pointer
                 `}
+                onClick={() => {
+                  if (activeTab === "media") {
+                    handleSubmit();
+                  } else if (activeTab === "details") {
+                    setActiveTab("pricing");
+                  } else {
+                    setActiveTab("media");
+                  }
+                }}
               >
                 {activeTab === "media" ? (
                   <>
