@@ -3,93 +3,155 @@
 @import "shadcn/tailwind.css";
 
 @custom-variant dark (&:is(.dark *));
-/* @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap'); */
 
+/* ============================================
+   ROOT VARIABLES (Light Mode)
+   ============================================ */
 :root {
+  /* ============================================
+     TYPOGRAPHY
+     ============================================ */
   --font-space-grotesk:
     "Inter", "Aptos", "Trebuchet MS", "Segoe UI", sans-serif;
-  --primary:
-    oklch(0.205 0 0);
-  --primary-strong: #d83e18;
-  --secondary:
-    oklch(0.97 0 0);
-  --accent:
-    oklch(0.97 0 0);
-  --success: #4caf50;
-  --warning: #ffc107;
-  --danger: #ff5252;
+
+  /* ============================================
+     HAGGLE BRAND COLORS
+     ============================================ */
+  --primary: #F44D24;
+  --primary-strong: #D83E18;
+  --secondary: #6B4EFF;
+  --accent: #FFEEE6;
+  --success: #4CAF50;
+  --warning: #FFC107;
+  --danger: #FF5252;
+
+  /* ============================================
+     SURFACE & BACKGROUND
+     ============================================ */
   --page-bg: #FFF8F0;
-  --background-elevated: #ffffff;
-  --surface: #fff4ec;
-  --surface-strong: #fffdf9;
-  --surface-inverse: #2c2c2c;
-  --muted:
-    oklch(0.97 0 0);
-  --border:
-    oklch(0.922 0 0);
-  --ring:
-    oklch(0.708 0 0);
+  --background: #FFF8F0;
+  --background-elevated: #FFFFFF;
+  --surface: #FFF4EC;
+  --surface-strong: #FFFDF9;
+  --surface-inverse: #2C2C2C;
+
+  /* ============================================
+     TEXT COLORS
+     ============================================ */
+  --foreground: #1F1712;
+  --muted: #6C625C;
+  --primary-foreground: #FFFFFF;
+  --secondary-foreground: #FFFFFF;
+  --accent-foreground: #1F1712;
+  --muted-foreground: #6C625C;
+  --card-foreground: #1F1712;
+  --popover-foreground: #1F1712;
+  --destructive: #FF5252;
+
+  /* ============================================
+     BORDERS & RINGS
+     ============================================ */
+  --border: rgba(60, 35, 19, 0.1);
+  --input: rgba(60, 35, 19, 0.1);
+  --ring: rgba(244, 77, 36, 0.22);
+  --sidebar-border: rgba(60, 35, 19, 0.1);
+  --sidebar-ring: rgba(244, 77, 36, 0.22);
+
+  /* ============================================
+     SHADOWS
+     ============================================ */
   --shadow-soft: 0 24px 70px rgba(86, 40, 11, 0.12);
   --shadow-card: 0 16px 50px rgba(77, 33, 9, 0.1);
-  --background:
-    oklch(1 0 0);
-  --foreground:
-    oklch(0.145 0 0);
-  --card:
-    oklch(1 0 0);
-  --card-foreground:
-    oklch(0.145 0 0);
-  --popover:
-    oklch(1 0 0);
-  --popover-foreground:
-    oklch(0.145 0 0);
-  --primary-foreground:
-    oklch(0.985 0 0);
-  --secondary-foreground:
-    oklch(0.205 0 0);
-  --muted-foreground:
-    oklch(0.556 0 0);
-  --accent-foreground:
-    oklch(0.205 0 0);
-  --destructive:
-    oklch(0.577 0.245 27.325);
-  --input:
-    oklch(0.922 0 0);
-  --chart-1:
-    oklch(0.87 0 0);
-  --chart-2:
-    oklch(0.556 0 0);
-  --chart-3:
-    oklch(0.439 0 0);
-  --chart-4:
-    oklch(0.371 0 0);
-  --chart-5:
-    oklch(0.269 0 0);
-  --radius:
-    0.625rem;
-  --sidebar:
-    oklch(0.985 0 0);
-  --sidebar-foreground:
-    oklch(0.145 0 0);
-  --sidebar-primary:
-    oklch(0.205 0 0);
-  --sidebar-primary-foreground:
-    oklch(0.985 0 0);
-  --sidebar-accent:
-    oklch(0.97 0 0);
-  --sidebar-accent-foreground:
-    oklch(0.205 0 0);
-  --sidebar-border:
-    oklch(0.922 0 0);
-  --sidebar-ring:
-    oklch(0.708 0 0);
+
+  /* ============================================
+     CARDS & POPOVERS
+     ============================================ */
+  --card: #FFFFFF;
+  --popover: #FFFFFF;
+
+  /* ============================================
+     SIDEBAR
+     ============================================ */
+  --sidebar: #FFF8F0;
+  --sidebar-foreground: #1F1712;
+  --sidebar-primary: #F44D24;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #FFF4EC;
+  --sidebar-accent-foreground: #1F1712;
+
+  /* ============================================
+     CHARTS (Haggle warm palette)
+     ============================================ */
+  --chart-1: #F44D24;
+  --chart-2: #6B4EFF;
+  --chart-3: #FFC107;
+  --chart-4: #4CAF50;
+  --chart-5: #FFEEE6;
+
+  /* ============================================
+     RADIUS
+     ============================================ */
+  --radius: 0.625rem;
 }
 
+/* ============================================
+   DARK MODE (data-theme="dark")
+   ============================================ */
 [data-theme="dark"] {
-  /* Dark mode */
+  /* ============================================
+     SURFACE & BACKGROUND
+     ============================================ */
   --page-bg: #190C05;
+  --background: #190C05;
+  --background-elevated: #1B1518;
+  --surface: #231B20;
+  --surface-strong: #2D2229;
+  --surface-inverse: #FFF8F0;
+
+  /* ============================================
+     TEXT COLORS
+     ============================================ */
+  --foreground: #FFF3EB;
+  --muted: #C8B8B0;
+  --muted-foreground: #C8B8B0;
+  --card-foreground: #FFF3EB;
+  --popover-foreground: #FFF3EB;
+
+  /* ============================================
+     BORDERS & RINGS
+     ============================================ */
+  --border: rgba(255, 236, 223, 0.12);
+  --input: rgba(255, 236, 223, 0.12);
+  --ring: rgba(244, 77, 36, 0.35);
+  --sidebar-border: rgba(255, 236, 223, 0.12);
+  --sidebar-ring: rgba(244, 77, 36, 0.35);
+
+  /* ============================================
+     SHADOWS
+     ============================================ */
+  --shadow-soft: 0 26px 80px rgba(0, 0, 0, 0.38);
+  --shadow-card: 0 18px 44px rgba(0, 0, 0, 0.32);
+
+  /* ============================================
+     CARDS & POPOVERS
+     ============================================ */
+  --card: #1B1518;
+  --popover: #1B1518;
+
+  /* ============================================
+     SIDEBAR
+     ============================================ */
+  --sidebar: #190C05;
+  --sidebar-foreground: #FFF3EB;
+  --sidebar-primary: #F44D24;
+  --sidebar-primary-foreground: #FFFFFF;
+  --sidebar-accent: #231B20;
+  --sidebar-accent-foreground: #FFF3EB;
 }
 
+/* ============================================
+   SHADOW UTILITIES
+   ============================================ */
 [data-theme="light"] .shadow-card {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
 }
@@ -106,6 +168,9 @@
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.3);
 }
 
+/* ============================================
+   ANIMATIONS
+   ============================================ */
 @keyframes pulse-slow {
   0%, 100% {
     box-shadow: 0 0 40px rgba(244, 77, 36, 0.4);
@@ -121,20 +186,35 @@
   animation: pulse-slow 2.5s ease-in-out infinite;
 }
 
-html[data-theme="dark"] {
-  --background: #140f12;
-  --background-elevated: #1b1518;
-  --surface: #231b20;
-  --surface-strong: #2d2229;
-  --surface-inverse: #fff8f3;
-  --foreground: #fff3eb;
-  --muted: #c8b8b0;
-  --border: rgba(255, 236, 223, 0.12);
-  --ring: rgba(244, 77, 36, 0.35);
-  --shadow-soft: 0 26px 80px rgba(0, 0, 0, 0.38);
-  --shadow-card: 0 18px 44px rgba(0, 0, 0, 0.32);
+@keyframes waveform {
+  0%, 100% {
+    height: 10px;
+    opacity: 0.4;
+  }
+  50% {
+    height: 22px;
+    opacity: 1;
+  }
 }
 
+@keyframes float {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  50% { transform: translateY(-15px) rotate(3deg); }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes lds-ring {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ============================================
+   TAILWIND THEME EXTENSION
+   ============================================ */
 @theme inline {
   --color-primary: var(--primary);
   --color-primary-strong: var(--primary-strong);
@@ -151,74 +231,52 @@ html[data-theme="dark"] {
   --color-foreground: var(--foreground);
   --color-muted: var(--muted);
   --color-border: var(--border);
-  --font-sans:
-    var(--font-sans);
-  --font-heading:
-    var(--font-sans);
-  --color-sidebar-ring:
-    var(--sidebar-ring);
-  --color-sidebar-border:
-    var(--sidebar-border);
-  --color-sidebar-accent-foreground:
-    var(--sidebar-accent-foreground);
-  --color-sidebar-accent:
-    var(--sidebar-accent);
-  --color-sidebar-primary-foreground:
-    var(--sidebar-primary-foreground);
-  --color-sidebar-primary:
-    var(--sidebar-primary);
-  --color-sidebar-foreground:
-    var(--sidebar-foreground);
-  --color-sidebar:
-    var(--sidebar);
-  --color-chart-5:
-    var(--chart-5);
-  --color-chart-4:
-    var(--chart-4);
-  --color-chart-3:
-    var(--chart-3);
-  --color-chart-2:
-    var(--chart-2);
-  --color-chart-1:
-    var(--chart-1);
-  --color-ring:
-    var(--ring);
-  --color-input:
-    var(--input);
-  --color-destructive:
-    var(--destructive);
-  --color-accent-foreground:
-    var(--accent-foreground);
-  --color-muted-foreground:
-    var(--muted-foreground);
-  --color-secondary-foreground:
-    var(--secondary-foreground);
-  --color-primary-foreground:
-    var(--primary-foreground);
-  --color-popover-foreground:
-    var(--popover-foreground);
-  --color-popover:
-    var(--popover);
-  --color-card-foreground:
-    var(--card-foreground);
-  --color-card:
-    var(--card);
-  --radius-sm:
-    calc(var(--radius) * 0.6);
-  --radius-md:
-    calc(var(--radius) * 0.8);
-  --radius-lg:
-    var(--radius);
-  --radius-xl:
-    calc(var(--radius) * 1.4);
-  --radius-2xl:
-    calc(var(--radius) * 1.8);
-  --radius-3xl:
-    calc(var(--radius) * 2.2);
-  --radius-4xl:
-    calc(var(--radius) * 2.6);
+  --font-sans: var(--font-space-grotesk);
+  --font-heading: var(--font-space-grotesk);
+
+  /* Sidebar */
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  /* Charts */
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  /* Other */
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+
+  /* Radius */
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* ============================================
+   BASE STYLES
+   ============================================ */
 * {
   box-sizing: border-box;
 }
@@ -272,6 +330,9 @@ select {
   color: #fff;
 }
 
+/* ============================================
+   SCROLLBAR
+   ============================================ */
 ::-webkit-scrollbar {
   width: 10px;
   height: 10px;
@@ -286,6 +347,9 @@ select {
   background: transparent;
 }
 
+/* ============================================
+   COMPONENT UTILITIES
+   ============================================ */
 .app-noise {
   position: relative;
 }
@@ -331,6 +395,9 @@ select {
   color: transparent;
 }
 
+/* ============================================
+   WAVEFORM ANIMATION
+   ============================================ */
 .wave-bars span {
   display: inline-block;
   width: 4px;
@@ -355,100 +422,58 @@ select {
   animation-delay: 320ms;
 }
 
-@keyframes waveform {
-  0%,
-  100% {
-    height: 10px;
-    opacity: 0.4;
-  }
-  50% {
-    height: 22px;
-    opacity: 1;
-  }
+/* ============================================
+   FLEX UTILITY CLASSES
+   ============================================ */
+.flexbm { @apply flex justify-between items-center; }
+.flexbs { @apply flex justify-between items-start; }
+.flexbe { @apply flex justify-between items-end; }
+.flexam { @apply flex justify-around items-center; }
+.flexmm { @apply flex justify-center items-center; }
+.flexem { @apply flex justify-end items-center; }
+.flexme { @apply flex justify-center items-end; }
+.flexsm { @apply flex justify-start items-center; }
+.flexms { @apply flex justify-center items-start; }
+.flexss { @apply flex justify-start items-start; }
+.flexse { @apply flex justify-start items-end; }
+.flexes { @apply flex justify-end items-start; }
+
+.cflexbm { @apply flex flex-col justify-between items-center; }
+.cflexbs { @apply flex flex-col justify-between items-start; }
+.cflexbe { @apply flex flex-col justify-between items-end; }
+.cflexam { @apply flex flex-col justify-around items-center; }
+.cflexmm { @apply flex flex-col justify-center items-center; }
+.cflexem { @apply flex flex-col justify-end items-center; }
+.cflexme { @apply flex flex-col justify-center items-end; }
+.cflexsm { @apply flex flex-col justify-start items-center; }
+.cflexms { @apply flex flex-col justify-center items-start; }
+.cflexss { @apply flex flex-col justify-start items-start; }
+.cflexse { @apply flex flex-col justify-start items-end; }
+.cflexes { @apply flex flex-col justify-end items-start; }
+
+/* ============================================
+   ANIMATION UTILITY CLASSES
+   ============================================ */
+.transition-all { transition: all 0.5s ease-in-out; }
+.transition-height { transition: max-height 0.7s ease-in-out; }
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+.delay-300 { animation-delay: 300ms; }
+.delay-500 { animation-delay: 500ms; }
+.delay-700 { animation-delay: 700ms; }
+
+.animate-spin-slow {
+  animation: spin-slow 20s linear infinite;
+}
+.animate-spin-slow-reverse {
+  animation: spin-slow 25s linear infinite reverse;
 }
 
-.flexbm {
-  @apply flex justify-between items-center;
-}
-.flexbs {
-  @apply flex justify-between items-start;
-}
-.flexbe {
-  @apply flex justify-between items-end;
-}
-.flexam {
-  @apply flex justify-around items-center;
-}
-.flexmm {
-  @apply flex justify-center items-center;
-}
-.flexem {
-  @apply flex justify-end items-center;
-}
-.flexme {
-  @apply flex justify-center items-end;
-}
-.flexsm {
-  @apply flex justify-start items-center;
-}
-.flexms {
-  @apply flex justify-center items-start;
-}
-.flexss {
-  @apply flex justify-start items-start;
-}
-.flexse {
-  @apply flex justify-start items-end;
-}
-.flexes {
-  @apply flex justify-end items-start;
-}
-
-.cflexbm {
-  @apply flex flex-col justify-between items-center;
-}
-.cflexbs {
-  @apply flex flex-col justify-between items-start;
-}
-.cflexbe {
-  @apply flex justify-between items-end;
-}
-.cflexam {
-  @apply flex flex-col justify-around items-center;
-}
-.cflexmm {
-  @apply flex flex-col justify-center items-center;
-}
-.cflexem {
-  @apply flex flex-col justify-end items-center;
-}
-.cflexme {
-  @apply flex flex-col justify-center items-end;
-}
-.cflexsm {
-  @apply flex flex-col justify-start items-center;
-}
-.cflexms {
-  @apply flex flex-col justify-center items-start;
-}
-.cflexss {
-  @apply flex flex-col justify-start items-start;
-}
-.cflexse {
-  @apply flex flex-col justify-start items-end;
-}
-.cflexes {
-  @apply flex flex-col justify-end items-start;
-}
-
-.transition-all {
-  transition: all 0.5s ease-in-out;
-}
-
-.transition-height {
-  transition: max-height 0.7s ease-in-out;
-}
-
+/* ============================================
+   LOADING SPINNERS
+   ============================================ */
 .lds-ring {
   display: inline-block;
   position: relative;
@@ -467,23 +492,9 @@ select {
   animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
   border-color: #fff transparent transparent transparent;
 }
-.lds-ring div:nth-child(1) {
-  animation-delay: -0.45s;
-}
-.lds-ring div:nth-child(2) {
-  animation-delay: -0.3s;
-}
-.lds-ring div:nth-child(3) {
-  animation-delay: -0.15s;
-}
-@keyframes lds-ring {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
+.lds-ring div:nth-child(1) { animation-delay: -0.45s; }
+.lds-ring div:nth-child(2) { animation-delay: -0.3s; }
+.lds-ring div:nth-child(3) { animation-delay: -0.15s; }
 
 .lds-ring-2 {
   display: inline-block;
@@ -503,52 +514,13 @@ select {
   animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
   border-color: black transparent transparent transparent;
 }
-.lds-ring-2 div:nth-child(1) {
-  animation-delay: -0.45s;
-}
-.lds-ring-2 div:nth-child(2) {
-  animation-delay: -0.3s;
-}
-.lds-ring-2 div:nth-child(3) {
-  animation-delay: -0.15s;
-}
-@keyframes lds-ring {
-  0% {
-    transform: rotate(0deg);
-  }
-  100% {
-    transform: rotate(360deg);
-  }
-}
+.lds-ring-2 div:nth-child(1) { animation-delay: -0.45s; }
+.lds-ring-2 div:nth-child(2) { animation-delay: -0.3s; }
+.lds-ring-2 div:nth-child(3) { animation-delay: -0.15s; }
 
-@keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-15px) rotate(3deg); }
-}
-.animate-float {
-  animation: float 6s ease-in-out infinite;
-}
-.delay-300 {
-  animation-delay: 300ms;
-}
-.delay-500 {
-  animation-delay: 500ms;
-}
-.delay-700 {
-  animation-delay: 700ms;
-}
-
-@keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
-}
-.animate-spin-slow {
-  animation: spin-slow 20s linear infinite;
-}
-.animate-spin-slow-reverse {
-  animation: spin-slow 25s linear infinite reverse;
-}
-
+/* ============================================
+   REDUCED MOTION PREFERENCE
+   ============================================ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -560,71 +532,9 @@ select {
   }
 }
 
-.dark {
-  --background:
-    oklch(0.145 0 0);
-  --foreground:
-    oklch(0.985 0 0);
-  --card:
-    oklch(0.205 0 0);
-  --card-foreground:
-    oklch(0.985 0 0);
-  --popover:
-    oklch(0.205 0 0);
-  --popover-foreground:
-    oklch(0.985 0 0);
-  --primary:
-    oklch(0.922 0 0);
-  --primary-foreground:
-    oklch(0.205 0 0);
-  --secondary:
-    oklch(0.269 0 0);
-  --secondary-foreground:
-    oklch(0.985 0 0);
-  --muted:
-    oklch(0.269 0 0);
-  --muted-foreground:
-    oklch(0.708 0 0);
-  --accent:
-    oklch(0.269 0 0);
-  --accent-foreground:
-    oklch(0.985 0 0);
-  --destructive:
-    oklch(0.704 0.191 22.216);
-  --border:
-    oklch(1 0 0 / 10%);
-  --input:
-    oklch(1 0 0 / 15%);
-  --ring:
-    oklch(0.556 0 0);
-  --chart-1:
-    oklch(0.87 0 0);
-  --chart-2:
-    oklch(0.556 0 0);
-  --chart-3:
-    oklch(0.439 0 0);
-  --chart-4:
-    oklch(0.371 0 0);
-  --chart-5:
-    oklch(0.269 0 0);
-  --sidebar:
-    oklch(0.205 0 0);
-  --sidebar-foreground:
-    oklch(0.985 0 0);
-  --sidebar-primary:
-    oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground:
-    oklch(0.985 0 0);
-  --sidebar-accent:
-    oklch(0.269 0 0);
-  --sidebar-accent-foreground:
-    oklch(0.985 0 0);
-  --sidebar-border:
-    oklch(1 0 0 / 10%);
-  --sidebar-ring:
-    oklch(0.556 0 0);
-}
-
+/* ============================================
+   TAILWIND BASE LAYER
+   ============================================ */
 @layer base {
   * {
     @apply border-border outline-ring/50;

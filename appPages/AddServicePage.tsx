@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Camera,
@@ -172,7 +172,7 @@ function GlassyField({
           className={cn(
             `
             w-full rounded-xl
-            border border-border/60 bg-[#2b2127] dark:bg-[#2b2127]
+            border border-border/60 bg-background-elevated/40
             px-4 py-3 text-sm text-foreground
             placeholder:text-muted/40
             backdrop-blur-sm
@@ -194,7 +194,7 @@ function GlassyField({
           className={cn(
             `
             w-full rounded-xl
-            border border-border/60 bg-[#2b2127] dark:bg-[#2b2127]
+            border border-border/60 bg-background-elevated/40
             px-4 py-3 text-sm text-foreground
             placeholder:text-muted/40
             backdrop-blur-sm
@@ -215,75 +215,19 @@ function GlassyField({
 // ============================================
 // GLASSY SELECT
 // ============================================
-
-function Glassy1Select({
-  label,
-  options,
-  placeholder,
-  optional = false,
-}: {
-  label: string;
-  options: any[];
-  placeholder: string;
-  optional?: boolean;
-}) {
-  const [isOpen, setIsOpen] = useState(false);
-  const [selected, setSelected] = useState<string | null>(null);
-
-  return (
-    <div className="space-y-1.5">
-      <div className="flex items-center gap-2">
-        <span className="text-sm font-medium text-foreground/80">{label}</span>
-        {optional && (
-          <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted/50">
-            Optional
-          </span>
-        )}
-      </div>
-
-      <Select items={options}>
-        <SelectTrigger
-          className={`
-            relative w-full rounded-xl
-            border border-border/60 bg-[#2b2127] dark:bg-[#2b2127]
-            px-4 py-6 text-sm text-foreground
-            backdrop-blur-sm
-            transition-all duration-200
-            focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
-            text-left flex items-center justify-between
-            shadow-sm
-          `}
-        >
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectGroup className={`bg-[#2b2127] dark:bg-[#2b2127]`}>
-            {options.map((item) => (
-              <SelectItem
-                key={item.id}
-                value={item.name}
-                className="w-full px-4 py-2 text-left text-sm text-foreground focus:bg-primary/5 hover:bg-primary/5 transition"
-              >
-                {item.name}
-              </SelectItem>
-            ))}
-          </SelectGroup>
-        </SelectContent>
-      </Select>
-    </div>
-  );
-}
-
 function GlassySelect({
   label,
   options,
   placeholder,
-  optional = false,  
+  type,
+  optional = false,
   onChange,
+  value,
 }: {
   label: string;
   options: any[];
   placeholder: string;
+  type?: string;
   optional?: boolean;
   value?: string;
   onChange: (value: string) => void;
@@ -302,7 +246,7 @@ function GlassySelect({
         <SelectTrigger
           className={`
             relative w-full rounded-xl
-            border border-border/60 bg-[#2b2127] dark:bg-[#2b2127]
+            border border-border/60 bg-background-elevated/40
             px-4 py-6 text-sm text-foreground
             backdrop-blur-sm
             transition-all duration-200
@@ -311,18 +255,18 @@ function GlassySelect({
             shadow-sm
           `}
         >
-          <SelectValue placeholder={placeholder} />
+          <SelectValue placeholder={value ? value : placeholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectGroup className={`bg-[#2b2127] dark:bg-[#2b2127]`}>
+          <SelectGroup className="bg-popover">
             {options.map((item) => (
               <SelectItem
-                key={item.id}
-                value={item.name}
-                onClick={() => onChange(item.name)}
+                key={type === "tag" ? item : item.id}
+                value={type === "tag" ? item : item.name}
                 className="w-full px-4 py-2 text-left text-sm text-foreground focus:bg-primary/5 hover:bg-primary/5 transition"
+                onClick={() => onChange(type === "tag" ? item : item.name)}
               >
-                {item.name}
+                {type === "tag" ? item : item.name}
               </SelectItem>
             ))}
           </SelectGroup>
@@ -1340,7 +1284,7 @@ function PricePackageCard({
             placeholder="₦50,000"
             value={basePrice}
             onChange={(e) => onPriceChange(e.target.value)}
-            className="w-full rounded-xl border border-border/60 bg-[#2b2127] dark:bg-[#2b2127] px-4 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 shadow-sm mt-1"
+            className="w-full rounded-xl border border-border/60 bg-background-elevated/40 px-4 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 shadow-sm mt-1"
           />
         </div>
         <div>
@@ -1350,7 +1294,7 @@ function PricePackageCard({
             placeholder="3-5 days"
             value={deliveryTime}
             onChange={(e) => onDeliveryChange(e.target.value)}
-            className="w-full rounded-xl border border-border/60 bg-[#2b2127] dark:bg-[#2b2127] px-4 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 shadow-sm mt-1"
+            className="w-full rounded-xl border border-border/60 bg-background-elevated/40 px-4 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 shadow-sm mt-1"
           />
         </div>
       </div>
@@ -1473,7 +1417,7 @@ function StickyHeader({
     <div
       className="
         sticky top-0 z-30
-        bg-[#F2EDE8] dark:bg-[#190C05]
+        bg-background
         border-b border-border/40
         px-3 py-3 lg:px-6
         flex items-center justify-between
@@ -1564,6 +1508,54 @@ const AddServicePage = () => {
     show: false,
   });
 
+  // ============================================
+  // TAGS STATE - Dynamic service tags as pipe-delimited string
+  // ============================================
+  const [tags, setTags] = useState("");
+
+  // ============================================
+  // HANDLE TAG CHANGE
+  // ============================================
+  const handleTagChange = (name: string, value: string) => {
+    // Clean up: remove any existing entry for this name
+    const existing = tags
+      .split("|")
+      .filter((tag) => !tag.startsWith(`${name.toLowerCase()}:`))
+      .filter(Boolean);
+
+    // Add the new tag
+    const updated = [
+      ...existing,
+      `${name.toLowerCase()}:${value.toLowerCase()}`,
+    ];
+
+    setTags(updated.join("|"));
+  };
+
+  // ============================================
+  // GET CURRENT VALUE FOR A TAG
+  // ============================================
+  const getTagValue = (name: string) => {
+    const tag = tags
+      .split("|")
+      .find((t) => t.startsWith(`${name.toLowerCase()}:`));
+    return tag?.split(":")[1] || "";
+  };
+
+  // ============================================
+  // INITIALIZE TAGS WHEN CATEGORY CHANGES
+  // ============================================
+  const selectedCategory = SERVICE_CATEGORIES.find((c) => c.name === category);
+  const requiredTags = selectedCategory?.requiredTags || [];
+
+  useEffect(() => {
+    // Build initial tags string with empty values
+    const initialTags = requiredTags
+      .map((tag) => `${tag.name.toLowerCase()}:`)
+      .join("|");
+    setTags(initialTags);
+  }, [category]);
+
   const tabs: { id: TabId; label: string }[] = [
     { id: "tell", label: "Tell buyers" },
     { id: "offer", label: "Set your offer" },
@@ -1619,7 +1611,7 @@ const AddServicePage = () => {
 
   return (
     <AppShell>
-      <div className="min-h-screen flex flex-col bg-[#F2EDE8] dark:bg-[#190C05]">
+      <div className="min-h-screen flex flex-col bg-background">
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 lg:px-6 flex flex-col">
           {/* STICKY HEADER */}
           <StickyHeader
@@ -1738,38 +1730,6 @@ const AddServicePage = () => {
                         }
                       />
 
-                      <div className="grid gap-3 sm:grid-cols-2">
-                        <GlassySelect
-                          label="Category"
-                          options={SERVICE_CATEGORIES}
-                          placeholder="Select category"                          
-                          onChange={(value) => {
-                            console.log('working')
-                            setCategory(value);
-                            setServiceSubCategories(
-                              SERVICE_CATEGORIES[
-                                SERVICE_CATEGORIES.findIndex(
-                                  (cat) => cat.name === value,
-                                )
-                              ].subcategories,
-                            );
-                            console.log(
-                              SERVICE_CATEGORIES[
-                                SERVICE_CATEGORIES.findIndex(
-                                  (cat) => cat.name === value,
-                                )
-                              ].subcategories,
-                            );
-                          }}
-                        />
-                        <GlassySelect
-                          label="Service Type"
-                          options={serviceSubcategories}
-                          placeholder="Select type"                          
-                          onChange={setServiceType}
-                        />
-                      </div>
-
                       <GlassyField
                         label="What makes your service unique?"
                         placeholder="Describe your approach, experience, and what sets you apart..."
@@ -1777,6 +1737,70 @@ const AddServicePage = () => {
                         value={serviceDescription}
                         onChange={(e) => setServiceDescription(e.target.value)}
                       />
+
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <GlassySelect
+                          label="Category"
+                          options={SERVICE_CATEGORIES}
+                          placeholder="Select category"
+                          onChange={(value) => {                      
+                            setCategory(value);
+                            setServiceType("")
+                            setServiceSubCategories(
+                              SERVICE_CATEGORIES[
+                                SERVICE_CATEGORIES.findIndex(
+                                  (cat) => cat.name === value,
+                                )
+                              ].subcategories,
+                            );                           
+                          }}
+                        />
+                        <GlassySelect
+                          label="Service Type"
+                          options={serviceSubcategories}
+                          placeholder="Select type"
+                          onChange={setServiceType}
+                        />
+                      </div>
+
+                      {/* ============================================ */}
+                      {/* DYNAMIC TAGS - Rendered when serviceType is selected */}
+                      {/* ============================================ */}
+                      {serviceType && requiredTags.length > 0 && (
+                        <div className="space-y-1.5">
+                          <p className="text-xs font-medium text-foreground/60">
+                            Service Requirements
+                          </p>
+                          <div className="grid gap-3 sm:grid-cols-2">
+                            {requiredTags.map((tag) => (
+                              <React.Fragment key={tag.name}>
+                                {tag.type === "select" ? (
+                                  <GlassySelect
+                                    label={tag.name}
+                                    options={tag?.options ?? []}
+                                    placeholder={tag.placeholder ?? "Select"}
+                                    value={getTagValue(tag.name)}
+                                    type="tag"
+                                    onChange={(value) =>
+                                      handleTagChange(tag.name, value)
+                                    }
+                                  />
+                                ) : (
+                                  <GlassyField
+                                    label={tag.name}
+                                    placeholder={tag.placeholder ?? ""}
+                                    prominent
+                                    value={getTagValue(tag.name)}
+                                    onChange={(e) =>
+                                      handleTagChange(tag.name, e.target.value)
+                                    }
+                                  />
+                                )}
+                              </React.Fragment>
+                            ))}
+                          </div>
+                        </div>
+                      )}
 
                       <TargetAudiencePicker
                         value={targetAudience}

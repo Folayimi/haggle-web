@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProductMedia } from "@/components/ProductMedia";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import {
   ArrowLeft,
   Camera,
@@ -123,7 +123,7 @@ function GlassyField({
           className={cn(
             `
             w-full rounded-xl
-            border border-border/60 bg-[#2b2127] dark:bg-[#2b2127]
+            border border-border/60 bg-background-elevated/40
             px-4 py-3 text-sm text-foreground
             placeholder:text-muted/40
             backdrop-blur-sm
@@ -146,7 +146,7 @@ function GlassyField({
           className={cn(
             `
             w-full rounded-xl
-            border border-border/60 bg-[#2b2127] dark:bg-[#2b2127]
+            border border-border/60 bg-background-elevated/40
             px-4 py-3 text-sm text-foreground
             placeholder:text-muted/40
             backdrop-blur-sm
@@ -197,7 +197,7 @@ function GlassySelect({
         <SelectTrigger
           className={`
             relative w-full rounded-xl
-            border border-border/60 bg-[#2b2127] dark:bg-[#2b2127]
+            border border-border/60 bg-background-elevated/40
             px-4 py-6 text-sm text-foreground
             backdrop-blur-sm
             transition-all duration-200
@@ -209,7 +209,7 @@ function GlassySelect({
           <SelectValue placeholder={value ? value : placeholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectGroup className={`bg-[#2b2127] dark:bg-[#2b2127]`}>
+          <SelectGroup className="bg-popover">
             {options.map((item) => (
               <SelectItem
                 key={type === "tag" ? item : item.id}
@@ -503,14 +503,21 @@ function ProductCardPreview({
 // MAIN PAGE
 // ============================================
 const PostProductPage = () => {
+  const [productInfo, setProductInfo] = useState({
+    name: "",
+    description: "",
+    category: "",
+    subCategory: "",
+    startingPrice: "",
+    lowestAcceptablePrice: "",
+    autoDeclinePrice: "",
+    negotiationNote: "",
+  });
   const [activeTab, setActiveTab] = useState<TabId>("details");
   const [negotiationStyle, setNegotiationStyle] =
     useState<NegotiationStyle>("flexible");
-  const [productName, setProductName] = useState("");
-  const [price, setPrice] = useState("");
-  const [category, setCategory] = useState("");
   const [productSubcategories, setProductSubcategories] = useState<any[]>([]);
-  const [subCategory, setSubCategory] = useState("");
+  const [tags, setTags] = useState("");
   const [completed, setCompleted] = useState({
     details: false,
     pricing: false,
@@ -535,15 +542,59 @@ const PostProductPage = () => {
   };
 
   const requiredTags = PRODUCT_CATEGORIES.find(
-    (c) => c.name === category,
+    (c) => c.name === productInfo["category"],
   )?.requiredTags;
+
+  const handleTagChange = (name: string, value: string) => {
+    // Remove existing entry for this name
+    const existing = tags
+      .split("|")
+      .filter((tag) => !tag.startsWith(`${name.toLowerCase()}:`))
+      .filter(Boolean);
+
+    // Add the new tag
+    const updated = [
+      ...existing,
+      `${name.toLowerCase()}:${value.toLowerCase()}`,
+    ];
+
+    setTags(updated.join("|"));
+
+    console.log("updated tags: ", updated.join("|"));
+  };
+
+  const getTagValue = (name: string) => {
+    const tag = tags
+      .split("|")
+      .find((t) => t.startsWith(`${name.toLowerCase()}:`));
+    return tag?.split(":")[1] || "";
+  };
+
+  const handleSubmit = () => {
+    const payload = {
+      ...productInfo,
+      tags, // "condition:new,color:blue,brand:apple"
+      negotiationStyle,
+    };
+    // send to backend
+  };
+
+  useEffect(() => {
+    const tags =
+      PRODUCT_CATEGORIES.find((c) => c.name === productInfo["category"])
+        ?.requiredTags || [];
+    const initialTags = tags
+      .map((tag) => `${tag.name.toLowerCase()}:`)
+      .join("|");
+    setTags(initialTags);
+  }, [productInfo["category"]]);
 
   return (
     <AppShell>
-      <div className="min-h-screen flex flex-col bg-[#F2EDE8] dark:bg-[#190C05]">
-        <div className="flex-1 mx-auto max-w-7xl w-full px-3 py-4 lg:px-6 flex flex-col">
+      <div className="min-h-screen flex flex-col bg-background">
+        <div className="relative flex-1 mx-auto max-w-7xl w-full px-3 py-4 lg:px-6 flex flex-col">
           {/* HEADER ROW */}
-          <div className="flex items-center justify-between mb-4">
+          <div className="fixed top-0 w-[calc(100vw-150px)] py-3 bg-background flex items-center justify-between mb-4 z-30">
             <div className="flex items-center gap-3">
               <Link
                 href="/create"
@@ -589,7 +640,7 @@ const PostProductPage = () => {
                   bg-primary hover:bg-primary-strong
                 `}
               >
-                {activeTab === "pricing" ? (
+                {activeTab === "media" ? (
                   <>
                     <Sparkles className="h-4 w-4" />
                     Publish Product
@@ -602,7 +653,7 @@ const PostProductPage = () => {
           </div>
 
           {/* COMPLETION SUMMARY */}
-          <div className="mb-4 flex items-center justify-between">
+          <div className="mb-4 mt-18 flex items-center justify-between">
             <CompletionSummary completed={completedCount} total={tabs.length} />
           </div>
 
@@ -613,7 +664,7 @@ const PostProductPage = () => {
               <ProductMedia
                 onImagesChange={(images) => {
                   // Optionally sync images to parent state if needed
-                  console.log("Images updated:", images);
+                  // console.log("Images updated:", images);
                 }}
               />
             </div>
@@ -666,8 +717,13 @@ const PostProductPage = () => {
                         label="Product Name"
                         placeholder="e.g. Apple iPhone 14 Pro Max (128GB) • Excellent Condition"
                         prominent
-                        value={productName}
-                        onChange={(e) => setProductName(e.target.value)}
+                        value={productInfo["name"]}
+                        onChange={(e) =>
+                          setProductInfo({
+                            ...productInfo,
+                            name: e.target.value,
+                          })
+                        }
                       />
                       <GlassyField
                         label="Short Description"
@@ -683,10 +739,13 @@ const PostProductPage = () => {
                             label="Category"
                             options={PRODUCT_CATEGORIES}
                             placeholder="Select category"
-                            value={category}
+                            value={productInfo["category"]}
                             onChange={(value) => {
-                              setCategory(value);
-                              setSubCategory('');
+                              setProductInfo({
+                                ...productInfo,
+                                category: value,
+                                subCategory: "",
+                              });
                               setProductSubcategories(
                                 PRODUCT_CATEGORIES[
                                   PRODUCT_CATEGORIES.findIndex(
@@ -699,46 +758,54 @@ const PostProductPage = () => {
                           <GlassySelect
                             label="Sub-Category"
                             options={productSubcategories}
-                            value={subCategory}
+                            value={productInfo["subCategory"]}
                             placeholder="Select condition"
-                            onChange={setSubCategory}
+                            onChange={(value) =>
+                              setProductInfo({
+                                ...productInfo,
+                                subCategory: value,
+                              })
+                            }
                           />
                         </div>
                       </div>
-                      {subCategory ? (
+                      {productInfo["subCategory"] ? (
                         <div className="space-y-1.5">
                           <p className="text-xs font-medium text-foreground/60">
                             Requirements
                           </p>
                           <div className="grid gap-3 sm:grid-cols-2">
                             {requiredTags?.map((item) => {
+                              const currentValue = getTagValue(item.name);
+
                               return (
-                                <>
+                                <React.Fragment key={item.name}>
                                   {item.type === "select" ? (
                                     <GlassySelect
                                       label={item.name}
                                       options={item?.options ?? []}
                                       placeholder={item.placeholder ?? "Select"}
-                                      type = 'tag'
-                                      value=""
-                                      onChange={(value) => {
-                                        console.log(value);
-                                      }}
+                                      value={currentValue}
+                                      type="tag"
+                                      onChange={(value) =>
+                                        handleTagChange(item.name, value)
+                                      }
                                     />
                                   ) : (
-                                    <>
-                                      <GlassyField
-                                        label={item.name}
-                                        placeholder={item.placeholder ?? ""}
-                                        prominent
-                                        value=""
-                                        onChange={(e) =>
-                                          console.log(e.target.value)
-                                        }
-                                      />
-                                    </>
+                                    <GlassyField
+                                      label={item.name}
+                                      placeholder={item.placeholder ?? ""}
+                                      prominent
+                                      value={currentValue}
+                                      onChange={(e) =>
+                                        handleTagChange(
+                                          item.name,
+                                          e.target.value,
+                                        )
+                                      }
+                                    />
                                   )}
-                                </>
+                                </React.Fragment>
                               );
                             })}
                           </div>
@@ -775,19 +842,38 @@ const PostProductPage = () => {
                           label="Starting Asking Price"
                           placeholder="₦50,000"
                           icon={<TrendingUp className="h-3 w-3" />}
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
+                          value={productInfo["startingPrice"]}
+                          onChange={(e) =>
+                            setProductInfo({
+                              ...productInfo,
+                              startingPrice: e.target.value,
+                            })
+                          }
                         />
                         <GlassyField
                           label="Lowest You'll Accept"
                           placeholder="₦42,000"
                           optional
+                          value={productInfo["lowestAcceptablePrice"]}
+                          onChange={(e) =>
+                            setProductInfo({
+                              ...productInfo,
+                              lowestAcceptablePrice: e.target.value,
+                            })
+                          }
                         />
                       </div>
                       <GlassyField
                         label="Auto Decline Below"
                         placeholder="₦35,000"
                         optional
+                        value={productInfo["autoDeclinePrice"]}
+                        onChange={(e) =>
+                          setProductInfo({
+                            ...productInfo,
+                            autoDeclinePrice: e.target.value,
+                          })
+                        }
                       />
 
                       <NegotiationStylePicker
@@ -800,6 +886,13 @@ const PostProductPage = () => {
                         placeholder="Open to bundle pricing for two or more pieces..."
                         multiline
                         optional
+                        value={productInfo["negotiationNote"]}
+                        onChange={(e) =>
+                          setProductInfo({
+                            ...productInfo,
+                            negotiationNote: e.target.value,
+                          })
+                        }
                       />
                     </motion.div>
                   )}
@@ -828,8 +921,8 @@ const PostProductPage = () => {
                       </div>
 
                       <ProductCardPreview
-                        productName={productName || "Your Product Name"}
-                        price={price || "₦50,000"}
+                        productName={productInfo["name"] || "Your Product Name"}
+                        price={productInfo["startingPrice"] || "₦50,000"}
                         negotiationStyle={negotiationStyle}
                       />
                     </motion.div>

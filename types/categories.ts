@@ -73,8 +73,6 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["New", "Like New", "Excellent", "Good", "Fair", "For Parts"],
       },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
       {
         id: "location",
         name: "Location",
@@ -173,8 +171,6 @@ export const PRODUCT_CATEGORIES: Category[] = [
           "Other",
         ],
       },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
       {
         id: "location",
         name: "Location",
@@ -245,8 +241,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. Wood, Metal, Glass",
       },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
+
       {
         id: "location",
         name: "Location",
@@ -330,8 +325,6 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["New", "Like New", "Good", "Fair"],
       },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
       {
         id: "location",
         name: "Location",
@@ -406,8 +399,6 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["New", "Used", "Refurbished"],
       },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
       {
         id: "location",
         name: "Location",
@@ -476,8 +467,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["Original", "Reproduction", "Unsure"],
       },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
+
       {
         id: "location",
         name: "Location",
@@ -544,8 +534,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["New", "Like New", "Excellent", "Good", "Fair"],
       },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
+
       {
         id: "location",
         name: "Location",
@@ -627,8 +616,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
           "Other",
         ],
       },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
+
       {
         id: "location",
         name: "Location",
@@ -695,8 +683,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["Sealed", "Open", "Vacuum Packed", "Other"],
       },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
+
       {
         id: "location",
         name: "Location",
@@ -764,8 +751,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["New", "Like New", "Excellent", "Good", "Fair", "For Parts"],
       },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
+
       {
         id: "location",
         name: "Location",
@@ -832,8 +818,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["New", "Like New", "Excellent", "Good", "Fair"],
       },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
+
       {
         id: "location",
         name: "Location",
@@ -908,8 +893,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 3-5 days, 2 weeks",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Location",
@@ -982,8 +966,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 4 weeks, Monthly",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Location",
@@ -1052,8 +1035,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 2 days, 1 week",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Location",
@@ -1131,8 +1113,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. React, Node.js, Python",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Location",
@@ -1201,8 +1182,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 1 hour, 2 days",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Location",
@@ -1273,8 +1253,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. Same day, 2 days notice",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Service Area",
@@ -1342,8 +1321,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. Weekdays, Evenings, Weekends",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Location",
@@ -1418,8 +1396,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. Weekdays, Evenings, Weekends",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Location",
@@ -1495,8 +1472,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 2 weeks notice, 3 months advance",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Service Area",
@@ -1564,8 +1540,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 24 hours, 1 week",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Location",
@@ -1634,8 +1609,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 2 weeks, 1 week",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Location",
@@ -1696,8 +1670,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 2 days, 1 week",
       },
-      { id: "price-range", name: "Price Range", type: "range", required: true },
-      { id: "negotiable", name: "Negotiable", type: "boolean", required: true },
+     
       {
         id: "location",
         name: "Location",
