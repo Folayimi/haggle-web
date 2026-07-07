@@ -13,12 +13,17 @@ import {
   ChevronRight,
   Settings,
   Bell,
+  Sun,
+  Moon,
 } from "lucide-react";
 import Link from "next/link";
+import { useHaggleStore } from "@/lib/app-store";
 
 const SideNav = () => {
   const [tab, setTab] = useState("home");
   const [collapsed, setCollapsed] = useState(false);
+  const theme = useHaggleStore((state) => state.theme);
+  const toggleTheme = useHaggleStore((state) => state.toggleTheme);
 
   const navItems = [
     { id: "for-you", label: "For You", icon: HomeIcon, path: "/for-you" },
@@ -36,14 +41,11 @@ const SideNav = () => {
   return (
     <aside
       className={`
-        relative h-screen bg-background-elevated text-foreground border-r-[0.5px] border-neutral-200 shadow-sm
+        hidden xl:block relative h-screen text-foreground border-r-[0.5px] border-neutral-200 shadow-sm
         transition-all duration-300 ease-in-out
         ${collapsed ? "w-[80px]" : "w-[220px]"}
         flex flex-col
-      `}
-      style={{
-        backgroundColor: "var(--page-bg, #190C05)",
-      }}
+      `}      
     >
       {/* Collapse Toggle Button */}
       <button
@@ -65,7 +67,7 @@ const SideNav = () => {
 
       {/* Logo Section */}
       <div
-        className={`
+        className={`relative
         flex items-center gap-3 px-4 pt-6 pb-8
         transition-all duration-300
         ${collapsed ? "justify-center px-2" : ""}
@@ -167,7 +169,7 @@ const SideNav = () => {
       </div>
 
       {/* Bottom Section */}
-      <div className="px-3 pb-4 mt-auto">
+      <div className="absolute bottom-0 px-3 pb-4 mt-auto">
         <div className="border-t border-neutral-200 pt-3">
           {/* Notifications & Settings - only when expanded */}
           <div
@@ -176,6 +178,17 @@ const SideNav = () => {
             ${collapsed ? "flex-col" : ""}
           `}
           >
+            <button
+              onClick={toggleTheme}
+              className="rounded-full border border-border bg-background-elevated p-2"
+              aria-label="Toggle theme"
+            >
+              {theme === "dark" ? (
+                <Sun className="h-4 w-4 text-warning" />
+              ) : (
+                <Moon className="h-4 w-4 text-secondary" />
+              )}
+            </button>
             <button
               className={`
               p-2 rounded-lg text-neutral-500 hover:bg-neutral-50 hover:text-dark-800

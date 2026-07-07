@@ -6,7 +6,7 @@ import SideNav from "@/components/SideNav";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Haggle | Live Negotiation Marketplace",
@@ -26,16 +26,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning className={cn("font-sans", geist.variable)}>
+    <html
+      lang="en"
+      suppressHydrationWarning
+      className={cn("font-sans", geist.variable)}
+    >
       <body>
         <ToastContainer />
         <ThemeProvider>
-          <div className="w-full flexss h-screen">
-            <div className="absolute z-50 w-[80px] h-full">
-              <SideNav />
-            </div>
-            <div className="w-[calc(100vw-80px)] ml-[80px] h-full overflow-y-auto">{children}</div>
-          </div>
+          <div className="w-full h-screen overflow-y-none">{children}</div>
         </ThemeProvider>
       </body>
     </html>

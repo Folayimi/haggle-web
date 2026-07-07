@@ -591,10 +591,10 @@ const PostProductPage = () => {
 
   return (
     <AppShell>
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-screen flex flex-col bg-transparent">
         <div className="relative flex-1 mx-auto max-w-7xl w-full px-3 py-4 lg:px-6 flex flex-col">
           {/* HEADER ROW */}
-          <div className="fixed top-0 w-[calc(100vw-150px)] py-3 bg-background flex items-center justify-between mb-4 z-30">
+          <div className="sticky top-0 left-0 w-full py-3 px-3 bg-background/20 backdrop-blur rounded-full flex items-center justify-between mb-4 z-30">
             <div className="flex items-center gap-3">
               <Link
                 href="/create"
@@ -653,7 +653,7 @@ const PostProductPage = () => {
           </div>
 
           {/* COMPLETION SUMMARY */}
-          <div className="mb-4 mt-18 flex items-center justify-between">
+          <div className="mb-4 flex items-center justify-between">
             <CompletionSummary completed={completedCount} total={tabs.length} />
           </div>
 
@@ -786,6 +786,7 @@ const PostProductPage = () => {
                                       options={item?.options ?? []}
                                       placeholder={item.placeholder ?? "Select"}
                                       value={currentValue}
+                                      optional={!item?.required}
                                       type="tag"
                                       onChange={(value) =>
                                         handleTagChange(item.name, value)
@@ -797,6 +798,7 @@ const PostProductPage = () => {
                                       placeholder={item.placeholder ?? ""}
                                       prominent
                                       value={currentValue}
+                                      optional={!item?.required}
                                       onChange={(e) =>
                                         handleTagChange(
                                           item.name,
@@ -811,6 +813,20 @@ const PostProductPage = () => {
                           </div>
                         </div>
                       ) : null}
+
+                      {productInfo["subCategory"] && (
+                        <div className="space-y-1.5">
+                          <GlassyField
+                            label="Location"
+                            placeholder="e.g. Lagos, Nigeria"
+                            prominent
+                            value=""
+                            onChange={(e) =>
+                              console.log("Location changed:", e.target.value)
+                            }
+                          />
+                        </div>
+                      )}
                     </motion.div>
                   )}
 

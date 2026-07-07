@@ -145,18 +145,7 @@ const CAROUSEL_IMAGES: CarouselImage[] = [
 // ============================================
 // CONSTANTS - Right Column Cards (Shortened Descriptions)
 // ============================================
-const RIGHT_CARDS = [
-  {
-    id: "seller-studio",
-    title: "Seller Studio",
-    description: "Configure your live room.",
-    icon: <Layers className="h-6 w-6" />,
-    href: "/room-styling",
-    color: "primary" as const,
-    stat: "12 presets",
-    step: "①",
-    label: "SETUP",
-  },
+const RIGHT_CARDS = [  
   {
     id: "post-product",
     title: "Post Product",
@@ -178,6 +167,17 @@ const RIGHT_CARDS = [
     stat: "1.8k added",
     step: "③",
     label: "CREATE",
+  },
+  {
+    id: "seller-studio",
+    title: "Seller Studio",
+    description: "Configure your live room.",
+    icon: <Layers className="h-6 w-6" />,
+    href: "/room-styling",
+    color: "primary" as const,
+    stat: "12 presets",
+    step: "①",
+    label: "SETUP",
   },
   {
     id: "host-live",
@@ -642,14 +642,11 @@ const CreatePage = () => {
   return (
     <AppShell>
       <div
-        className="min-h-screen flex flex-col"
-        style={{
-          backgroundColor: "var(--page-bg, #190C05)",
-        }}
+        className="min-h-screen flex flex-col"       
       >
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 py-5 lg:px-6 flex flex-col">
           {/* MAIN SPLIT LAYOUT */}
-          <div className="flex-1 grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
+          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
             <LiveRoomPreview />
 
             {/* RIGHT CARDS - 2x2 Grid with Hierarchy */}

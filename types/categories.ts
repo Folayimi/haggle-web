@@ -72,16 +72,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         type: "select",
         required: true,
         options: ["New", "Like New", "Excellent", "Good", "Fair", "For Parts"],
-      },
-      {
-        id: "location",
-        name: "Location",
-        type: "text",
-        required: true,
-        placeholder: "e.g. Lagos, Nigeria",
-      },
-    ],
-    recommendedTags: [
+      },      
       {
         id: "warranty",
         name: "Warranty Status",
@@ -171,15 +162,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
           "Other",
         ],
       },
-      {
-        id: "location",
-        name: "Location",
-        type: "text",
-        required: true,
-        placeholder: "e.g. Lagos, Nigeria",
-      },
-    ],
-    recommendedTags: [
+      
       {
         id: "color",
         name: "Color",
@@ -242,15 +225,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         placeholder: "e.g. Wood, Metal, Glass",
       },
 
-      {
-        id: "location",
-        name: "Location",
-        type: "text",
-        required: true,
-        placeholder: "e.g. Lagos, Nigeria",
-      },
-    ],
-    recommendedTags: [
+      
       {
         id: "brand",
         name: "Brand",
@@ -325,15 +300,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["New", "Like New", "Good", "Fair"],
       },
-      {
-        id: "location",
-        name: "Location",
-        type: "text",
-        required: true,
-        placeholder: "e.g. Lagos, Nigeria",
-      },
-    ],
-    recommendedTags: [
+      
       {
         id: "expiry",
         name: "Expiry Date",
@@ -399,15 +366,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["New", "Used", "Refurbished"],
       },
-      {
-        id: "location",
-        name: "Location",
-        type: "text",
-        required: true,
-        placeholder: "e.g. Lagos, Nigeria",
-      },
-    ],
-    recommendedTags: [
+      
       {
         id: "mileage",
         name: "Mileage",
@@ -468,15 +427,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         options: ["Original", "Reproduction", "Unsure"],
       },
 
-      {
-        id: "location",
-        name: "Location",
-        type: "text",
-        required: true,
-        placeholder: "e.g. Lagos, Nigeria",
-      },
-    ],
-    recommendedTags: [
+      
       {
         id: "year",
         name: "Year",
@@ -535,15 +486,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         options: ["New", "Like New", "Excellent", "Good", "Fair"],
       },
 
-      {
-        id: "location",
-        name: "Location",
-        type: "text",
-        required: true,
-        placeholder: "e.g. Lagos, Nigeria",
-      },
-    ],
-    recommendedTags: [
+      
       {
         id: "size",
         name: "Size",
@@ -617,15 +560,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         ],
       },
 
-      {
-        id: "location",
-        name: "Location",
-        type: "text",
-        required: true,
-        placeholder: "e.g. Lagos, Nigeria",
-      },
-    ],
-    recommendedTags: [
+      
       {
         id: "edition",
         name: "Edition",
@@ -683,16 +618,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["Sealed", "Open", "Vacuum Packed", "Other"],
       },
-
-      {
-        id: "location",
-        name: "Location",
-        type: "text",
-        required: true,
-        placeholder: "e.g. Lagos, Nigeria",
-      },
-    ],
-    recommendedTags: [
+      
       {
         id: "quantity",
         name: "Quantity",
@@ -752,15 +678,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         options: ["New", "Like New", "Excellent", "Good", "Fair", "For Parts"],
       },
 
-      {
-        id: "location",
-        name: "Location",
-        type: "text",
-        required: true,
-        placeholder: "e.g. Lagos, Nigeria",
-      },
-    ],
-    recommendedTags: [
+      
       {
         id: "specs",
         name: "Specifications",
@@ -818,16 +736,6 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["New", "Like New", "Excellent", "Good", "Fair"],
       },
-
-      {
-        id: "location",
-        name: "Location",
-        type: "text",
-        required: true,
-        placeholder: "e.g. Lagos, Nigeria",
-      },
-    ],
-    recommendedTags: [
       {
         id: "size",
         name: "Size",
@@ -842,6 +750,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: false,
         placeholder: "e.g. Chicken, Beef",
       },
+      
     ],
   },
 ];
@@ -893,7 +802,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 3-5 days, 2 weeks",
       },
-     
+
       {
         id: "location",
         name: "Location",
@@ -966,7 +875,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 4 weeks, Monthly",
       },
-     
+
       {
         id: "location",
         name: "Location",
@@ -1035,7 +944,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 2 days, 1 week",
       },
-     
+
       {
         id: "location",
         name: "Location",
@@ -1113,7 +1022,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. React, Node.js, Python",
       },
-     
+
       {
         id: "location",
         name: "Location",
@@ -1182,7 +1091,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 1 hour, 2 days",
       },
-     
+
       {
         id: "location",
         name: "Location",
@@ -1253,7 +1162,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. Same day, 2 days notice",
       },
-     
+
       {
         id: "location",
         name: "Service Area",
@@ -1321,7 +1230,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. Weekdays, Evenings, Weekends",
       },
-     
+
       {
         id: "location",
         name: "Location",
@@ -1396,7 +1305,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. Weekdays, Evenings, Weekends",
       },
-     
+
       {
         id: "location",
         name: "Location",
@@ -1472,7 +1381,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 2 weeks notice, 3 months advance",
       },
-     
+
       {
         id: "location",
         name: "Service Area",
@@ -1540,7 +1449,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 24 hours, 1 week",
       },
-     
+
       {
         id: "location",
         name: "Location",
@@ -1609,7 +1518,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 2 weeks, 1 week",
       },
-     
+
       {
         id: "location",
         name: "Location",
@@ -1670,7 +1579,7 @@ export const SERVICE_CATEGORIES: Category[] = [
         required: true,
         placeholder: "e.g. 2 days, 1 week",
       },
-     
+
       {
         id: "location",
         name: "Location",

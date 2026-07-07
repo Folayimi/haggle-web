@@ -1417,8 +1417,8 @@ function StickyHeader({
     <div
       className="
         sticky top-0 z-30
-        bg-background
-        border-b border-border/40
+        bg-background/20 backdrop-blur        
+        rounded-full
         px-3 py-3 lg:px-6
         flex items-center justify-between
         -mx-3 lg:-mx-6
@@ -1611,7 +1611,7 @@ const AddServicePage = () => {
 
   return (
     <AppShell>
-      <div className="min-h-screen flex flex-col bg-background">
+      <div className="min-h-screen flex flex-col">
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 lg:px-6 flex flex-col">
           {/* STICKY HEADER */}
           <StickyHeader
@@ -1743,16 +1743,16 @@ const AddServicePage = () => {
                           label="Category"
                           options={SERVICE_CATEGORIES}
                           placeholder="Select category"
-                          onChange={(value) => {                      
+                          onChange={(value) => {
                             setCategory(value);
-                            setServiceType("")
+                            setServiceType("");
                             setServiceSubCategories(
                               SERVICE_CATEGORIES[
                                 SERVICE_CATEGORIES.findIndex(
                                   (cat) => cat.name === value,
                                 )
                               ].subcategories,
-                            );                           
+                            );
                           }}
                         />
                         <GlassySelect
