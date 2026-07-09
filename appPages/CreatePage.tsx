@@ -145,7 +145,7 @@ const CAROUSEL_IMAGES: CarouselImage[] = [
 // ============================================
 // CONSTANTS - Right Column Cards (Shortened Descriptions)
 // ============================================
-const RIGHT_CARDS = [  
+const RIGHT_CARDS = [
   {
     id: "post-product",
     title: "Post Product",
@@ -461,7 +461,7 @@ function GlassyActionCard({
           ${config.border}
           overflow-hidden
           relative
-          ${!isTop ? 'opacity-85' : ''}
+          ${!isTop ? "opacity-85" : ""}
         `}
       >
         <Link
@@ -541,13 +541,16 @@ function CircularProgress({
   };
 
   // Generate sparkline path
-  const sparklinePath = sparkline.length > 0
-    ? sparkline.map((value, i) => {
-        const x = (i / (sparkline.length - 1)) * 40;
-        const y = 16 - (value / 100) * 14;
-        return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-      }).join(' ')
-    : '';
+  const sparklinePath =
+    sparkline.length > 0
+      ? sparkline
+          .map((value, i) => {
+            const x = (i / (sparkline.length - 1)) * 40;
+            const y = 16 - (value / 100) * 14;
+            return `${i === 0 ? "M" : "L"} ${x} ${y}`;
+          })
+          .join(" ")
+      : "";
 
   return (
     <motion.div
@@ -641,9 +644,7 @@ function CircularProgress({
 const CreatePage = () => {
   return (
     <AppShell>
-      <div
-        className="min-h-screen flex flex-col"       
-      >
+      <div className="min-h-screen flex flex-col">
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 py-5 lg:px-6 flex flex-col">
           {/* MAIN SPLIT LAYOUT */}
           <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">

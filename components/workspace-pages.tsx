@@ -24,12 +24,7 @@ import {
   VideoOff,
 } from "lucide-react";
 import { saveImageFromUrl, saveAudioBlob } from "@/lib/indexeddb";
-import {
-  startTransition,
-  useDeferredValue,
-  useMemo,
-  useState,
-} from "react";
+import { startTransition, useDeferredValue, useMemo, useState } from "react";
 
 import { AppShell } from "@/components/app-shell";
 import {
@@ -119,8 +114,6 @@ function Chip({
   );
 }
 
-    
-
 function MessageThread({
   thread,
   draft,
@@ -176,9 +169,14 @@ function MessageThread({
                   <Play className="h-4 w-4" />
                 </button>
                 <div className="wave-bars flex items-end gap-1 text-current">
-                  {(message.waveform ?? [6, 12, 16, 10, 20]).map((value, index) => (
-                    <span key={`${message.id}-${index}`} style={{ height: value }} />
-                  ))}
+                  {(message.waveform ?? [6, 12, 16, 10, 20]).map(
+                    (value, index) => (
+                      <span
+                        key={`${message.id}-${index}`}
+                        style={{ height: value }}
+                      />
+                    ),
+                  )}
                 </div>
                 {message.audioUrl ? (
                   <audio className="ml-3" controls src={message.audioUrl} />
@@ -189,8 +187,12 @@ function MessageThread({
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-primary">
                   Shared product
                 </p>
-                <p className="mt-2 font-semibold">{getProductById(message.productId).name}</p>
-                <p className="text-sm text-muted">{getProductById(message.productId).price}</p>
+                <p className="mt-2 font-semibold">
+                  {getProductById(message.productId).name}
+                </p>
+                <p className="text-sm text-muted">
+                  {getProductById(message.productId).price}
+                </p>
               </div>
             ) : message.type === "screenshot" ? (
               <div>
@@ -298,12 +300,10 @@ function TextField({
   );
 }
 
-function MarketplaceMessages({
-  compact = false,
-}: {
-  compact?: boolean;
-}) {
-  const activeConversationId = useHaggleStore((state) => state.activeConversationId);
+function MarketplaceMessages({ compact = false }: { compact?: boolean }) {
+  const activeConversationId = useHaggleStore(
+    (state) => state.activeConversationId,
+  );
   const setActiveConversationId = useHaggleStore(
     (state) => state.setActiveConversationId,
   );
@@ -328,18 +328,20 @@ function MarketplaceMessages({
       (conversation) => conversation.id === activeConversationId,
     ) ?? filteredConversations[0];
 
-  const [localMessages, setLocalMessages] = useState<Record<string, ChatMessage[]>>(
-    Object.fromEntries(conversations.map((item) => [item.id, item.messages])),
-  );
+  const [localMessages, setLocalMessages] = useState<
+    Record<string, ChatMessage[]>
+  >(Object.fromEntries(conversations.map((item) => [item.id, item.messages])));
 
   const thread = activeConversation
     ? {
         ...activeConversation,
-        messages: localMessages[activeConversation.id] ?? activeConversation.messages,
+        messages:
+          localMessages[activeConversation.id] ?? activeConversation.messages,
       }
     : {
         ...conversations[0],
-        messages: localMessages[conversations[0].id] ?? conversations[0].messages,
+        messages:
+          localMessages[conversations[0].id] ?? conversations[0].messages,
       };
 
   function sendDraft() {
@@ -366,7 +368,13 @@ function MarketplaceMessages({
     });
   }
 
-  async function sendVoice({ audioId, audioUrl }: { audioId: string; audioUrl: string }) {
+  async function sendVoice({
+    audioId,
+    audioUrl,
+  }: {
+    audioId: string;
+    audioUrl: string;
+  }) {
     const threadId = thread.id;
     startTransition(() => {
       setLocalMessages((state) => ({
@@ -387,7 +395,12 @@ function MarketplaceMessages({
   }
 
   return (
-    <div className={cn("grid gap-5", compact ? "lg:grid-cols-1" : "lg:grid-cols-[0.38fr_0.62fr]")}>
+    <div
+      className={cn(
+        "grid gap-5",
+        compact ? "lg:grid-cols-1" : "lg:grid-cols-[0.38fr_0.62fr]",
+      )}
+    >
       <div className="panel rounded-[34px] p-4">
         <div className="mb-4 rounded-[22px] border border-border bg-background-elevated px-4 py-3">
           <div className="flex items-center gap-3">
@@ -415,7 +428,9 @@ function MarketplaceMessages({
                   alt={conversation.sellerName}
                   className="h-12 w-12 rounded-2xl object-cover"
                 />
-                <p className="mt-2 text-sm font-semibold">{conversation.sellerName}</p>
+                <p className="mt-2 text-sm font-semibold">
+                  {conversation.sellerName}
+                </p>
                 <p className="text-xs text-success">Online</p>
               </button>
             ))}
@@ -440,8 +455,12 @@ function MarketplaceMessages({
               />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-3">
-                  <p className="truncate font-semibold">{conversation.sellerName}</p>
-                  <span className="text-xs text-muted">{conversation.updatedAt}</span>
+                  <p className="truncate font-semibold">
+                    {conversation.sellerName}
+                  </p>
+                  <span className="text-xs text-muted">
+                    {conversation.updatedAt}
+                  </span>
                 </div>
                 <p className="truncate text-sm text-muted">
                   {conversation.messages.at(-1)?.text ?? "Voice note shared"}
@@ -479,8 +498,15 @@ export function DashboardPage() {
         description="A desktop-friendly live feed that keeps the product front and center, with seller trust and room energy never more than one click away."
         actions={
           <>
-            <PrimaryButton href="/market" label="Browse market" icon={<Search className="h-4 w-4" />} />
-            <GhostButton href="/negotiation-room" label="Open negotiation room" />
+            <PrimaryButton
+              href="/market"
+              label="Browse market"
+              icon={<Search className="h-4 w-4" />}
+            />
+            <GhostButton
+              href="/negotiation-room"
+              label="Open negotiation room"
+            />
           </>
         }
       />
@@ -525,15 +551,21 @@ export function DashboardPage() {
                   </p>
                   <div className="mt-4 grid grid-cols-3 gap-3 text-center">
                     <div className="rounded-2xl bg-white/8 px-3 py-3">
-                      <p className="text-xl font-semibold">{liveNow[0].participantCount}</p>
+                      <p className="text-xl font-semibold">
+                        {liveNow[0].participantCount}
+                      </p>
                       <p className="text-xs text-white/60">Watching</p>
                     </div>
                     <div className="rounded-2xl bg-white/8 px-3 py-3">
-                      <p className="text-xl font-semibold">{liveNow[0].offerCount}</p>
+                      <p className="text-xl font-semibold">
+                        {liveNow[0].offerCount}
+                      </p>
                       <p className="text-xs text-white/60">Offers</p>
                     </div>
                     <div className="rounded-2xl bg-white/8 px-3 py-3">
-                      <p className="text-xl font-semibold">{liveNow[0].saveCount}</p>
+                      <p className="text-xl font-semibold">
+                        {liveNow[0].saveCount}
+                      </p>
                       <p className="text-xs text-white/60">Saves</p>
                     </div>
                   </div>
@@ -571,9 +603,21 @@ export function DashboardPage() {
           </div>
 
           <div className="grid gap-5 sm:grid-cols-3 xl:grid-cols-1">
-            <MetricCard label="Rooms live" value="12" detail="Across beauty, decor, fashion, and tech tonight." />
-            <MetricCard label="Reserved drops" value="4" detail="Your tickets are locked in and waiting." />
-            <MetricCard label="Offer win rate" value="68%" detail="Compared with your last 10 active room bids." />
+            <MetricCard
+              label="Rooms live"
+              value="12"
+              detail="Across beauty, decor, fashion, and tech tonight."
+            />
+            <MetricCard
+              label="Reserved drops"
+              value="4"
+              detail="Your tickets are locked in and waiting."
+            />
+            <MetricCard
+              label="Offer win rate"
+              value="68%"
+              detail="Compared with your last 10 active room bids."
+            />
           </div>
         </div>
       </ContentSection>
@@ -582,7 +626,13 @@ export function DashboardPage() {
         <SectionTitle
           title="Live now"
           description="Rich discovery cards keep the live feed immersive without losing seller context."
-          action={<PrimaryButton href="/market" label="See full market" icon={<ChevronRight className="h-4 w-4" />} />}
+          action={
+            <PrimaryButton
+              href="/market"
+              label="See full market"
+              icon={<ChevronRight className="h-4 w-4" />}
+            />
+          }
         />
         <div className="grid gap-5 xl:grid-cols-2">
           {liveNow.map((session) => (
@@ -649,7 +699,11 @@ export function MarketPage() {
         description="Search fast, switch categories, reserve reminders, and keep the app feeling like a premium consumer product instead of a dull catalog."
         actions={
           <>
-            <PrimaryButton href="/market-search" label="Open dedicated search" icon={<Search className="h-4 w-4" />} />
+            <PrimaryButton
+              href="/market-search"
+              label="Open dedicated search"
+              icon={<Search className="h-4 w-4" />}
+            />
             <GhostButton href="/reminders" label="View my tickets" />
           </>
         }
@@ -693,7 +747,10 @@ export function MarketPage() {
       </ContentSection>
 
       <ContentSection>
-        <SectionTitle title="Products" description="Editorial-feeling product cards that keep seller identity close." />
+        <SectionTitle
+          title="Products"
+          description="Editorial-feeling product cards that keep seller identity close."
+        />
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
           {filteredProducts.map((product) => (
             <ProductCard key={product.id} product={product} />
@@ -702,7 +759,10 @@ export function MarketPage() {
       </ContentSection>
 
       <ContentSection className="pt-0">
-        <SectionTitle title="Services" description="Skilled trades, beauty sessions, and creative work live alongside physical products." />
+        <SectionTitle
+          title="Services"
+          description="Skilled trades, beauty sessions, and creative work live alongside physical products."
+        />
         <div className="grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
           {filteredServices.map((service) => (
             <ServiceCard key={service.id} service={service} />
@@ -711,7 +771,10 @@ export function MarketPage() {
       </ContentSection>
 
       <ContentSection className="pt-0">
-        <SectionTitle title="Ongoing and scheduled lives" description="Buyers can jump into current rooms or reserve upcoming ones without leaving the market." />
+        <SectionTitle
+          title="Ongoing and scheduled lives"
+          description="Buyers can jump into current rooms or reserve upcoming ones without leaving the market."
+        />
         <div className="grid gap-5 lg:grid-cols-3">
           {allLiveSessions.map((session) => (
             <LiveSessionCard key={session.id} session={session} compact />
@@ -727,7 +790,9 @@ export function MarketSearchPage() {
   const deferredQuery = useDeferredValue(query);
   const recentSearches = useHaggleStore((state) => state.recentSearches);
   const addRecentSearch = useHaggleStore((state) => state.addRecentSearch);
-  const removeRecentSearch = useHaggleStore((state) => state.removeRecentSearch);
+  const removeRecentSearch = useHaggleStore(
+    (state) => state.removeRecentSearch,
+  );
 
   const filteredResults = useMemo(() => {
     if (!deferredQuery.trim()) {
@@ -794,7 +859,10 @@ export function MarketSearchPage() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => recentSearches.at(-1) && removeRecentSearch(recentSearches.at(-1)!)}
+                  onClick={() =>
+                    recentSearches.at(-1) &&
+                    removeRecentSearch(recentSearches.at(-1)!)
+                  }
                   className="mt-3 text-sm font-semibold text-primary"
                 >
                   Clear latest
@@ -837,8 +905,12 @@ export function MarketSearchPage() {
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                         {result.type}
                       </p>
-                      <h4 className="mt-2 truncate text-lg font-semibold">{result.title}</h4>
-                      <p className="truncate text-sm text-muted">{result.subtitle}</p>
+                      <h4 className="mt-2 truncate text-lg font-semibold">
+                        {result.title}
+                      </h4>
+                      <p className="truncate text-sm text-muted">
+                        {result.subtitle}
+                      </p>
                     </div>
                     <span className="rounded-full bg-surface px-3 py-2 text-xs font-semibold text-muted">
                       {result.pill}
@@ -856,8 +928,11 @@ export function MarketSearchPage() {
 
 export function ProductDetailPage({ productId }: { productId?: string }) {
   const product = productId ? getProductById(productId) : featuredProduct;
-  const seller = sellerProfiles.find((s) => s.id === product.sellerId) ?? featuredSeller;
-  const relatedLives = allLiveSessions.filter((session) => session.sellerId === seller.id);
+  const seller =
+    sellerProfiles.find((s) => s.id === product.sellerId) ?? featuredSeller;
+  const relatedLives = allLiveSessions.filter(
+    (session) => session.sellerId === seller.id,
+  );
 
   return (
     <WorkspaceFrame>
@@ -865,7 +940,11 @@ export function ProductDetailPage({ productId }: { productId?: string }) {
         <div className="grid gap-6 xl:grid-cols-[0.58fr_0.42fr]">
           <div className="panel overflow-hidden rounded-[36px]">
             <div className="relative h-[420px]">
-              <img src={product.imageUrl} alt={product.name} className="h-full w-full object-cover" />
+              <img
+                src={product.imageUrl}
+                alt={product.name}
+                className="h-full w-full object-cover"
+              />
               <div className="absolute left-5 top-5 rounded-full bg-white/85 px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
                 {product.category}
               </div>
@@ -878,18 +957,36 @@ export function ProductDetailPage({ productId }: { productId?: string }) {
               </p>
               <h1 className="mt-4 text-4xl font-semibold">{product.name}</h1>
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <span className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white">{product.price}</span>
-                <span className="rounded-full bg-surface px-4 py-2 text-sm font-medium text-muted">{product.stockStatus}</span>
+                <span className="rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white">
+                  {product.price}
+                </span>
+                <span className="rounded-full bg-surface px-4 py-2 text-sm font-medium text-muted">
+                  {product.stockStatus}
+                </span>
               </div>
-              <p className="mt-5 text-sm leading-8 text-muted">{product.description} {product.negotiationNote}</p>
+              <p className="mt-5 text-sm leading-8 text-muted">
+                {product.description} {product.negotiationNote}
+              </p>
               <div className="mt-5 flex flex-wrap gap-2">
                 {product.features.map((feature) => (
-                  <span key={feature} className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted">{feature}</span>
+                  <span
+                    key={feature}
+                    className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted"
+                  >
+                    {feature}
+                  </span>
                 ))}
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
-                <PrimaryButton href="/conversation" label="Message owner" icon={<Send className="h-4 w-4" />} />
-                <GhostButton href="/seller-profile" label="Open seller profile" />
+                <PrimaryButton
+                  href="/conversation"
+                  label="Message owner"
+                  icon={<Send className="h-4 w-4" />}
+                />
+                <GhostButton
+                  href="/seller-profile"
+                  label="Open seller profile"
+                />
               </div>
             </div>
             <SellerIdentity seller={seller} />
@@ -911,22 +1008,29 @@ export function ProductDetailPage({ productId }: { productId?: string }) {
           ))}
         </div>
       </ContentSection>
-      
     </WorkspaceFrame>
   );
 }
 
 export function ServiceDetailPage({ serviceId }: { serviceId?: string }) {
   const service = serviceId ? getServiceById(serviceId) : featuredService;
-  const seller = sellerProfiles.find((profile) => profile.id === service.sellerId) ?? sellerProfiles[0];
-  const relatedLives = allLiveSessions.filter((session) => session.sellerId === seller.id);
+  const seller =
+    sellerProfiles.find((profile) => profile.id === service.sellerId) ??
+    sellerProfiles[0];
+  const relatedLives = allLiveSessions.filter(
+    (session) => session.sellerId === seller.id,
+  );
 
   return (
     <WorkspaceFrame>
       <ContentSection className="pt-6">
         <div className="grid gap-6 xl:grid-cols-[0.55fr_0.45fr]">
           <div className="panel overflow-hidden rounded-[36px]">
-            <img src={service.imageUrl} alt={service.name} className="h-full min-h-[430px] w-full object-cover" />
+            <img
+              src={service.imageUrl}
+              alt={service.name}
+              className="h-full min-h-[430px] w-full object-cover"
+            />
           </div>
           <div className="space-y-5">
             <div className="panel rounded-[34px] p-6">
@@ -935,21 +1039,39 @@ export function ServiceDetailPage({ serviceId }: { serviceId?: string }) {
               </p>
               <h1 className="mt-4 text-4xl font-semibold">{service.name}</h1>
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <span className="rounded-full bg-secondary px-4 py-2 text-sm font-semibold text-white">{service.price}</span>
-                <span className="rounded-full bg-surface px-4 py-2 text-sm font-medium text-muted">{service.deliveryTime}</span>
+                <span className="rounded-full bg-secondary px-4 py-2 text-sm font-semibold text-white">
+                  {service.price}
+                </span>
+                <span className="rounded-full bg-surface px-4 py-2 text-sm font-medium text-muted">
+                  {service.deliveryTime}
+                </span>
               </div>
-              <p className="mt-5 text-sm leading-8 text-muted">{service.description}</p>
+              <p className="mt-5 text-sm leading-8 text-muted">
+                {service.description}
+              </p>
               <div className="mt-5 rounded-[24px] bg-surface p-4">
                 <p className="font-semibold">What is included</p>
                 <div className="mt-3 flex flex-wrap gap-2">
                   {service.includes.map((item) => (
-                    <span key={item} className="rounded-full bg-background-elevated px-3 py-1 text-xs font-medium text-muted">{item}</span>
+                    <span
+                      key={item}
+                      className="rounded-full bg-background-elevated px-3 py-1 text-xs font-medium text-muted"
+                    >
+                      {item}
+                    </span>
                   ))}
                 </div>
               </div>
               <div className="mt-6 flex flex-wrap gap-3">
-                <PrimaryButton href="/conversation" label="Request service" icon={<Send className="h-4 w-4" />} />
-                <GhostButton href="/seller-profile" label="View seller profile" />
+                <PrimaryButton
+                  href="/conversation"
+                  label="Request service"
+                  icon={<Send className="h-4 w-4" />}
+                />
+                <GhostButton
+                  href="/seller-profile"
+                  label="View seller profile"
+                />
               </div>
             </div>
             <SellerIdentity seller={seller} />
@@ -958,7 +1080,10 @@ export function ServiceDetailPage({ serviceId }: { serviceId?: string }) {
       </ContentSection>
 
       <ContentSection>
-        <SectionTitle title="Scheduled lives from this seller" description="Keep the service page connected to live sessions and reminder bookings." />
+        <SectionTitle
+          title="Scheduled lives from this seller"
+          description="Keep the service page connected to live sessions and reminder bookings."
+        />
         <div className="grid gap-5 lg:grid-cols-2">
           {relatedLives.map((session) => (
             <LiveSessionCard key={session.id} session={session} compact />
@@ -1040,7 +1165,9 @@ export function SellerProfilePage() {
                   onClick={() => setFollowing((value) => !value)}
                   className={cn(
                     "rounded-full px-5 py-3 text-sm font-semibold",
-                    following ? "bg-white text-foreground" : "bg-primary text-white",
+                    following
+                      ? "bg-white text-foreground"
+                      : "bg-primary text-white",
                   )}
                 >
                   {following ? "Following" : "Follow seller"}
@@ -1065,16 +1192,31 @@ export function SellerProfilePage() {
                 {seller.bio}
               </p>
               <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                <MetricCard label="Followers" value={seller.followers} detail="People tracking drops and rooms." />
-                <MetricCard label="Rating" value={seller.rating} detail="Based on negotiation and delivery feedback." />
-                <MetricCard label="Response" value={seller.responseTime} detail="Average seller reply time." />
+                <MetricCard
+                  label="Followers"
+                  value={seller.followers}
+                  detail="People tracking drops and rooms."
+                />
+                <MetricCard
+                  label="Rating"
+                  value={seller.rating}
+                  detail="Based on negotiation and delivery feedback."
+                />
+                <MetricCard
+                  label="Response"
+                  value={seller.responseTime}
+                  detail="Average seller reply time."
+                />
               </div>
             </div>
             <div className="rounded-[30px] bg-surface p-5">
               <p className="text-sm font-semibold">What this seller offers</p>
               <div className="mt-4 space-y-3">
                 {seller.whatTheyOffer.map((offer) => (
-                  <div key={offer} className="rounded-[20px] bg-background-elevated px-4 py-4 text-sm text-muted">
+                  <div
+                    key={offer}
+                    className="rounded-[20px] bg-background-elevated px-4 py-4 text-sm text-muted"
+                  >
                     {offer}
                   </div>
                 ))}
@@ -1141,7 +1283,9 @@ export function ProfilePage() {
                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
                   Seller workspace profile
                 </p>
-                <h1 className="mt-2 text-4xl font-semibold">{currentUser.fullName}</h1>
+                <h1 className="mt-2 text-4xl font-semibold">
+                  {currentUser.fullName}
+                </h1>
                 <p className="text-sm text-muted">
                   {currentUser.businessName} • {currentUser.username}
                 </p>
@@ -1162,9 +1306,21 @@ export function ProfilePage() {
             </div>
           </div>
           <div className="grid gap-5 px-6 pb-6 sm:grid-cols-3">
-            <MetricCard label="Saved deals" value={savedIds.length.toString()} detail="Items and rooms you want to revisit." />
-            <MetricCard label="Upcoming lives" value={reservedIds.length.toString()} detail="Reserved sessions and reminder-ready tickets." />
-            <MetricCard label="Rooms joined" value={currentUser.metrics.roomsJoined.toString()} detail="Buyer and seller room activity this month." />
+            <MetricCard
+              label="Saved deals"
+              value={savedIds.length.toString()}
+              detail="Items and rooms you want to revisit."
+            />
+            <MetricCard
+              label="Upcoming lives"
+              value={reservedIds.length.toString()}
+              detail="Reserved sessions and reminder-ready tickets."
+            />
+            <MetricCard
+              label="Rooms joined"
+              value={currentUser.metrics.roomsJoined.toString()}
+              detail="Buyer and seller room activity this month."
+            />
           </div>
         </div>
       </ContentSection>
@@ -1192,19 +1348,40 @@ export function ProfilePage() {
                 description="Start a room, review performance, and keep upcoming sessions in view."
               />
               <div className="grid gap-4 sm:grid-cols-2">
-                <MetricCard label="Upcoming lives" value="3" detail="Sessions ready for promo and reminders." />
-                <MetricCard label="Offer rate" value="47%" detail="Buyers are making strong bids in your active rooms." />
-                <MetricCard label="Recent rooms" value="8" detail="Buyer and seller rooms from the last 14 days." />
-                <MetricCard label="Start live" value="Ready" detail="Room styling and title are already prepared." />
+                <MetricCard
+                  label="Upcoming lives"
+                  value="3"
+                  detail="Sessions ready for promo and reminders."
+                />
+                <MetricCard
+                  label="Offer rate"
+                  value="47%"
+                  detail="Buyers are making strong bids in your active rooms."
+                />
+                <MetricCard
+                  label="Recent rooms"
+                  value="8"
+                  detail="Buyer and seller rooms from the last 14 days."
+                />
+                <MetricCard
+                  label="Start live"
+                  value="Ready"
+                  detail="Room styling and title are already prepared."
+                />
               </div>
             </div>
             <div className="panel rounded-[34px] p-6">
               <h3 className="text-xl font-semibold">Recent rooms</h3>
               <div className="mt-5 space-y-3">
                 {allLiveSessions.slice(0, 3).map((session) => (
-                  <div key={session.id} className="rounded-[24px] bg-surface p-4">
+                  <div
+                    key={session.id}
+                    className="rounded-[24px] bg-surface p-4"
+                  >
                     <p className="font-semibold">{session.title}</p>
-                    <p className="mt-1 text-sm text-muted">{session.schedule}</p>
+                    <p className="mt-1 text-sm text-muted">
+                      {session.schedule}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -1241,13 +1418,19 @@ export function RemindersPage() {
         {reservedLives.length === 0 ? (
           <div className="panel rounded-[36px] p-10 text-center">
             <Ticket className="mx-auto h-10 w-10 text-primary" />
-            <h2 className="mt-4 text-2xl font-semibold">No reserved lives yet</h2>
+            <h2 className="mt-4 text-2xl font-semibold">
+              No reserved lives yet
+            </h2>
             <p className="mt-3 text-sm leading-7 text-muted">
               Explore scheduled rooms, reserve your seat, and your tickets will
               land here with seller previews and reminder messaging.
             </p>
             <div className="mt-6">
-              <PrimaryButton href="/market" label="Browse live sessions" icon={<Search className="h-4 w-4" />} />
+              <PrimaryButton
+                href="/market"
+                label="Browse live sessions"
+                icon={<Search className="h-4 w-4" />}
+              />
             </div>
           </div>
         ) : (
@@ -1271,23 +1454,51 @@ export function AnalyticsPage() {
         eyebrow="Analytics"
         title="Seller performance that feels polished, not spreadsheet-heavy."
         description="A quick overview of session performance, offer conversion, trust, and export-ready reporting."
-        actions={<PrimaryButton href="/analytics" label="Export insights" icon={<Download className="h-4 w-4" />} />}
+        actions={
+          <PrimaryButton
+            href="/analytics"
+            label="Export insights"
+            icon={<Download className="h-4 w-4" />}
+          />
+        }
       />
       <ContentSection>
         <div className="grid gap-5 lg:grid-cols-4">
-          <MetricCard label="Sessions run" value="18" detail="Lives hosted in the current performance window." />
-          <MetricCard label="Offer rate" value="47%" detail="Share of viewers who entered at least one offer." />
-          <MetricCard label="Return buyers" value="31%" detail="People coming back into multiple rooms." />
-          <MetricCard label="Trust score" value="96" detail="Identity, moderation, and fulfillment metrics combined." />
+          <MetricCard
+            label="Sessions run"
+            value="18"
+            detail="Lives hosted in the current performance window."
+          />
+          <MetricCard
+            label="Offer rate"
+            value="47%"
+            detail="Share of viewers who entered at least one offer."
+          />
+          <MetricCard
+            label="Return buyers"
+            value="31%"
+            detail="People coming back into multiple rooms."
+          />
+          <MetricCard
+            label="Trust score"
+            value="96"
+            detail="Identity, moderation, and fulfillment metrics combined."
+          />
         </div>
       </ContentSection>
       <ContentSection className="pt-0">
         <div className="grid gap-5 xl:grid-cols-[0.66fr_0.34fr]">
           <div className="panel rounded-[34px] p-6">
-            <SectionTitle title="Session momentum" description="Mock chart area ready for a future analytics data pipeline." />
+            <SectionTitle
+              title="Session momentum"
+              description="Mock chart area ready for a future analytics data pipeline."
+            />
             <div className="mt-8 flex h-72 items-end gap-4 rounded-[28px] bg-surface p-6">
               {chartBars.map((bar, index) => (
-                <div key={bar + index} className="flex flex-1 flex-col items-center gap-3">
+                <div
+                  key={bar + index}
+                  className="flex flex-1 flex-col items-center gap-3"
+                >
                   <div
                     className="w-full rounded-t-[20px] bg-[linear-gradient(180deg,#ff8b4c,#f44d24)]"
                     style={{ height: `${bar * 2.2}px` }}
@@ -1300,7 +1511,10 @@ export function AnalyticsPage() {
             </div>
           </div>
           <div className="panel rounded-[34px] p-6">
-            <SectionTitle title="Trust and safety" description="Metrics buyers care about before entering a room." />
+            <SectionTitle
+              title="Trust and safety"
+              description="Metrics buyers care about before entering a room."
+            />
             <div className="space-y-3">
               {[
                 ["Verified identity", "Complete"],
@@ -1308,7 +1522,10 @@ export function AnalyticsPage() {
                 ["Muted participant incidents", "Low"],
                 ["Fulfillment reliability", "Excellent"],
               ].map(([label, status]) => (
-                <div key={label} className="rounded-[24px] bg-surface px-4 py-4">
+                <div
+                  key={label}
+                  className="rounded-[24px] bg-surface px-4 py-4"
+                >
                   <p className="font-semibold">{label}</p>
                   <p className="mt-1 text-sm text-muted">{status}</p>
                 </div>
@@ -1330,7 +1547,11 @@ export function CreateHubPage() {
         description="This hub keeps creation flows premium and warm, with quick actions, workflow guidance, and a room preview before you go live."
         actions={
           <>
-            <PrimaryButton href="/post-product" label="Post product" icon={<Sparkles className="h-4 w-4" />} />
+            <PrimaryButton
+              href="/post-product"
+              label="Post product"
+              icon={<Sparkles className="h-4 w-4" />}
+            />
             <GhostButton href="/schedule-live" label="Schedule live" />
           </>
         }
@@ -1341,10 +1562,13 @@ export function CreateHubPage() {
             <p className="text-xs font-semibold uppercase tracking-[0.28em]">
               Seller studio card
             </p>
-            <h2 className="mt-4 text-4xl font-semibold">Build a room buyers want to stay in.</h2>
+            <h2 className="mt-4 text-4xl font-semibold">
+              Build a room buyers want to stay in.
+            </h2>
             <p className="mt-4 max-w-2xl text-sm leading-7">
-              From listing copy to atmosphere presets, the create hub is designed
-              to make live commerce feel intentional and premium rather than rushed.
+              From listing copy to atmosphere presets, the create hub is
+              designed to make live commerce feel intentional and premium rather
+              than rushed.
             </p>
             <div className="mt-6 grid gap-4 sm:grid-cols-2">
               {[
@@ -1373,7 +1597,10 @@ export function CreateHubPage() {
                   "Attach room-ready visuals",
                   "Schedule buyer reminders",
                 ].map((step, index) => (
-                  <div key={step} className="flex items-center gap-3 rounded-[22px] bg-surface px-4 py-4">
+                  <div
+                    key={step}
+                    className="flex items-center gap-3 rounded-[22px] bg-surface px-4 py-4"
+                  >
                     <span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-sm font-semibold text-white">
                       {index + 1}
                     </span>
@@ -1389,7 +1616,9 @@ export function CreateHubPage() {
                 <div className="mt-4 grid grid-cols-3 gap-3">
                   <div className="rounded-[22px] bg-white/8 p-4">Stage</div>
                   <div className="rounded-[22px] bg-white/8 p-4">Chat</div>
-                  <div className="rounded-[22px] bg-white/8 p-4">Offer rail</div>
+                  <div className="rounded-[22px] bg-white/8 p-4">
+                    Offer rail
+                  </div>
                 </div>
               </div>
             </div>
@@ -1410,17 +1639,45 @@ export function PostProductPage() {
       />
       <ContentSection>
         <div className="grid gap-5 xl:grid-cols-[0.62fr_0.38fr]">
-          <FormBlock title="Product info" description="Set the core details buyers should trust at a glance.">
-            <TextField label="Product name" placeholder="Vintage Ceramic Story Vase" />
+          <FormBlock
+            title="Product info"
+            description="Set the core details buyers should trust at a glance."
+          >
+            <TextField
+              label="Product name"
+              placeholder="Vintage Ceramic Story Vase"
+            />
             <TextField label="Category" placeholder="Home Decor" />
             <TextField label="Price range" placeholder="$140 - $170" />
-            <TextField label="Condition or stock status" placeholder="Limited studio stock" />
-            <TextField label="Short description" placeholder="Describe the product in warm, buyer-friendly language." multiline />
+            <TextField
+              label="Condition or stock status"
+              placeholder="Limited studio stock"
+            />
+            <TextField
+              label="Short description"
+              placeholder="Describe the product in warm, buyer-friendly language."
+              multiline
+            />
           </FormBlock>
-          <FormBlock title="Offer shaping" description="Add the details that make a negotiation room feel intentional.">
-            <TextField label="Top features" placeholder="Hand-thrown finish, signed base, gift-ready packaging" multiline />
-            <TextField label="Bundle or negotiation note" placeholder="Open to bundle pricing for two or more pieces." multiline />
-            <TextField label="Cover image and gallery" placeholder="Upload entrypoint ready for future media APIs" multiline />
+          <FormBlock
+            title="Offer shaping"
+            description="Add the details that make a negotiation room feel intentional."
+          >
+            <TextField
+              label="Top features"
+              placeholder="Hand-thrown finish, signed base, gift-ready packaging"
+              multiline
+            />
+            <TextField
+              label="Bundle or negotiation note"
+              placeholder="Open to bundle pricing for two or more pieces."
+              multiline
+            />
+            <TextField
+              label="Cover image and gallery"
+              placeholder="Upload entrypoint ready for future media APIs"
+              multiline
+            />
             <button className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
               Save product draft
             </button>
@@ -1441,17 +1698,45 @@ export function AddServicePage() {
       />
       <ContentSection>
         <div className="grid gap-5 xl:grid-cols-[0.62fr_0.38fr]">
-          <FormBlock title="Service setup" description="Frame the offer clearly and keep the tone warm.">
-            <TextField label="Service name" placeholder="Launch-ready Creator Branding" />
-            <TextField label="Category or expertise" placeholder="Creative Services" />
+          <FormBlock
+            title="Service setup"
+            description="Frame the offer clearly and keep the tone warm."
+          >
+            <TextField
+              label="Service name"
+              placeholder="Launch-ready Creator Branding"
+            />
+            <TextField
+              label="Category or expertise"
+              placeholder="Creative Services"
+            />
             <TextField label="Base price" placeholder="From $420" />
             <TextField label="Delivery time" placeholder="4 days" />
-            <TextField label="What is included" placeholder="Moodboard, story templates, mini brand guide" multiline />
+            <TextField
+              label="What is included"
+              placeholder="Moodboard, story templates, mini brand guide"
+              multiline
+            />
           </FormBlock>
-          <FormBlock title="Audience and upgrades" description="Tell buyers who this service is for and what extras they can unlock.">
-            <TextField label="Who the service is for" placeholder="New sellers preparing for launch week" multiline />
-            <TextField label="Add-ons or upgrades" placeholder="Express delivery, extra launch assets, room visuals" multiline />
-            <TextField label="Portfolio image or preview" placeholder="Attach visuals or mock media notes" multiline />
+          <FormBlock
+            title="Audience and upgrades"
+            description="Tell buyers who this service is for and what extras they can unlock."
+          >
+            <TextField
+              label="Who the service is for"
+              placeholder="New sellers preparing for launch week"
+              multiline
+            />
+            <TextField
+              label="Add-ons or upgrades"
+              placeholder="Express delivery, extra launch assets, room visuals"
+              multiline
+            />
+            <TextField
+              label="Portfolio image or preview"
+              placeholder="Attach visuals or mock media notes"
+              multiline
+            />
             <button className="rounded-full bg-secondary px-5 py-3 text-sm font-semibold text-white">
               Save service draft
             </button>
@@ -1472,17 +1757,41 @@ export function ScheduleLivePage() {
       />
       <ContentSection>
         <div className="grid gap-5 xl:grid-cols-[0.62fr_0.38fr]">
-          <FormBlock title="Session planning" description="Name the live, set the timing, and shape the buyer promise.">
-            <TextField label="Live title" placeholder="Soft Glam Friday With Live Shade Matching" />
+          <FormBlock
+            title="Session planning"
+            description="Name the live, set the timing, and shape the buyer promise."
+          >
+            <TextField
+              label="Live title"
+              placeholder="Soft Glam Friday With Live Shade Matching"
+            />
             <TextField label="Date" placeholder="Saturday, May 16" />
             <TextField label="Time" placeholder="5:00 PM" />
             <TextField label="Expected duration" placeholder="45 minutes" />
-            <TextField label="Product or service focus" placeholder="Glow Session Makeup Kit" />
+            <TextField
+              label="Product or service focus"
+              placeholder="Glow Session Makeup Kit"
+            />
           </FormBlock>
-          <FormBlock title="Negotiation angle" description="Tell buyers why they should reserve before the room opens.">
-            <TextField label="What buyers will see explained live" placeholder="Shade matching, routine flow, brush selection, finish options" multiline />
-            <TextField label="Special offer or negotiation angle" placeholder="Brush upgrade for the first 10 buyers and live-only bundles" multiline />
-            <TextField label="Reminder message" placeholder="Bring your skin tone reference in chat for the best shade match." multiline />
+          <FormBlock
+            title="Negotiation angle"
+            description="Tell buyers why they should reserve before the room opens."
+          >
+            <TextField
+              label="What buyers will see explained live"
+              placeholder="Shade matching, routine flow, brush selection, finish options"
+              multiline
+            />
+            <TextField
+              label="Special offer or negotiation angle"
+              placeholder="Brush upgrade for the first 10 buyers and live-only bundles"
+              multiline
+            />
+            <TextField
+              label="Reminder message"
+              placeholder="Bring your skin tone reference in chat for the best shade match."
+              multiline
+            />
             <button className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
               Save live schedule
             </button>
@@ -1521,8 +1830,12 @@ export function RoomStylingPage() {
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">
                       {preset.name}
                     </p>
-                    <h3 className="mt-3 text-2xl font-semibold">{preset.headline}</h3>
-                    <p className="mt-3 text-sm leading-7 text-muted">{preset.mood}</p>
+                    <h3 className="mt-3 text-2xl font-semibold">
+                      {preset.headline}
+                    </h3>
+                    <p className="mt-3 text-sm leading-7 text-muted">
+                      {preset.mood}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     {preset.previewColors.map((color) => (
@@ -1544,7 +1857,10 @@ export function RoomStylingPage() {
             <div className="mt-5 rounded-[30px] border border-white/10 bg-white/6 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <p className="font-semibold">
-                  {roomPresets.find((preset) => preset.id === selectedPreset)?.name}
+                  {
+                    roomPresets.find((preset) => preset.id === selectedPreset)
+                      ?.name
+                  }
                 </p>
                 <span className="rounded-full bg-white/10 px-3 py-1 text-xs uppercase tracking-[0.2em] text-white/70">
                   cinematic
@@ -1554,7 +1870,9 @@ export function RoomStylingPage() {
                 <div className="rounded-[24px] bg-black/30 p-4">Stage</div>
                 <div className="space-y-3">
                   <div className="rounded-[20px] bg-black/30 p-4">Chat</div>
-                  <div className="rounded-[20px] bg-black/30 p-4">Accepted buyers</div>
+                  <div className="rounded-[20px] bg-black/30 p-4">
+                    Accepted buyers
+                  </div>
                 </div>
               </div>
             </div>
@@ -1578,15 +1896,30 @@ export function EditProfilePage() {
       />
       <ContentSection>
         <div className="grid gap-5 xl:grid-cols-[0.62fr_0.38fr]">
-          <FormBlock title="Profile details" description="Keep the public seller identity polished and clear.">
+          <FormBlock
+            title="Profile details"
+            description="Keep the public seller identity polished and clear."
+          >
             <TextField label="Full name" placeholder={currentUser.fullName} />
             <TextField label="Username" placeholder={currentUser.username} />
-            <TextField label="Business name" placeholder={currentUser.businessName} />
+            <TextField
+              label="Business name"
+              placeholder={currentUser.businessName}
+            />
             <TextField label="Bio" placeholder={currentUser.bio} multiline />
           </FormBlock>
-          <FormBlock title="Visibility and sharing" description="Control how the public profile appears across the app.">
-            <TextField label="Public profile visibility" placeholder="Visible to all marketplace buyers" />
-            <TextField label="Share URL pattern" placeholder={`haggle.app/seller/${currentUser.username.replace("@", "")}`} />
+          <FormBlock
+            title="Visibility and sharing"
+            description="Control how the public profile appears across the app."
+          >
+            <TextField
+              label="Public profile visibility"
+              placeholder="Visible to all marketplace buyers"
+            />
+            <TextField
+              label="Share URL pattern"
+              placeholder={`haggle.app/seller/${currentUser.username.replace("@", "")}`}
+            />
             <button className="rounded-full bg-primary px-5 py-3 text-sm font-semibold text-white">
               Save changes
             </button>
@@ -1599,8 +1932,12 @@ export function EditProfilePage() {
 
 export function SavedPage() {
   const savedIds = useHaggleStore((state) => state.savedItemIds);
-  const savedProducts = sellerProducts.filter((product) => savedIds.includes(product.id));
-  const savedLives = allLiveSessions.filter((live) => savedIds.includes(live.id));
+  const savedProducts = sellerProducts.filter((product) =>
+    savedIds.includes(product.id),
+  );
+  const savedLives = allLiveSessions.filter((live) =>
+    savedIds.includes(live.id),
+  );
 
   return (
     <WorkspaceFrame>
@@ -1613,7 +1950,9 @@ export function SavedPage() {
         <SectionTitle title="Saved products" />
         <div className="grid gap-5 lg:grid-cols-2">
           {savedProducts.length > 0 ? (
-            savedProducts.map((product) => <ProductCard key={product.id} product={product} />)
+            savedProducts.map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))
           ) : (
             <div className="panel rounded-[30px] p-6 text-sm text-muted">
               No saved products yet.
@@ -1625,7 +1964,9 @@ export function SavedPage() {
         <SectionTitle title="Saved live rooms" />
         <div className="grid gap-5 lg:grid-cols-2">
           {savedLives.length > 0 ? (
-            savedLives.map((session) => <LiveSessionCard key={session.id} session={session} compact />)
+            savedLives.map((session) => (
+              <LiveSessionCard key={session.id} session={session} compact />
+            ))
           ) : (
             <div className="panel rounded-[30px] p-6 text-sm text-muted">
               No saved live rooms yet.
@@ -1684,7 +2025,10 @@ export function SettingsPage() {
                   ),
                 },
               ].map((item) => (
-                <div key={item.label} className="rounded-[24px] bg-surface px-4 py-4">
+                <div
+                  key={item.label}
+                  className="rounded-[24px] bg-surface px-4 py-4"
+                >
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="font-semibold">{item.label}</p>
@@ -1746,9 +2090,12 @@ export function SettingsPage() {
 export function NegotiationRoomPage() {
   const [mode, setMode] = useState<"buyer" | "seller">("buyer");
   const [offer, setOffer] = useState(138);
-  const [participants, setParticipants] =
-    useState<NegotiationParticipant[]>(negotiationParticipants);
-  const [acceptedBuyerIds, setAcceptedBuyerIds] = useState<string[]>(["buyer-4"]);
+  const [participants, setParticipants] = useState<NegotiationParticipant[]>(
+    negotiationParticipants,
+  );
+  const [acceptedBuyerIds, setAcceptedBuyerIds] = useState<string[]>([
+    "buyer-4",
+  ]);
   const [raisedHand, setRaisedHand] = useState(false);
   const [frozen, setFrozen] = useState(false);
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
@@ -1829,10 +2176,16 @@ export function NegotiationRoomPage() {
                   </span>
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <Chip active={mode === "buyer"} onClick={() => setMode("buyer")}>
+                  <Chip
+                    active={mode === "buyer"}
+                    onClick={() => setMode("buyer")}
+                  >
                     Buyer mode
                   </Chip>
-                  <Chip active={mode === "seller"} onClick={() => setMode("seller")}>
+                  <Chip
+                    active={mode === "seller"}
+                    onClick={() => setMode("seller")}
+                  >
                     Seller mode
                   </Chip>
                 </div>
@@ -1886,7 +2239,9 @@ export function NegotiationRoomPage() {
                               min={110}
                               max={180}
                               value={offer}
-                              onChange={(event) => setOffer(Number(event.target.value))}
+                              onChange={(event) =>
+                                setOffer(Number(event.target.value))
+                              }
                               className="w-full accent-[var(--primary)]"
                             />
                           </div>
@@ -1939,32 +2294,36 @@ export function NegotiationRoomPage() {
                                 label: frozen ? "Unfreeze" : "Freeze",
                                 action: () => setFrozen((value) => !value),
                               },
-                                              {
-                                                  icon: Camera,
-                                                  label: "Screenshot",
-                                                  action: async () => {
-                                                    try {
-                                                      const { id, objectUrl } = await saveImageFromUrl(allLiveSessions[0].coverImageUrl);
-                                                      addRoomMessage({
-                                                        id: nextMockId("screenshot"),
-                                                        sender: "buyer",
-                                                        type: "screenshot",
-                                                        screenshotLabel: "Frame captured and attached to chat.",
-                                                        screenshotId: id,
-                                                        screenshotUrl: objectUrl,
-                                                        createdAt: "Now",
-                                                      });
-                                                    } catch (err) {
-                                                      addRoomMessage({
-                                                        id: nextMockId("screenshot-fail"),
-                                                        sender: "system",
-                                                        type: "system",
-                                                        text: "Screenshot failed to capture.",
-                                                        createdAt: "Now",
-                                                      });
-                                                    }
-                                                  },
-                                                },
+                              {
+                                icon: Camera,
+                                label: "Screenshot",
+                                action: async () => {
+                                  try {
+                                    const { id, objectUrl } =
+                                      await saveImageFromUrl(
+                                        allLiveSessions[0].coverImageUrl,
+                                      );
+                                    addRoomMessage({
+                                      id: nextMockId("screenshot"),
+                                      sender: "buyer",
+                                      type: "screenshot",
+                                      screenshotLabel:
+                                        "Frame captured and attached to chat.",
+                                      screenshotId: id,
+                                      screenshotUrl: objectUrl,
+                                      createdAt: "Now",
+                                    });
+                                  } catch (err) {
+                                    addRoomMessage({
+                                      id: nextMockId("screenshot-fail"),
+                                      sender: "system",
+                                      type: "system",
+                                      text: "Screenshot failed to capture.",
+                                      createdAt: "Now",
+                                    });
+                                  }
+                                },
+                              },
                               {
                                 icon: MicOff,
                                 label: "Mute",
@@ -2015,7 +2374,10 @@ export function NegotiationRoomPage() {
                       </p>
                       <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         {participants.map((participant) => (
-                          <div key={participant.id} className="rounded-[28px] bg-black/22 p-4">
+                          <div
+                            key={participant.id}
+                            className="rounded-[28px] bg-black/22 p-4"
+                          >
                             <div className="flex items-center gap-3">
                               <img
                                 src={participant.imageUrl}
@@ -2023,7 +2385,9 @@ export function NegotiationRoomPage() {
                                 className="h-14 w-14 rounded-2xl object-cover"
                               />
                               <div className="flex-1">
-                                <p className="font-semibold">{participant.name}</p>
+                                <p className="font-semibold">
+                                  {participant.name}
+                                </p>
                                 <p className="text-sm text-white/65">
                                   Offer ${participant.offer}
                                 </p>
@@ -2054,7 +2418,9 @@ export function NegotiationRoomPage() {
                                 onClick={() => toggleMute(participant.id)}
                                 className="rounded-full border border-white/12 px-4 py-2 text-xs font-semibold"
                               >
-                                {participant.isMuted ? "Unmute buyer" : "Mute buyer"}
+                                {participant.isMuted
+                                  ? "Unmute buyer"
+                                  : "Mute buyer"}
                               </button>
                             </div>
                           </div>
@@ -2087,16 +2453,26 @@ export function NegotiationRoomPage() {
                         >
                           {message.type === "screenshot" ? (
                             <div>
-                              <p className="font-semibold">Screenshot attachment</p>
-                              <p className="text-sm opacity-80">{message.screenshotLabel}</p>
+                              <p className="font-semibold">
+                                Screenshot attachment
+                              </p>
+                              <p className="text-sm opacity-80">
+                                {message.screenshotLabel}
+                              </p>
                             </div>
                           ) : message.type === "voice" ? (
                             <div>
                               <p className="font-semibold">Voice note</p>
                               {message.audioUrl ? (
-                                <audio controls src={message.audioUrl} className="mt-2 w-full" />
+                                <audio
+                                  controls
+                                  src={message.audioUrl}
+                                  className="mt-2 w-full"
+                                />
                               ) : (
-                                <p className="text-sm opacity-80">Audio saved ({message.audioId})</p>
+                                <p className="text-sm opacity-80">
+                                  Audio saved ({message.audioId})
+                                </p>
                               )}
                             </div>
                           ) : (
@@ -2107,9 +2483,15 @@ export function NegotiationRoomPage() {
                     </div>
                     <div className="mt-4">
                       <div className="mb-3 flex flex-wrap gap-2">
-                        <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-2 text-xs font-medium text-secondary">Record note</div>
-                        <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-2 text-xs font-medium text-secondary">Share item</div>
-                        <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-2 text-xs font-medium text-secondary">Ask about bundles</div>
+                        <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-2 text-xs font-medium text-secondary">
+                          Record note
+                        </div>
+                        <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-2 text-xs font-medium text-secondary">
+                          Share item
+                        </div>
+                        <div className="inline-flex items-center gap-2 rounded-full bg-secondary/10 px-3 py-2 text-xs font-medium text-secondary">
+                          Ask about bundles
+                        </div>
                       </div>
                       <div className="flex items-center gap-3">
                         <RecordingButton
@@ -2128,7 +2510,9 @@ export function NegotiationRoomPage() {
                           type="button"
                           className="rounded-full border border-border bg-background-elevated p-3"
                           onClick={async () => {
-                            const screenshot = await saveImageFromUrl(window.location.href + "?capture=room");
+                            const screenshot = await saveImageFromUrl(
+                              window.location.href + "?capture=room",
+                            );
                             addRoomMessage({
                               id: nextMockId("chat"),
                               sender: "buyer",
@@ -2168,15 +2552,22 @@ export function NegotiationRoomPage() {
                     </div>
                     <div className="mt-4 space-y-3">
                       {acceptedBuyerIds.map((buyerId) => {
-                        const buyer = participants.find((item) => item.id === buyerId);
+                        const buyer = participants.find(
+                          (item) => item.id === buyerId,
+                        );
                         if (!buyer) {
                           return null;
                         }
 
                         return (
-                          <div key={buyerId} className="rounded-[22px] bg-black/20 px-4 py-3">
+                          <div
+                            key={buyerId}
+                            className="rounded-[22px] bg-black/20 px-4 py-3"
+                          >
                             <p className="font-semibold">{buyer.name}</p>
-                            <p className="text-sm text-white/65">Accepted at ${buyer.offer}</p>
+                            <p className="text-sm text-white/65">
+                              Accepted at ${buyer.offer}
+                            </p>
                           </div>
                         );
                       })}

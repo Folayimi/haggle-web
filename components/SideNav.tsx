@@ -20,8 +20,7 @@ import Link from "next/link";
 import { useHaggleStore } from "@/lib/app-store";
 import { usePathname } from "next/navigation";
 
-const SideNav = ({userData}:{userData:any}) => {
-  console.log('userrr: ',userData?.profile)
+const SideNav = ({userData}:{userData:any}) => {  
   const [tab, setTab] = useState("home");
   const [collapsed, setCollapsed] = useState(localStorage.getItem("sideNavCollapsed") === "true");
   const theme = useHaggleStore((state) => state.theme);

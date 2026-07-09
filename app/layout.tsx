@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import SideNav from "@/components/SideNav";
 import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
+import { AppShell } from "@/components/app-shell";
 
 const geist = Geist({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -33,8 +34,8 @@ export default function RootLayout({
     >
       <body>
         <ToastContainer />
-        <ThemeProvider>
-          <div className="w-full h-screen overflow-y-none">{children}</div>
+        <ThemeProvider>          
+            <div className="w-full h-screen overflow-y-none">{children}</div>          
         </ThemeProvider>
       </body>
     </html>

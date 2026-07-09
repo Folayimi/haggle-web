@@ -47,48 +47,56 @@ const mainNav = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const [activateAuth, setActivateAuth] = useState(false);
 
+  // 👇 Get everything from the store
   const theme = useHaggleStore((state) => state.theme);
   const toggleTheme = useHaggleStore((state) => state.toggleTheme);
+  const userData = useHaggleStore((state) => state.userData);
+  const setUserData = useHaggleStore((state) => state.setUserData);
+  const activateAuth = useHaggleStore((state) => state.activateAuth);
+  const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
-  const [userData, setUserData] = useState({});
-
-  const hasFetched = useRef(false);
+  // const hasFetched = useRef(false);
 
   const fetchUserProfile = async () => {
-     const haggleAccessToken = localStorage.getItem("haggleAccessToken");
-    if (localStorage.getItem("activateAuth") === "true") {
-      const timer = setTimeout(() => {
-        setActivateAuth(true);
-      }, 10000);
-      // return () => clearTimeout(timer);
-    } else {
-      if (haggleAccessToken) {
-        // hasFetched.current = true;
-        let user = await getUserProfile(setActivateAuth);
-        console.log(user);
-        setUserData(user);
-      } else {
-        localStorage.setItem("activateAuth", "true");
-        const timer = setTimeout(() => {
-          setActivateAuth(true);
-        }, 10000);
-      }
+    const haggleAccessToken = localStorage.getItem("haggleAccessToken");
+    const storedActivateAuth = localStorage.getItem("activateAuth") === "true";
+
+    // if (hasFetched.current) return;
+    // hasFetched.current = true;
+
+    if (storedActivateAuth) {
+      setActivateAuth(true);
+      localStorage.removeItem("activateAuth");
+      return;
     }
-  }
+
+    if (haggleAccessToken) {
+      try {
+        const user = await getUserProfile(setActivateAuth);
+        console.log("User profile fetched:", user);
+        setUserData(user); // ✅ Update Zustand
+      } catch (error) {
+        console.error("Failed to fetch user profile:", error);
+        setActivateAuth(true);
+      }
+    } else {
+      setActivateAuth(true);
+    }
+  };
 
   useEffect(() => {
-   fetchUserProfile()
+    console.log('yeaaaa')
+    fetchUserProfile();
   }, []);
 
   return (
     <div className="flex h-screen text-foreground w-full">
       {activateAuth && <AuthPopUp setActivateAuth={setActivateAuth} />}
-      <SideNav userData={userData}/>
+      <SideNav userData={userData} />
       <div className="flex h-full overflow-y-auto flex-1 flex-col">
         <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur xl:hidden">
           <div className="flex items-center justify-between px-4 py-4">

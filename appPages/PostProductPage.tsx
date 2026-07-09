@@ -38,6 +38,8 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { PRODUCT_CATEGORIES } from "@/types/categories";
 import { cn } from "@/lib/utils";
+import { useHaggleStore } from "@/lib/app-store";
+import { createCategory } from "@/services/request";
 
 // ============================================
 // TYPES
@@ -83,6 +85,7 @@ function GlassyField({
   prominent = false,
   value,
   onChange,
+  error,
   ...props
 }: {
   label: string;
@@ -95,6 +98,7 @@ function GlassyField({
   onChange?: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => void;
+  error?: string;
 }) {
   return (
     <div className="space-y-1.5">
@@ -133,6 +137,8 @@ function GlassyField({
             shadow-sm
           `,
             prominent && "text-base py-3.5",
+            error &&
+              "border-danger/50 focus:border-danger/50 focus:ring-danger/30",
           )}
           {...props}
         />
@@ -155,13 +161,17 @@ function GlassyField({
             shadow-sm
           `,
             prominent && "text-base py-3.5",
+            error &&
+              "border-danger/50 focus:border-danger/50 focus:ring-danger/30",
           )}
           {...props}
         />
       )}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );
 }
+
 // ============================================
 // GLASSY SELECT
 // ============================================
@@ -173,6 +183,7 @@ function GlassySelect({
   type,
   optional = false,
   onChange,
+  error,
 }: {
   label: string;
   options: any[];
@@ -181,6 +192,7 @@ function GlassySelect({
   type?: string;
   optional?: boolean;
   onChange: (value: string) => void;
+  error?: string;
 }) {
   return (
     <div className="space-y-1.5">
@@ -195,7 +207,8 @@ function GlassySelect({
 
       <Select items={options}>
         <SelectTrigger
-          className={`
+          className={cn(
+            `
             relative w-full rounded-xl
             border border-border/60 bg-background-elevated/40
             px-4 py-6 text-sm text-foreground
@@ -204,7 +217,10 @@ function GlassySelect({
             focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
             text-left flex items-center justify-between
             shadow-sm
-          `}
+          `,
+            error &&
+              "border-danger/50 focus:border-danger/50 focus:ring-danger/30",
+          )}
         >
           <SelectValue placeholder={value ? value : placeholder} />
         </SelectTrigger>
@@ -223,6 +239,7 @@ function GlassySelect({
           </SelectGroup>
         </SelectContent>
       </Select>
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );
 }
@@ -305,21 +322,20 @@ function CompletionSummary({
 }
 
 // ============================================
-// SMART SAVE DRAFT BUTTON
+// SMART SAVE DRAFT BUTTON (Controlled)
 // ============================================
-function SmartSaveButton() {
-  const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
+function SmartSaveButton({
+  status,
+  onSave,
+}: {
+  status: "idle" | "saving" | "saved";
+  onSave: () => void;
+}) {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
 
   const handleSave = () => {
-    setStatus("saving");
-    setTimeout(() => {
-      setStatus("saved");
-      setLastSaved(new Date());
-      setTimeout(() => {
-        setStatus("idle");
-      }, 3000);
-    }, 1000);
+    onSave();
+    setLastSaved(new Date());
   };
 
   const getTimeAgo = () => {
@@ -371,7 +387,7 @@ function SmartSaveButton() {
 }
 
 // ============================================
-// NEGOTIATION STYLE PICKER (Emotional)
+// NEGOTIATION STYLE PICKER
 // ============================================
 function NegotiationStylePicker({
   value,
@@ -500,19 +516,107 @@ function ProductCardPreview({
 }
 
 // ============================================
+// PRICE INPUT (with currency formatting)
+// ============================================
+function PriceInput({
+  label,
+  placeholder = "0",
+  value,
+  onChange,
+  error,
+  optional = false,
+  icon,
+}: {
+  label: string;
+  placeholder?: string;
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+  optional?: boolean;
+  icon?: React.ReactNode;
+}) {
+  const userData = useHaggleStore((state) => state.userData);
+  const currency = userData?.settings?.preferred_currency || "NGN";
+  const currencySymbol = currency === "USD" ? "$" : "₦";
+
+  const formatDisplay = (raw: string) => {
+    if (!raw) return "";
+    const num = parseFloat(raw);
+    if (isNaN(num)) return "";
+    return `${currencySymbol}${num.toLocaleString()}`;
+  };
+
+  const [displayValue, setDisplayValue] = useState(() => formatDisplay(value));
+
+  useEffect(() => {
+    setDisplayValue(value ? formatDisplay(value) : "");
+  }, [value]);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const input = e.target.value;
+    // Remove all non-digit characters except dot
+    const raw = input.replace(/[^0-9.]/g, "");
+    // Prevent multiple decimal points
+    const parts = raw.split(".");
+    if (parts.length > 2) return;
+    // Update parent with raw value
+    onChange(raw);
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-sm font-medium text-foreground/80">{label}</span>
+        {optional && (
+          <span className="text-[10px] font-medium uppercase tracking-[0.08em] text-muted/50">
+            Optional
+          </span>
+        )}
+        {icon && <span className="text-muted/30">{icon}</span>}
+      </div>
+      <input
+        type="text"
+        placeholder={placeholder}
+        value={displayValue}
+        onChange={handleChange}
+        className={cn(
+          `
+          w-full rounded-xl
+          border border-border/60 bg-background-elevated/40
+          px-4 py-3 text-sm text-foreground
+          placeholder:text-muted/40
+          backdrop-blur-sm
+          transition-all duration-200
+          focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
+          shadow-sm
+        `,
+          error &&
+            "border-danger/50 focus:border-danger/50 focus:ring-danger/30",
+        )}
+      />
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+// ============================================
 // MAIN PAGE
 // ============================================
 const PostProductPage = () => {
+  const userData = useHaggleStore((state) => state.userData);
   const [productInfo, setProductInfo] = useState({
     name: "",
-    description: "",
     category: "",
+    categorySlug: "",
     subCategory: "",
+    subCategorySlug: "",
+    description: "",
     startingPrice: "",
     lowestAcceptablePrice: "",
     autoDeclinePrice: "",
     negotiationNote: "",
+    location: "",
   });
+
   const [activeTab, setActiveTab] = useState<TabId>("details");
   const [negotiationStyle, setNegotiationStyle] =
     useState<NegotiationStyle>("flexible");
@@ -523,6 +627,12 @@ const PostProductPage = () => {
     pricing: false,
     media: false,
   });
+  const [validationErrors, setValidationErrors] = useState<
+    Record<string, string>
+  >({});
+  const [draftStatus, setDraftStatus] = useState<"idle" | "saving" | "saved">(
+    "idle",
+  );
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "details", label: "Product Details" },
@@ -532,35 +642,145 @@ const PostProductPage = () => {
 
   const completedCount = Object.values(completed).filter(Boolean).length;
 
+  // ============================================
+  // VALIDATE A SPECIFIC TAB
+  // ============================================
+  const validateTab = (tabId: TabId): boolean => {
+    let errors: Record<string, string> = {};
+
+    if (tabId === "details") {
+      errors = validateDetails();
+    } else if (tabId === "pricing") {
+      errors = validatePricing();
+    }
+    // media tab doesn't need validation (publish handled separately)
+
+    if (Object.keys(errors).length > 0) {
+      setValidationErrors(errors);
+      // Scroll to first error
+      const firstErrorField = document.querySelector(".text-danger");
+      if (firstErrorField) {
+        firstErrorField.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return false;
+    }
+
+    setValidationErrors({});
+    return true;
+  };
+
+  // ============================================
+  // HANDLE TAB CHANGE (with validation for forward moves)
+  // ============================================
   const handleTabChange = (tab: TabId) => {
-    setActiveTab(tab);
-    if (tab === "pricing") {
-      setCompleted((prev) => ({ ...prev, details: true }));
-    } else if (tab === "media") {
-      setCompleted((prev) => ({ ...prev, pricing: true }));
+    const currentIndex = tabs.findIndex((t) => t.id === activeTab);
+    const targetIndex = tabs.findIndex((t) => t.id === tab);
+    const nextTab = tabs[currentIndex + 1]?.id;
+
+    // CASE 1: Moving backward → always allowed
+    if (targetIndex < currentIndex) {
+      setActiveTab(tab);
+      return;
+    }
+
+    // CASE 2: Moving forward to the immediate next tab → validate current tab
+    if (targetIndex === currentIndex + 1) {
+      const isValid = validateTab(activeTab);
+      if (!isValid) return;
+
+      // Move forward
+      setActiveTab(tab);
+
+      // Mark completed and auto-save
+      if (activeTab === "details") {
+        setCompleted((prev) => ({ ...prev, details: true }));
+      } else if (activeTab === "pricing") {
+        setCompleted((prev) => ({ ...prev, pricing: true }));
+      }
+      saveDraft();
+      return;
+    }
+
+    // CASE 3: Moving forward multiple steps (e.g., from details to media)
+    // Validate all intermediate tabs
+    if (targetIndex > currentIndex + 1) {
+      // Check if the current tab is valid first
+      const isValidCurrent = validateTab(activeTab);
+      if (!isValidCurrent) return;
+
+      // Move to the next tab in sequence (one step at a time)
+      // This enforces step-by-step progression
+      setActiveTab(nextTab);
+
+      if (activeTab === "details") {
+        setCompleted((prev) => ({ ...prev, details: true }));
+      } else if (activeTab === "pricing") {
+        setCompleted((prev) => ({ ...prev, pricing: true }));
+      }
+      saveDraft();
+      return;
     }
   };
 
-  const requiredTags = PRODUCT_CATEGORIES.find(
-    (c) => c.name === productInfo["category"],
-  )?.requiredTags;
+  // ============================================
+  // VALIDATION FUNCTIONS
+  // ============================================
+  const validateDetails = () => {
+    const errors: Record<string, string> = {};
+    if (!productInfo.name.trim()) errors.name = "Product name is required";
+    if (!productInfo.description.trim())
+      errors.description = "Description is required";
+    if (!productInfo.category) errors.category = "Category is required";
+    if (!productInfo.subCategory)
+      errors.subCategory = "Sub-category is required";
+    if (!productInfo.location.trim()) errors.location = "Location is required";
 
+    // Validate required tags
+    const categoryObj = PRODUCT_CATEGORIES.find(
+      (c) => c.name === productInfo.category,
+    );
+    if (categoryObj) {
+      const requiredTags =
+        categoryObj.requiredTags?.filter((t) => t.required) || [];
+      requiredTags.forEach((tag) => {
+        const value = getTagValue(tag.name);
+        if (!value) errors[tag.name] = `${tag.name} is required`;
+      });
+    }
+    return errors;
+  };
+
+  const validatePricing = () => {
+    const errors: Record<string, string> = {};
+    if (
+      !productInfo.startingPrice ||
+      parseFloat(productInfo.startingPrice) <= 0
+    ) {
+      errors.startingPrice = "Starting asking price is required";
+    }
+    return errors;
+  };
+
+  // ============================================
+  // TAG HELPERS
+  // ============================================
   const handleTagChange = (name: string, value: string) => {
-    // Remove existing entry for this name
     const existing = tags
       .split("|")
       .filter((tag) => !tag.startsWith(`${name.toLowerCase()}:`))
       .filter(Boolean);
 
-    // Add the new tag
-    const updated = [
-      ...existing,
-      `${name.toLowerCase()}:${value.toLowerCase()}`,
-    ];
+    const updated = [...existing, `${name.toLowerCase()}:${value}`];
 
     setTags(updated.join("|"));
-
-    console.log("updated tags: ", updated.join("|"));
+    // Clear error for this field if exists
+    if (validationErrors[name]) {
+      setValidationErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const getTagValue = (name: string) => {
@@ -570,26 +790,107 @@ const PostProductPage = () => {
     return tag?.split(":")[1] || "";
   };
 
-  const handleSubmit = () => {
+  // ============================================
+  // SAVE DRAFT
+  // ============================================
+  const saveDraft = async () => {
+    setDraftStatus("saving");
+    const categoryPayload = {
+      name: productInfo?.category,
+      slug: productInfo?.categorySlug,
+      kind: "product",
+      status: "draft",
+    };
+    const subCategoryPayload = {
+      name: productInfo?.subCategory,
+      slug: productInfo?.categorySlug,
+      kind: "product",
+      status: "draft",
+      parent_id: "",
+    };
+    const payload = {
+      seller_id: "",
+      listing_type: "product",
+      category_id: "",
+      title: productInfo?.name,
+      description: productInfo?.description,
+      starting_amount: productInfo?.startingPrice,
+      lowest_amount: productInfo?.lowestAcceptablePrice,
+      auto_decline_amount: productInfo?.autoDeclinePrice,
+      tags,
+      status: "draft",
+      negotiation_style: negotiationStyle,
+      negotiation_note: productInfo?.negotiationNote,
+    };
+    try {
+      // Simulate API call
+      const data = await createCategory(categoryPayload);
+      if (data) {
+        const categoryId = data?.data?.id;        
+        setTimeout(() => setDraftStatus("idle"), 3000);
+      }
+      console.log("Draft saved:", payload);
+        setDraftStatus("saved");
+    } catch (error) {
+      console.error("Failed to save draft:", error);
+      setDraftStatus("idle");
+    }
+  };
+
+  // ============================================
+  // STEP NAVIGATION
+  // ============================================
+  const goToNextStep = async () => {
+    const currentIndex = tabs.findIndex((t) => t.id === activeTab);
+    if (currentIndex < tabs.length - 1) {
+      const nextTab = tabs[currentIndex + 1].id;
+      // Use the same validation as tab click
+      if (validateTab(activeTab)) {
+        setActiveTab(nextTab);
+        // Mark completed and auto-save
+        if (activeTab === "details") {
+          setCompleted((prev) => ({ ...prev, details: true }));
+        } else if (activeTab === "pricing") {
+          setCompleted((prev) => ({ ...prev, pricing: true }));
+        }
+        await saveDraft();
+      }
+    } else {
+      // On media tab, publish
+      await handleSubmit();
+    }
+  };
+
+  const handleSubmit = async () => {
     const payload = {
       ...productInfo,
-      tags, // "condition:new,color:blue,brand:apple"
+      tags,
       negotiationStyle,
     };
 
-    console.log(payload);
-    // send to backend
+    console.log("Publishing product:", payload);
   };
 
+  // ============================================
+  // EFFECTS
+  // ============================================
   useEffect(() => {
-    const tags =
-      PRODUCT_CATEGORIES.find((c) => c.name === productInfo["category"])
-        ?.requiredTags || [];
+    const categoryObj = PRODUCT_CATEGORIES.find(
+      (c) => c.name === productInfo.category,
+    );
+    const tags = categoryObj?.requiredTags || [];
     const initialTags = tags
       .map((tag) => `${tag.name.toLowerCase()}:`)
       .join("|");
     setTags(initialTags);
-  }, [productInfo["category"]]);
+  }, [productInfo.category]);
+
+  // ============================================
+  // RENDER
+  // ============================================
+  const requiredTags = PRODUCT_CATEGORIES.find(
+    (c) => c.name === productInfo.category,
+  )?.requiredTags;
 
   return (
     <AppShell>
@@ -620,7 +921,7 @@ const PostProductPage = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <SmartSaveButton />
+              <SmartSaveButton status={draftStatus} onSave={saveDraft} />
               <Link
                 href="/create"
                 className="
@@ -642,15 +943,7 @@ const PostProductPage = () => {
                   bg-primary hover:bg-primary-strong
                   cursor-pointer
                 `}
-                onClick={() => {
-                  if (activeTab === "media") {
-                    handleSubmit();
-                  } else if (activeTab === "details") {
-                    setActiveTab("pricing");
-                  } else {
-                    setActiveTab("media");
-                  }
-                }}
+                onClick={goToNextStep}
               >
                 {activeTab === "media" ? (
                   <>
@@ -676,7 +969,6 @@ const PostProductPage = () => {
               <ProductMedia
                 onImagesChange={(images) => {
                   // Optionally sync images to parent state if needed
-                  // console.log("Images updated:", images);
                 }}
               />
             </div>
@@ -729,18 +1021,27 @@ const PostProductPage = () => {
                         label="Product Name"
                         placeholder="e.g. Apple iPhone 14 Pro Max (128GB) • Excellent Condition"
                         prominent
-                        value={productInfo["name"]}
+                        value={productInfo.name}
                         onChange={(e) =>
                           setProductInfo({
                             ...productInfo,
                             name: e.target.value,
                           })
                         }
+                        error={validationErrors.name}
                       />
                       <GlassyField
                         label="Short Description"
                         placeholder="Describe the product in warm, buyer-friendly language..."
                         multiline
+                        value={productInfo.description}
+                        onChange={(e) =>
+                          setProductInfo({
+                            ...productInfo,
+                            description: e.target.value,
+                          })
+                        }
+                        error={validationErrors.description}
                       />
                       <div className="space-y-1.5">
                         <p className="text-xs font-medium text-foreground/60">
@@ -751,12 +1052,19 @@ const PostProductPage = () => {
                             label="Category"
                             options={PRODUCT_CATEGORIES}
                             placeholder="Select category"
-                            value={productInfo["category"]}
+                            value={productInfo.category}
                             onChange={(value) => {
                               setProductInfo({
                                 ...productInfo,
                                 category: value,
+                                categorySlug:
+                                  PRODUCT_CATEGORIES[
+                                    PRODUCT_CATEGORIES.findIndex(
+                                      (cat) => cat.name === value,
+                                    )
+                                  ].id,
                                 subCategory: "",
+                                subCategorySlug: "",
                               });
                               setProductSubcategories(
                                 PRODUCT_CATEGORIES[
@@ -765,23 +1073,38 @@ const PostProductPage = () => {
                                   )
                                 ].subcategories,
                               );
+                              // Clear errors for these fields
+                              setValidationErrors((prev) => {
+                                const newErrors = { ...prev };
+                                delete newErrors.category;
+                                delete newErrors.subCategory;
+                                return newErrors;
+                              });
                             }}
+                            error={validationErrors.category}
                           />
                           <GlassySelect
                             label="Sub-Category"
                             options={productSubcategories}
-                            value={productInfo["subCategory"]}
-                            placeholder="Select condition"
+                            value={productInfo.subCategory}
+                            placeholder="Select sub-category"
                             onChange={(value) =>
                               setProductInfo({
                                 ...productInfo,
                                 subCategory: value,
+                                subCategorySlug:
+                                  productSubcategories[
+                                    productSubcategories.findIndex(
+                                      (sub) => sub.name === value,
+                                    )
+                                  ].id,
                               })
                             }
+                            error={validationErrors.subCategory}
                           />
                         </div>
                       </div>
-                      {productInfo["subCategory"] ? (
+                      {productInfo.subCategory ? (
                         <div className="space-y-1.5">
                           <p className="text-xs font-medium text-foreground/60">
                             Requirements
@@ -803,6 +1126,7 @@ const PostProductPage = () => {
                                       onChange={(value) =>
                                         handleTagChange(item.name, value)
                                       }
+                                      error={validationErrors[item.name]}
                                     />
                                   ) : (
                                     <GlassyField
@@ -817,6 +1141,7 @@ const PostProductPage = () => {
                                           e.target.value,
                                         )
                                       }
+                                      error={validationErrors[item.name]}
                                     />
                                   )}
                                 </React.Fragment>
@@ -826,16 +1151,20 @@ const PostProductPage = () => {
                         </div>
                       ) : null}
 
-                      {productInfo["subCategory"] && (
+                      {productInfo.subCategory && (
                         <div className="space-y-1.5">
                           <GlassyField
                             label="Location"
-                            placeholder="e.g. Lagos, Nigeria"
+                            placeholder="Your current Location. e.g. Lagos, Nigeria"
                             prominent
-                            value=""
+                            value={productInfo.location}
                             onChange={(e) =>
-                              console.log("Location changed:", e.target.value)
+                              setProductInfo({
+                                ...productInfo,
+                                location: e.target.value,
+                              })
                             }
+                            error={validationErrors.location}
                           />
                         </div>
                       )}
@@ -866,40 +1195,41 @@ const PostProductPage = () => {
                       </div>
 
                       <div className="grid gap-3 sm:grid-cols-2">
-                        <GlassyField
+                        <PriceInput
                           label="Starting Asking Price"
-                          placeholder="₦50,000"
+                          placeholder="50,000"
                           icon={<TrendingUp className="h-3 w-3" />}
-                          value={productInfo["startingPrice"]}
-                          onChange={(e) =>
+                          value={productInfo.startingPrice}
+                          onChange={(value) =>
                             setProductInfo({
                               ...productInfo,
-                              startingPrice: e.target.value,
+                              startingPrice: value,
                             })
                           }
+                          error={validationErrors.startingPrice}
                         />
-                        <GlassyField
+                        <PriceInput
                           label="Lowest You'll Accept"
-                          placeholder="₦42,000"
+                          placeholder="42,000"
                           optional
-                          value={productInfo["lowestAcceptablePrice"]}
-                          onChange={(e) =>
+                          value={productInfo.lowestAcceptablePrice}
+                          onChange={(value) =>
                             setProductInfo({
                               ...productInfo,
-                              lowestAcceptablePrice: e.target.value,
+                              lowestAcceptablePrice: value,
                             })
                           }
                         />
                       </div>
-                      <GlassyField
+                      <PriceInput
                         label="Auto Decline Below"
-                        placeholder="₦35,000"
+                        placeholder="35,000"
                         optional
-                        value={productInfo["autoDeclinePrice"]}
-                        onChange={(e) =>
+                        value={productInfo.autoDeclinePrice}
+                        onChange={(value) =>
                           setProductInfo({
                             ...productInfo,
-                            autoDeclinePrice: e.target.value,
+                            autoDeclinePrice: value,
                           })
                         }
                       />
@@ -914,7 +1244,7 @@ const PostProductPage = () => {
                         placeholder="Open to bundle pricing for two or more pieces..."
                         multiline
                         optional
-                        value={productInfo["negotiationNote"]}
+                        value={productInfo.negotiationNote}
                         onChange={(e) =>
                           setProductInfo({
                             ...productInfo,
@@ -949,8 +1279,8 @@ const PostProductPage = () => {
                       </div>
 
                       <ProductCardPreview
-                        productName={productInfo["name"] || "Your Product Name"}
-                        price={productInfo["startingPrice"] || "₦50,000"}
+                        productName={productInfo.name || "Your Product Name"}
+                        price={productInfo.startingPrice || "₦50,000"}
                         negotiationStyle={negotiationStyle}
                       />
                     </motion.div>

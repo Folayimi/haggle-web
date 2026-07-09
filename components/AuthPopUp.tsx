@@ -7,7 +7,7 @@ import { usePathname, useRouter } from "next/navigation";
 const AuthPopUp = ({
   setActivateAuth,
 }: {
-  setActivateAuth: Dispatch<SetStateAction<boolean>>;
+  setActivateAuth: any;
 }) => {
   const [view, setView] = useState("signup");
   const pathname = usePathname();

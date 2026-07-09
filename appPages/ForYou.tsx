@@ -14,11 +14,8 @@ import {
   Bookmark,
 } from "lucide-react";
 import FeedCard from "@/components/FeedCard";
-import Background from "@/components/Background";
-import { url } from "inspector";
-import Image from "next/image";
+import { useHaggleStore } from "@/lib/app-store";
 import { AppShell } from "@/components/app-shell";
-import { getUserProfile } from "@/services/request";
 
 // Sample feed data with images from the web
 const feedData = [
@@ -58,8 +55,10 @@ const ForYou = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
-  const [userProfile, setUserProfile] = useState<any>(null);
   const feedContainerRef = useRef<HTMLDivElement>(null);
+  const userData = useHaggleStore((state) => state.userData);
+  const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
+  const clearUserData = useHaggleStore((state) => state.clearUserData);
 
   const handleNext = () => {
     if (currentIndex < feedData.length - 1) {
@@ -104,10 +103,6 @@ const ForYou = () => {
   };
 
   const currentFeed = feedData[currentIndex];
-
-  useEffect(() => {
-   
-  }, []);
 
   return (
     <AppShell>

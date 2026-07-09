@@ -4,7 +4,7 @@ import { notify, notifyError } from "./toastify";
 import { PassThrough } from "stream";
 import { Dispatch, SetStateAction } from "react";
 
-const baseUrl = "http://localhost:5000/api/v1";
+const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
 const setConfig = (accessToken: string) => {
   return {
@@ -42,7 +42,7 @@ const processQueue = (error: any = null, token: string | null = null) => {
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("haggleAccessToken");
-    console.log('accessToken...',token)
+    console.log("accessToken...", token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -78,9 +78,12 @@ apiClient.interceptors.response.use(
 
       try {
         const refreshToken = localStorage.getItem("haggleRefreshToken");
-        const response = await axios.post(`${baseUrl}/auth/refresh-token`, {
-          refreshToken,
-        });
+        const response = await axios.post(
+          `${process.env.NEXT_PUBLIC_API_URL}/auth/refresh-token`,
+          {
+            refreshToken,
+          },
+        );
 
         const newAccessToken = response.data.tokens?.accessToken;
         const newRefreshToken = response.data.tokens?.refreshToken;
@@ -88,7 +91,7 @@ apiClient.interceptors.response.use(
         localStorage.setItem("haggleAccessToken", newAccessToken);
         localStorage.setItem("haggleRefreshToken", newRefreshToken);
 
-        console.log('new tokens: ',response.data.tokens)
+        console.log("new tokens: ", response.data.tokens);
 
         // Update the auth header for the current request
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
@@ -370,7 +373,7 @@ export const resetPassword = async (data: {
 // USER API CALLS
 export const getUserProfile = async (
   // accessToken: string,
-  setActivateAuth: Dispatch<SetStateAction<boolean>>,
+  setActivateAuth: any,
 ) => {
   let result = {};
   await apiClient
@@ -378,7 +381,7 @@ export const getUserProfile = async (
     .then((response: any) => {
       if (response?.data?.success === true) {
         result = response?.data;
-        console.log(result)
+        console.log(result);
       }
     })
     .catch((err) => {
@@ -386,6 +389,44 @@ export const getUserProfile = async (
       // If the interceptor successfully refreshes the token and retries, this catch does NOT run.
       localStorage.setItem("activateAuth", "true");
       setActivateAuth(true);
+      notifyError(err?.response?.data?.error);
+      throw err;
+    });
+
+  return result;
+};
+
+// PRODUCT/SERVICES LISTINGS API CALLS
+
+export const createCategory = async (data: any) => {
+  let result = "";
+  await apiClient
+    .post(`/catalog/categories`, { data }) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
+    .then((response: any) => {
+      if (response?.data?.success === true) {
+        result = response?.data;
+        console.log(result);
+      }
+    })
+    .catch((err) => {
+      notifyError(err?.response?.data?.error);
+      throw err;
+    });
+
+  return result;
+};
+
+export const createListing = async (data: any) => {
+  let result = {};
+  await apiClient
+    .post(`/catalog/listings`, { data }) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
+    .then((response: any) => {
+      if (response?.data?.success === true) {
+        result = response?.data;
+        console.log(result);
+      }
+    })
+    .catch((err) => {
       notifyError(err?.response?.data?.error);
       throw err;
     });
