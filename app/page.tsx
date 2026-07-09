@@ -1,5 +1,11 @@
-import LandingPage from '@/components/landing-page';
+"use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 export default function Home() {
-  return <LandingPage />;
+  const router = useRouter();
+  useEffect(() => {
+    router.push("/for-you");
+  }, []);
+  // return <LandingPage />;
 }

@@ -1,14 +1,15 @@
 "use client";
-import { useState } from "react";
+import { SetStateAction, Dispatch, useState } from "react";
 import InputField from "@/reusables/InputFied";
 import HaggleButton from "@/reusables/haggleButton";
 
 interface ResetPasswordFormProps {
   onSubmit: (email: string) => void;
+  setView: Dispatch<SetStateAction<string>>;
   isLoading?: boolean;
 }
 
-const ResetPasswordForm = ({ onSubmit, isLoading = false }: ResetPasswordFormProps) => {
+const ResetPasswordForm = ({ onSubmit, setView, isLoading = false }: ResetPasswordFormProps) => {
   const [email, setEmail] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -49,8 +50,10 @@ const ResetPasswordForm = ({ onSubmit, isLoading = false }: ResetPasswordFormPro
           Remember your password?{" "}
           <button
             type="button"
-            className="text-primary font-medium hover:underline focus:outline-none"
-            onClick={() => window.location.href = "/login"}
+            className="text-primary font-medium hover:underline focus:outline-none cursor-pointer"
+            onClick={() => {
+              setView('login')
+            }}
           >
             Log in
           </button>

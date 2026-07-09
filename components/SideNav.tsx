@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   HomeIcon,
   Compass,
@@ -18,18 +18,21 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useHaggleStore } from "@/lib/app-store";
+import { usePathname } from "next/navigation";
 
-const SideNav = () => {
+const SideNav = ({userData}:{userData:any}) => {
+  console.log('userrr: ',userData?.profile)
   const [tab, setTab] = useState("home");
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(localStorage.getItem("sideNavCollapsed") === "true");
   const theme = useHaggleStore((state) => state.theme);
   const toggleTheme = useHaggleStore((state) => state.toggleTheme);
+  const pathname = usePathname();
 
   const navItems = [
-    { id: "for-you", label: "For You", icon: HomeIcon, path: "/for-you" },
-    { id: "explore", label: "Explore", icon: Compass, path: "/for-you" },
+    { id: "for-you", label: "Home", icon: HomeIcon, path: "/for-you" },
+    { id: "explore", label: "Explore", icon: Compass, path: "/explore" },
     { id: "market", label: "Market", icon: ShoppingBag, path: "/market" },
-    { id: "add", label: "Add", icon: PlusCircle, path: "/create" },
+    { id: "create", label: "Add", icon: PlusCircle, path: "/create" },
     {
       id: "message",
       label: "Messages",
@@ -38,18 +41,24 @@ const SideNav = () => {
     },
   ];
 
+  const isActive = (path: string) =>
+    pathname === path || pathname.startsWith(`${path}/`);
+
   return (
     <aside
       className={`
         hidden xl:block relative h-screen text-foreground border-r-[0.5px] border-neutral-200 shadow-sm
         transition-all duration-300 ease-in-out
-        ${collapsed ? "w-[80px]" : "w-[220px]"}
+        ${collapsed ? "w-[80px]" : "w-[250px]"}
         flex flex-col
-      `}      
+      `}
     >
       {/* Collapse Toggle Button */}
       <button
-        onClick={() => setCollapsed(!collapsed)}
+        onClick={() => {
+          setCollapsed(!collapsed);
+          localStorage.setItem("sideNavCollapsed", (!collapsed).toString());
+        }}
         className="absolute -right-3 top-6 z-50 w-6 h-6 rounded-full 
           bg-primary text-white
           hover:bg-primary-600
@@ -96,7 +105,7 @@ const SideNav = () => {
         <div className="flex flex-col gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const isActive = tab === item.id;
+            const active = isActive(item.path);
 
             return (
               <Link href={item.path}>
@@ -109,15 +118,15 @@ const SideNav = () => {
                   group relative flex items-center gap-3 px-3 py-2.5 rounded-xl w-full
                   transition-all duration-200
                   ${
-                    isActive
+                    active
                       ? "bg-primary-50 text-primary"
-                      : "text-foreground hover:bg-surface hover:text-dark-800"
+                      : "text-foreground hover:bg-[#f29f8a]/20 hover:text-dark-800"
                   }
                   ${collapsed ? "justify-center px-0" : ""}
                 `}
                 >
                   {/* Active Indicator */}
-                  {isActive && (
+                  {active && (
                     <div
                       className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 
                     bg-primary rounded-r-full"
@@ -129,23 +138,23 @@ const SideNav = () => {
                   flex items-center justify-center w-8 h-8 rounded-lg
                   transition-all duration-200
                   ${
-                    isActive
+                    active
                       ? "bg-primary text-white shadow-sm shadow-primary/20"
-                      : "text-current group-hover:bg-surface"
+                      : "text-current"
                   }
                 `}
                   >
                     <Icon
                       size={18}
-                      strokeWidth={isActive ? 2.5 : 2}
-                      className={`${isActive ? "text-white" : "text-foreground"}`}
+                      strokeWidth={active ? 2.5 : 2}
+                      className={`${active ? "text-white" : "text-foreground"}`}
                     />
                   </div>
 
                   <span
                     className={`
                   font-medium text-sm transition-all duration-300
-                  ${isActive && "text-primary"}
+                  ${active && "text-primary"}
                   ${collapsed ? "w-0 opacity-0 absolute" : "w-auto opacity-100"}
                 `}
                   >
@@ -226,8 +235,8 @@ const SideNav = () => {
               ${collapsed ? "w-0 opacity-0" : "w-auto opacity-100"}
             `}
             >
-              <p className="text-sm font-medium text-dark-800">John Doe</p>
-              <p className="text-xs text-neutral-500">john@haggle.com</p>
+              <p className="text-sm font-medium text-dark-800">{userData?.profile?.full_name}</p>
+              <p className="text-xs text-neutral-500">{userData?.profile?.email}</p>
             </div>
             {!collapsed && (
               <LogOut

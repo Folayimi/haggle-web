@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { Dispatch, SetStateAction, useState } from "react";
 import { useRouter } from "next/navigation";
 import ResetPasswordForm from "./ResetPasswordForm";
 import ResetPasswordOtp from "./ResetPasswordOtp";
@@ -10,7 +10,11 @@ import {
   verifyResetOtp,
 } from "@/services/request";
 
-const ForgotPasswordPage = () => {
+const ForgotPasswordPage = ({
+  setView,
+}: {
+  setView: Dispatch<SetStateAction<string>>;
+}) => {
   const router = useRouter();
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
@@ -54,7 +58,7 @@ const ForgotPasswordPage = () => {
       setLoading(true);
       await resetPassword({ newPassword, confirmPassword, token: resetToken });
       // Redirect to login after successful password reset
-      router.push("/login");
+      setView('login')
     } catch (err: any) {
       console.error("Password reset error:", err);
     } finally {
@@ -83,7 +87,9 @@ const ForgotPasswordPage = () => {
   };
 
   return (
-    <div className="relative min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+    // <div className="relative min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
+
+    <div className="w-full max-w-md">
       {/* Loading overlay */}
       {(loading || resending) && (
         <div className="absolute inset-0 bg-black/30 z-50 flex items-center justify-center">
@@ -95,43 +101,41 @@ const ForgotPasswordPage = () => {
           </div>
         </div>
       )}
-
-      <div className="w-full max-w-md">
-        <div className="bg-white rounded-3xl shadow-xl p-8 md:p-10 transition-all duration-300">
-          {/* Logo */}
-          <div className="flex justify-center mb-8">
-            <div className="flex items-center gap-1 text-2xl font-bold text-gray-800">
-              <span>Haggle</span>
-              <span className="text-primary text-3xl">.</span>
-            </div>
+      <div className="bg-white rounded-3xl shadow-xl p-8 md:p-10 transition-all duration-300">
+        {/* Logo */}
+        <div className="flex justify-center mb-8">
+          <div className="flex items-center gap-1 text-2xl font-bold text-gray-800">
+            <span>Haggle</span>
+            <span className="text-primary text-3xl">.</span>
           </div>
-
-          {/* Step components */}
-          {step === 1 && (
-            <ResetPasswordForm onSubmit={handleSendOtp} isLoading={loading} />
-          )}
-
-          {step === 2 && (
-            <ResetPasswordOtp
-              onComplete={handleVerifyOtp}
-              onBack={handleBack}
-              onResendCode={handleResendOtp}
-              email={email}
-              isLoading={loading}
-              isResending={resending}
-            />
-          )}
-
-          {step === 3 && (
-            <NewPasswordForm
-              onSubmit={handleResetPassword}
-              onBack={handleBack}
-              isLoading={loading}
-            />
-          )}
         </div>
+
+        {/* Step components */}
+        {step === 1 && (
+          <ResetPasswordForm onSubmit={handleSendOtp} setView={setView} isLoading={loading} />
+        )}
+
+        {step === 2 && (
+          <ResetPasswordOtp
+            onComplete={handleVerifyOtp}
+            onBack={handleBack}
+            onResendCode={handleResendOtp}
+            email={email}
+            isLoading={loading}
+            isResending={resending}
+          />
+        )}
+
+        {step === 3 && (
+          <NewPasswordForm
+            onSubmit={handleResetPassword}
+            onBack={handleBack}
+            isLoading={loading}
+          />
+        )}
       </div>
     </div>
+    // </div>
   );
 };
 

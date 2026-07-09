@@ -699,7 +699,7 @@ const PostProductPage = () => {
               </div>
 
               {/* TAB CONTENT */}
-              <div className="rounded-2xl border border-border/60 bg-background-elevated/30 p-5 backdrop-blur-sm shadow-card h-[calc(100vh-240px)] overflow-y-auto">
+              <div className="rounded-2xl border border-border/60 bg-background-elevated/30 p-5 backdrop-blur-sm shadow-card overflow-y-auto">
                 <AnimatePresence mode="wait">
                   {activeTab === "details" && (
                     <motion.div

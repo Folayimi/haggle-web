@@ -28,15 +28,17 @@ import {
   Video,
   X,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 import { currentUser } from "@/lib/mock-data";
 import { useHaggleStore } from "@/lib/app-store";
 import { cn } from "@/lib/utils";
 import SideNav from "./SideNav";
+import AuthPopUp from "./AuthPopUp";
+import { getUserProfile } from "@/services/request";
 
 const mainNav = [
-  { href: "/dashboard", label: "Home", icon: Home },
+  { href: "/for-you", label: "Home", icon: Home },
   { href: "/market", label: "Market", icon: Search },
   { href: "/create", label: "Create", icon: Plus },
   { href: "/messages", label: "Messages", icon: MessageSquare },
@@ -45,29 +47,48 @@ const mainNav = [
 
 export function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const [activateAuth, setActivateAuth] = useState(false);
 
   const theme = useHaggleStore((state) => state.theme);
   const toggleTheme = useHaggleStore((state) => state.toggleTheme);
 
-  const navItems = [
-    { id: "for-you", label: "For You", icon: HomeIcon, path: "/for-you" },
-    { id: "explore", label: "Explore", icon: Compass, path: "/for-you" },
-    { id: "market", label: "Market", icon: ShoppingBag, path: "/market" },
-    { id: "add", label: "Add", icon: PlusCircle, path: "/create" },
-    {
-      id: "message",
-      label: "Messages",
-      icon: MessageCircle,
-      path: "/messages",
-    },
-  ];
-
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
 
+  const [userData, setUserData] = useState({});
+
+  const hasFetched = useRef(false);
+
+  const fetchUserProfile = async () => {
+     const haggleAccessToken = localStorage.getItem("haggleAccessToken");
+    if (localStorage.getItem("activateAuth") === "true") {
+      const timer = setTimeout(() => {
+        setActivateAuth(true);
+      }, 10000);
+      // return () => clearTimeout(timer);
+    } else {
+      if (haggleAccessToken) {
+        // hasFetched.current = true;
+        let user = await getUserProfile(setActivateAuth);
+        console.log(user);
+        setUserData(user);
+      } else {
+        localStorage.setItem("activateAuth", "true");
+        const timer = setTimeout(() => {
+          setActivateAuth(true);
+        }, 10000);
+      }
+    }
+  }
+
+  useEffect(() => {
+   fetchUserProfile()
+  }, []);
+
   return (
     <div className="flex h-screen text-foreground w-full">
-      <SideNav />
+      {activateAuth && <AuthPopUp setActivateAuth={setActivateAuth} />}
+      <SideNav userData={userData}/>
       <div className="flex h-full overflow-y-auto flex-1 flex-col">
         <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur xl:hidden">
           <div className="flex items-center justify-between px-4 py-4">
