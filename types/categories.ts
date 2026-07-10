@@ -20,7 +20,7 @@ export interface Subcategory {
 export interface Tag {
   id: string;
   name: string;
-  type: "text" | "number" | "select" | "boolean" | "range" | "multi-select";
+  type: "text" | "number" | "select" | "boolean" | "range" | "multi-select" | "date";
   options?: string[];
   placeholder?: string;
   required: boolean;
@@ -304,7 +304,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
       {
         id: "expiry",
         name: "Expiry Date",
-        type: "text",
+        type: "date",
         required: false,
         placeholder: "e.g. 12/2025",
       },

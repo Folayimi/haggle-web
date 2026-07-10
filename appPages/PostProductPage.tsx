@@ -333,12 +333,14 @@ function CompletionSummary({
 function SmartSaveButton({
   status,
   onSave,
+  lastSaved,
+  setLastSaved,
 }: {
   status: "idle" | "saving" | "saved";
   onSave: () => void;
+  lastSaved: Date | null;
+  setLastSaved: React.Dispatch<React.SetStateAction<Date | null>>;
 }) {
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-
   const handleSave = () => {
     onSave();
     setLastSaved(new Date());
@@ -629,7 +631,7 @@ const PostProductPage = () => {
   // useEffect(()=>{
 
   // },[productInfo.category, productInfo.subCategory])
-
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("details");
   const [negotiationStyle, setNegotiationStyle] =
     useState<NegotiationStyle>("flexible");
@@ -703,8 +705,6 @@ const PostProductPage = () => {
 
       // Move forward
       setActiveTab(tab);
-      setSaveType("update");
-
       // Mark completed and auto-save
       if (activeTab === "details") {
         setCompleted((prev) => ({ ...prev, details: true }));
@@ -712,6 +712,8 @@ const PostProductPage = () => {
         setCompleted((prev) => ({ ...prev, pricing: true }));
       }
       saveDraft();
+      setLastSaved(new Date());
+      setSaveType("update");
       return;
     }
 
@@ -732,6 +734,8 @@ const PostProductPage = () => {
         setCompleted((prev) => ({ ...prev, pricing: true }));
       }
       saveDraft();
+      setLastSaved(new Date());
+      setSaveType("update");
       return;
     }
   };
@@ -835,9 +839,9 @@ const PostProductPage = () => {
       negotiation_note: productInfo?.negotiationNote,
     };
     try {
-      // Simulate API call
+      // PRODUCT LISTING LOGIC
       const subCategory = await getCategory(productInfo.subCategorySlug);
-      if (subCategory) {
+      if (subCategory?.data) {
         if (saveType === "create") {
           const listing: any = await createListing({
             ...payload,
@@ -852,7 +856,7 @@ const PostProductPage = () => {
         }
       } else {
         const category = await getCategory(productInfo.categorySlug);
-        if (category) {
+        if (category?.data) {
           const subCategory = await createCategory({
             ...subCategoryPayload,
             parent_id: category.data.id,
@@ -889,7 +893,6 @@ const PostProductPage = () => {
                 category_id: subCategory.data.id,
               });
             }
-            // setTimeout(() => setDraftStatus("idle"), 3000);
           }
         }
       }
@@ -902,6 +905,7 @@ const PostProductPage = () => {
       console.log("Draft saved:", payload);
 
       setDraftStatus("saved");
+      setTimeout(() => setDraftStatus("idle"), 3000);
     } catch (error) {
       console.error("Failed to save draft:", error);
       setDraftStatus("idle");
@@ -925,6 +929,8 @@ const PostProductPage = () => {
           setCompleted((prev) => ({ ...prev, pricing: true }));
         }
         await saveDraft();
+        setLastSaved(new Date());
+        setSaveType("update");
       }
     } else {
       // On media tab, publish
@@ -992,7 +998,18 @@ const PostProductPage = () => {
             </div>
 
             <div className="flex items-center gap-3">
-              <SmartSaveButton status={draftStatus} onSave={saveDraft} />
+              <SmartSaveButton
+                status={draftStatus}
+                onSave={() => {
+                  if (validateTab(activeTab)) {
+                    saveDraft();
+                  } else {
+                    return;
+                  }
+                }}
+                lastSaved={lastSaved}
+                setLastSaved={setLastSaved}
+              />
               <Link
                 href="/create"
                 className="

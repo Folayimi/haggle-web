@@ -1,77 +1,227 @@
-// ForYou.tsx - Main Page
+// ForYou.tsx - Main Feed Page
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { AnimatePresence } from "framer-motion";
 import {
-  User,
-  Heart,
-  MessageCircle,
-  Share2,
-  Users,
   ChevronUp,
   ChevronDown,
-  Bell,
-  Bookmark,
+  Home,
+  Search,
+  PlusCircle,
+  MessageCircle,
+  User,
+  Megaphone,
 } from "lucide-react";
 import FeedCard from "@/components/FeedCard";
 import { useHaggleStore } from "@/lib/app-store";
 import { AppShell } from "@/components/app-shell";
 
-// Sample feed data with images from the web
-const feedData = [
-  {
-    id: 1,
-    username: "sarah_mitchell",
-    imageUrl:
-      "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&h=1200&fit=crop",
-  },
-  {
-    id: 2,
-    username: "michael_chen",
-    imageUrl:
-      "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800&h=1200&fit=crop",
-  },
-  {
-    id: 3,
-    username: "emma_watson",
-    imageUrl:
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=800&h=1200&fit=crop",
-  },
-  {
-    id: 4,
-    username: "james_rodriguez",
-    imageUrl:
-      "https://images.unsplash.com/photo-1502741224143-90386d7f8c82?w=800&h=1200&fit=crop",
-  },
-  {
-    id: 5,
-    username: "lisa_wong",
-    imageUrl:
-      "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=1200&fit=crop",
-  },
-];
+// ============================================
+// TYPES
+// ============================================
+interface FeedItem {
+  id: string;
+  seller: {
+    id: string;
+    username: string;
+    displayName: string;
+    avatar: string;
+    rating: number;
+    totalReviews: number;
+    marketStyle: "fresh" | "boutique" | "workshop" | "kitchen" | "studio" | "farm" | "warehouse";
+    location: {
+      city: string;
+      distance: number;
+    };
+  };
+  product: {
+    title: string;
+    category: string;
+    imageUrl: string;
+    price: number;
+    currency: string;
+  };
+  live: {
+    viewerCount: number;
+    offersMade: number;
+    soldToday: number;
+    duration: number;
+    status: "live" | "trending" | "ending";
+    lastSale?: string;
+  };
+  status: {
+    text: string;
+    icon: string;
+  };
+}
 
+// ============================================
+// MOCK DATA (will be replaced with real API)
+// ============================================
+const generateMockFeed = (): FeedItem[] => {
+  const sellers = [
+    {
+      id: "seller1",
+      username: "sarah_mitchell",
+      displayName: "Sarah Mitchell",
+      avatar: "SM",
+      rating: 4.9,
+      totalReviews: 92,
+      marketStyle: "boutique" as const,
+      location: { city: "Lagos", distance: 2.4 },
+    },
+    {
+      id: "seller2",
+      username: "michael_chen",
+      displayName: "Michael Chen",
+      avatar: "MC",
+      rating: 4.8,
+      totalReviews: 67,
+      marketStyle: "workshop" as const,
+      location: { city: "Ikeja", distance: 5.1 },
+    },
+    {
+      id: "seller3",
+      username: "emma_watson",
+      displayName: "Emma Watson",
+      avatar: "EW",
+      rating: 4.7,
+      totalReviews: 45,
+      marketStyle: "studio" as const,
+      location: { city: "Surulere", distance: 1.8 },
+    },
+    {
+      id: "seller4",
+      username: "james_rodriguez",
+      displayName: "James Rodriguez",
+      avatar: "JR",
+      rating: 4.9,
+      totalReviews: 103,
+      marketStyle: "fresh" as const,
+      location: { city: "Yaba", distance: 3.2 },
+    },
+    {
+      id: "seller5",
+      username: "lisa_wong",
+      displayName: "Lisa Wong",
+      avatar: "LW",
+      rating: 4.6,
+      totalReviews: 38,
+      marketStyle: "kitchen" as const,
+      location: { city: "Victoria Island", distance: 6.7 },
+    },
+  ];
+
+  const products = [
+    {
+      title: "Vintage Denim Jacket",
+      category: "Fashion",
+      imageUrl:
+        "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=800&h=1200&fit=crop",
+      price: 45000,
+      currency: "₦",
+    },
+    {
+      title: "Handcrafted Wooden Table",
+      category: "Furniture",
+      imageUrl:
+        "https://images.unsplash.com/photo-1509631179647-0177331693ae?w=800&h=1200&fit=crop",
+      price: 120000,
+      currency: "₦",
+    },
+    {
+      title: "Custom Portrait Painting",
+      category: "Art",
+      imageUrl:
+        "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=800&h=1200&fit=crop",
+      price: 85000,
+      currency: "₦",
+    },
+    {
+      title: "Fresh Organic Vegetables",
+      category: "Food",
+      imageUrl:
+        "https://images.unsplash.com/photo-1502741224143-90386d7f8c82?w=800&h=1200&fit=crop",
+      price: 15000,
+      currency: "₦",
+    },
+    {
+      title: "Homemade Pastries",
+      category: "Food",
+      imageUrl:
+        "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=800&h=1200&fit=crop",
+      price: 8000,
+      currency: "₦",
+    },
+  ];
+
+  const statuses = [
+    { text: "Just sold 2 items", icon: "✅" },
+    { text: "Responding to offers", icon: "💬" },
+    { text: "🔥 18 buyers watching", icon: "🔥" },
+    { text: "Last sale 1 min ago", icon: "⚡" },
+    { text: "🔊 Negotiating now", icon: "🤝" },
+  ];
+
+  const liveStatuses: ("live" | "trending" | "ending")[] = [
+    "live",
+    "trending",
+    "live",
+    "trending",
+    "ending",
+  ];
+
+  return sellers.map((seller, index) => ({
+    id: `feed_${index + 1}`,
+    seller,
+    product: products[index % products.length],
+    live: {
+      viewerCount: Math.floor(Math.random() * 200) + 20,
+      offersMade: Math.floor(Math.random() * 15) + 3,
+      soldToday: Math.floor(Math.random() * 8) + 1,
+      duration: Math.floor(Math.random() * 45) + 5,
+      status: liveStatuses[index % liveStatuses.length],
+      lastSale: Math.random() > 0.5 ? `${Math.floor(Math.random() * 5) + 1} mins ago` : undefined,
+    },
+    status: statuses[index % statuses.length],
+  }));
+};
+
+const FEED_DATA = generateMockFeed();
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
 const ForYou = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
+  const [isAnimating, setIsAnimating] = useState(false);
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const userData = useHaggleStore((state) => state.userData);
-  const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
-  const clearUserData = useHaggleStore((state) => state.clearUserData);
 
-  const handleNext = () => {
-    if (currentIndex < feedData.length - 1) {
-      setCurrentIndex(currentIndex + 1);
+  const currentFeed = FEED_DATA[currentIndex];
+  const isFirst = currentIndex === 0;
+  const isLast = currentIndex === FEED_DATA.length - 1;
+
+  const handleNext = useCallback(() => {
+    if (!isLast && !isAnimating) {
+      setIsAnimating(true);
+      setCurrentIndex((prev) => prev + 1);
+      setTimeout(() => setIsAnimating(false), 500);
     }
-  };
+  }, [isLast, isAnimating]);
 
-  const handlePrevious = () => {
-    if (currentIndex > 0) {
-      setCurrentIndex(currentIndex - 1);
+  const handlePrevious = useCallback(() => {
+    if (!isFirst && !isAnimating) {
+      setIsAnimating(true);
+      setCurrentIndex((prev) => prev - 1);
+      setTimeout(() => setIsAnimating(false), 500);
     }
-  };
+  }, [isFirst, isAnimating]);
 
+  // Touch handlers
   const handleTouchStart = (e: React.TouchEvent) => {
     setTouchStart(e.targetTouches[0].clientY);
   };
@@ -81,162 +231,133 @@ const ForYou = () => {
   };
 
   const handleTouchEnd = () => {
-    if (touchStart - touchEnd > 50) {
-      handleNext();
-    }
-    if (touchStart - touchEnd < -50) {
-      handlePrevious();
+    const diff = touchStart - touchEnd;
+    if (Math.abs(diff) > 50) {
+      if (diff > 0) handleNext();
+      else handlePrevious();
     }
     setTouchStart(0);
     setTouchEnd(0);
   };
 
   // Keyboard support
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === "ArrowDown" || e.key === "ArrowRight") {
-      e.preventDefault();
-      handleNext();
-    } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
-      e.preventDefault();
-      handlePrevious();
-    }
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "ArrowDown" || e.key === "ArrowRight") {
+        e.preventDefault();
+        handleNext();
+      } else if (e.key === "ArrowUp" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        handlePrevious();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [handleNext, handlePrevious]);
+
+  // Handle join live
+  const handleJoinLive = (sellerId: string) => {
+    console.log(`Joining live room for seller: ${sellerId}`);
+    // Navigate to live room
   };
 
-  const currentFeed = feedData[currentIndex];
+  // Handle broadcast button
+  const handleBroadcast = () => {
+    console.log("Opening broadcast modal");
+    // Open broadcast modal or navigate to broadcast page
+  };
+
+  if (!currentFeed) return null;
 
   return (
     <AppShell>
       <div
-        className="relative w-full h-screen"
+        className="relative w-full h-screen overflow-hidden"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
-        onKeyDown={handleKeyDown}
-        tabIndex={0}
       >
-        {/* <Image
-        src={"/road-4.png"}
-        alt="road-background"
-        width={1000}
-        height={1000}
-        className="w-full h-full opacity-[0.8] object-cover"
-      /> */}
-        <div className="absolute top-0 left-0 z-20 w-full h-full flex items-center justify-center px-5 py-10">
-          {/* <Background /> */}
-          <div className="flex items-start gap-5">
-            {/* Feed Container */}
+        {/* ============================================ */}
+        {/* TOP HEADER - With Broadcast Button */}
+        {/* ============================================ */}
+        <div className="absolute top-0 left-0 right-0 z-30 p-4 flex items-center justify-between bg-gradient-to-b from-black/50 to-transparent">
+          {/* Left: Logo / Title */}
+          <div className="flex items-center gap-2">
+            <span className="text-white font-bold text-xl">Haggle</span>
+            <span className="text-white/40 text-xs">Feed</span>
+          </div>
+
+          {/* Right: Actions */}
+          <div className="flex items-center gap-3">
+            {/* Broadcast Button */}
+            <button
+              onClick={handleBroadcast}
+              className="px-3 py-1.5 rounded-full bg-primary/20 backdrop-blur-sm border border-primary/30 text-primary text-xs font-medium flex items-center gap-1.5 hover:bg-primary/30 transition-all duration-200"
+            >
+              <Megaphone className="w-3.5 h-3.5" />
+              <span>Broadcast</span>
+            </button>
+
+            {/* Notification */}
+            <button className="p-2 rounded-full bg-black/30 backdrop-blur-sm hover:bg-black/50 transition-all duration-200 border border-white/10">
+              <span className="text-white text-sm">🔔</span>
+            </button>
+
+            {/* Profile */}
+            <button className="p-2 rounded-full bg-black/30 backdrop-blur-sm hover:bg-black/50 transition-all duration-200 border border-white/10">
+              <span className="text-white text-sm">👤</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Feed Container */}
+        <div
+          ref={feedContainerRef}
+          className="relative w-full h-full flex items-center justify-center px-4 py-5"
+        >
+          <AnimatePresence mode="wait">
+            <FeedCard
+              key={currentFeed.id}
+              item={currentFeed}
+              onJoin={() => handleJoinLive(currentFeed.seller.id)}
+            />
+          </AnimatePresence>
+        </div>
+
+        {/* Bottom Navigation Indicator */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
+          {FEED_DATA.map((_, index) => (
             <div
-              ref={feedContainerRef}
-              className="w-100 transition-all duration-500 ease-out"
-            >
-              <FeedCard
-                key={currentFeed.id}
-                imageUrl={currentFeed.imageUrl}
-                username={currentFeed.username}
-                onJoin={() => console.log("Join negotiation")}
-              />
-            </div>
-
-            {/* Side Action Buttons - Icons only */}
-            <div className="flex flex-col gap-5 pt-4">
-              <button
-                className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 flex items-center justify-center border border-white/20"
-                onClick={() => console.log("Profile")}
-              >
-                <User
-                  size={20}
-                  className="text-dark-700 hover:text-primary transition-colors"
-                />
-              </button>
-
-              <button
-                className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 flex items-center justify-center border border-white/20"
-                onClick={() => console.log("Like")}
-              >
-                <Heart
-                  size={20}
-                  className="text-dark-700 hover:text-danger transition-colors"
-                />
-              </button>
-
-              <button
-                className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 flex items-center justify-center border border-white/20 relative"
-                onClick={() => console.log("Messages")}
-              >
-                <MessageCircle
-                  size={20}
-                  className="text-dark-700 hover:text-secondary transition-colors"
-                />
-                <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-danger text-white text-[8px] font-bold flex items-center justify-center">
-                  3
-                </span>
-              </button>
-
-              <button
-                className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 flex items-center justify-center border border-white/20"
-                onClick={() => console.log("Share")}
-              >
-                <Share2
-                  size={20}
-                  className="text-dark-700 hover:text-primary transition-colors"
-                />
-              </button>
-
-              <button
-                className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 flex items-center justify-center border border-white/20"
-                onClick={() => console.log("Save")}
-              >
-                <Bookmark
-                  size={20}
-                  className="text-dark-700 hover:text-primary transition-colors"
-                />
-              </button>
-
-              <button
-                className="w-12 h-12 rounded-full bg-white/80 backdrop-blur-sm hover:bg-white shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 flex items-center justify-center border border-white/20"
-                onClick={() => console.log("Notifications")}
-              >
-                <Bell
-                  size={20}
-                  className="text-dark-700 hover:text-primary transition-colors"
-                />
-              </button>
-
-              <button
-                className="w-12 h-12 rounded-full bg-primary text-white shadow-lg hover:shadow-primary/30 transition-all duration-200 hover:scale-110 flex items-center justify-center"
-                onClick={() => console.log("Join")}
-              >
-                <Users size={20} />
-              </button>
-            </div>
-          </div>
-
-          {/* Chevron Controls */}
-          <div className="absolute right-8 top-1/2 -translate-y-1/2 flex flex-col gap-4">
-            <button
-              onClick={handlePrevious}
-              disabled={currentIndex === 0}
-              className={`p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 border border-white/20 ${
-                currentIndex === 0
-                  ? "opacity-40 cursor-not-allowed"
-                  : "hover:bg-primary hover:text-white"
+              key={index}
+              className={`h-1 rounded-full transition-all duration-300 ${
+                index === currentIndex
+                  ? "w-8 bg-primary"
+                  : "w-4 bg-white/30"
               }`}
-            >
-              <ChevronUp size={22} />
-            </button>
+            />
+          ))}
+        </div>
 
-            <button
-              onClick={handleNext}
-              disabled={currentIndex === feedData.length - 1}
-              className={`p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-lg hover:shadow-xl transition-all duration-200 hover:scale-110 border border-white/20 ${
-                currentIndex === feedData.length - 1
-                  ? "opacity-40 cursor-not-allowed"
-                  : "hover:bg-primary hover:text-white"
-              }`}
-            >
-              <ChevronDown size={22} />
-            </button>
-          </div>
+        {/* Navigation Arrows - Desktop only */}
+        <div className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 flex-col gap-3 z-20">
+          <button
+            onClick={handlePrevious}
+            disabled={isFirst}
+            className={`p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-all duration-200 ${
+              isFirst ? "opacity-30 cursor-not-allowed" : "hover:scale-110"
+            }`}
+          >
+            <ChevronUp size={24} />
+          </button>
+          <button
+            onClick={handleNext}
+            disabled={isLast}
+            className={`p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-all duration-200 ${
+              isLast ? "opacity-30 cursor-not-allowed" : "hover:scale-110"
+            }`}
+          >
+            <ChevronDown size={24} />
+          </button>
         </div>
       </div>
     </AppShell>
