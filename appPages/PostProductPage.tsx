@@ -39,7 +39,13 @@ import { AppShell } from "@/components/app-shell";
 import { PRODUCT_CATEGORIES } from "@/types/categories";
 import { cn } from "@/lib/utils";
 import { useHaggleStore } from "@/lib/app-store";
-import { createCategory } from "@/services/request";
+import {
+  createCategory,
+  createListing,
+  getCategory,
+  updateListing,
+  updateUserProfile,
+} from "@/services/request";
 
 // ============================================
 // TYPES
@@ -603,6 +609,9 @@ function PriceInput({
 // ============================================
 const PostProductPage = () => {
   const userData = useHaggleStore((state) => state.userData);
+  const setUserData = useHaggleStore((state) => state.setUserData);
+  const [saveType, setSaveType] = useState("create");
+  const [listingId, setListingId] = useState("");
   const [productInfo, setProductInfo] = useState({
     name: "",
     category: "",
@@ -616,6 +625,10 @@ const PostProductPage = () => {
     negotiationNote: "",
     location: "",
   });
+
+  // useEffect(()=>{
+
+  // },[productInfo.category, productInfo.subCategory])
 
   const [activeTab, setActiveTab] = useState<TabId>("details");
   const [negotiationStyle, setNegotiationStyle] =
@@ -690,6 +703,7 @@ const PostProductPage = () => {
 
       // Move forward
       setActiveTab(tab);
+      setSaveType("update");
 
       // Mark completed and auto-save
       if (activeTab === "details") {
@@ -803,34 +817,91 @@ const PostProductPage = () => {
     };
     const subCategoryPayload = {
       name: productInfo?.subCategory,
-      slug: productInfo?.categorySlug,
+      slug: productInfo?.subCategorySlug,
       kind: "product",
       status: "draft",
-      parent_id: "",
     };
     const payload = {
-      seller_id: "",
+      seller_id: userData?.profile?.user_id,
       listing_type: "product",
-      category_id: "",
       title: productInfo?.name,
       description: productInfo?.description,
       starting_amount: productInfo?.startingPrice,
       lowest_amount: productInfo?.lowestAcceptablePrice,
       auto_decline_amount: productInfo?.autoDeclinePrice,
-      tags,
+      tags: tags,
       status: "draft",
       negotiation_style: negotiationStyle,
       negotiation_note: productInfo?.negotiationNote,
     };
     try {
       // Simulate API call
-      const data = await createCategory(categoryPayload);
-      if (data) {
-        const categoryId = data?.data?.id;        
-        setTimeout(() => setDraftStatus("idle"), 3000);
+      const subCategory = await getCategory(productInfo.subCategorySlug);
+      if (subCategory) {
+        if (saveType === "create") {
+          const listing: any = await createListing({
+            ...payload,
+            category_id: subCategory.data.id,
+          });
+          setListingId(listing?.data?.id);
+        } else {
+          await updateListing(listingId, {
+            ...payload,
+            category_id: subCategory.data.id,
+          });
+        }
+      } else {
+        const category = await getCategory(productInfo.categorySlug);
+        if (category) {
+          const subCategory = await createCategory({
+            ...subCategoryPayload,
+            parent_id: category.data.id,
+          });
+          if (saveType === "create") {
+            const listing: any = await createListing({
+              ...payload,
+              category_id: subCategory.data.id,
+            });
+            setListingId(listing?.data?.id);
+          } else {
+            await updateListing(listingId, {
+              ...payload,
+              category_id: subCategory.data.id,
+            });
+          }
+        } else {
+          const data = await createCategory(categoryPayload);
+          if (data) {
+            const categoryId = data?.data?.id;
+            const subCategory = await createCategory({
+              ...subCategoryPayload,
+              parent_id: categoryId,
+            });
+            if (saveType === "create") {
+              const listing: any = await createListing({
+                ...payload,
+                category_id: subCategory.data.id,
+              });
+              setListingId(listing?.data?.id);
+            } else {
+              await updateListing(listingId, {
+                ...payload,
+                category_id: subCategory.data.id,
+              });
+            }
+            // setTimeout(() => setDraftStatus("idle"), 3000);
+          }
+        }
       }
+      const updatedProfile = await updateUserProfile({
+        city: productInfo?.location,
+        primary_role: "seller",
+        preferred_role: "seller",
+      });
+      setUserData(updatedProfile);
       console.log("Draft saved:", payload);
-        setDraftStatus("saved");
+
+      setDraftStatus("saved");
     } catch (error) {
       console.error("Failed to save draft:", error);
       setDraftStatus("idle");

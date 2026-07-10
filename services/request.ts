@@ -3,6 +3,7 @@ import apiClient from "./client";
 import { notify, notifyError } from "./toastify";
 import { PassThrough } from "stream";
 import { Dispatch, SetStateAction } from "react";
+import { useHaggleStore } from "@/lib/app-store";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -46,6 +47,18 @@ apiClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+
+    // 2. 👇 Add conditional headers
+    const userData = useHaggleStore.getState().userData; // 👈 Get userData from store
+    if (config.url?.includes("/users/me") && userData?.id) {
+      config.headers["x-user-id"] = userData.id;
+    }
+
+    // 3. 👇 Add header only if request has FormData (multipart)
+    if (config.data instanceof FormData) {
+      config.headers["Content-Type"] = "multipart/form-data";
+    }
+
     return config;
   },
   (error) => Promise.reject(error),
@@ -190,7 +203,6 @@ export const userSignup = async (data: {
       notifyError(errorMessage);
       throw err;
     });
-
   return result;
 };
 
@@ -396,12 +408,10 @@ export const getUserProfile = async (
   return result;
 };
 
-// PRODUCT/SERVICES LISTINGS API CALLS
-
-export const createCategory = async (data: any) => {
+export const updateUserProfile = async (data: any) => {
   let result = "";
   await apiClient
-    .post(`/catalog/categories`, { data }) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
+    .put(`/users/me`, data) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
     .then((response: any) => {
       if (response?.data?.success === true) {
         result = response?.data;
@@ -416,10 +426,65 @@ export const createCategory = async (data: any) => {
   return result;
 };
 
-export const createListing = async (data: any) => {
-  let result = {};
+// PRODUCT/SERVICES LISTINGS API CALLS
+export const getCategory = async (slug: string) => {
+  let result: any = "";
   await apiClient
-    .post(`/catalog/listings`, { data }) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
+    .get(`/catalog/categories/${slug}`) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
+    .then((response: any) => {
+      if (response?.data?.success === true) {
+        result = response?.data;
+        console.log(result);
+      }
+    })
+    .catch((err) => {
+      // notifyError(err?.response?.data?.error);
+      // throw err;
+    });
+
+  return result;
+};
+
+export const createCategory = async (data: any) => {
+  let result: any = "";
+  await apiClient
+    .post(`/catalog/categories`, data) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
+    .then((response: any) => {
+      if (response?.data?.success === true) {
+        result = response?.data;
+        console.log(result);
+      }
+    })
+    .catch((err) => {
+      // notifyError(err?.response?.data?.error);
+      // throw err;
+    });
+
+  return result;
+};
+
+export const createListing = async (data: any) => {
+  let result = "";
+  await apiClient
+    .post(`/catalog/listings`, data) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
+    .then((response: any) => {
+      if (response?.data?.success === true) {
+        result = response?.data;
+        console.log(result);
+      }
+    })
+    .catch((err) => {
+      notifyError(err?.response?.data?.error);
+      throw err;
+    });
+
+  return result;
+};
+
+export const updateListing = async (id: any, data: any) => {
+  let result = "";
+  await apiClient
+    .patch(`/catalog/listings/${id}`, data) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
     .then((response: any) => {
       if (response?.data?.success === true) {
         result = response?.data;
