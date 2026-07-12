@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { ProductMedia } from "@/components/ProductMedia";
-import React, { useState, useEffect } from "react";
+import { ProductMedia, ProductMediaRef } from "@/components/ProductMedia";
+import React, { useRef, useState, useEffect } from "react";
 import {
   ArrowLeft,
   Camera,
@@ -34,6 +34,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { GalleryImage } from "@/components/ProductMedia";
 
 import { AppShell } from "@/components/app-shell";
 import { PRODUCT_CATEGORIES } from "@/types/categories";
@@ -42,10 +43,12 @@ import { useHaggleStore } from "@/lib/app-store";
 import {
   createCategory,
   createListing,
+  createListingMedia,
   getCategory,
   updateListing,
   updateUserProfile,
 } from "@/services/request";
+import Image from "next/image";
 
 // ============================================
 // TYPES
@@ -457,10 +460,12 @@ function ProductCardPreview({
   productName = "Your Product Name",
   price = "₦50,000",
   negotiationStyle = "flexible",
+  imageGallery,
 }: {
   productName?: string;
   price?: string;
   negotiationStyle?: NegotiationStyle;
+  imageGallery: GalleryImage[];
 }) {
   const styleMap = {
     flexible: { label: "Flexible", icon: <Handshake className="h-3 w-3" /> },
@@ -470,19 +475,38 @@ function ProductCardPreview({
 
   const style = styleMap[negotiationStyle];
 
+  const frontImage = imageGallery.find(
+    (item) => item.slotId === "front",
+  )?.previewUrl;
+
   return (
     <div className="rounded-xl border border-border/40 bg-background-elevated/20 overflow-hidden shadow-sm">
       {/* Image area */}
       <div className="aspect-video bg-gradient-to-br from-primary/10 via-background/20 to-secondary/10 flex items-center justify-center relative">
-        <div className="absolute top-2 left-2">
-          <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[8px] font-medium text-primary border border-primary/20">
-            Live
-          </span>
-        </div>
-        <div className="text-center">
-          <ShoppingBag className="mx-auto h-8 w-8 text-muted/20" />
-          <p className="text-xs text-muted/40 mt-1">Product Image</p>
-        </div>
+        {frontImage ? (
+          <Image
+            src={frontImage}
+            className=""
+            w-full
+            h-full
+            width={500}
+            height={500}
+            alt="preview-image"
+          />
+        ) : (
+          <>
+            {" "}
+            <div className="absolute top-2 left-2">
+              <span className="rounded-full bg-primary/20 px-2 py-0.5 text-[8px] font-medium text-primary border border-primary/20">
+                Live
+              </span>
+            </div>
+            <div className="text-center">
+              <ShoppingBag className="mx-auto h-8 w-8 text-muted/20" />
+              <p className="text-xs text-muted/40 mt-1">Product Image</p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Info area */}
@@ -610,6 +634,7 @@ function PriceInput({
 // MAIN PAGE
 // ============================================
 const PostProductPage = () => {
+  const productMediaRef = useRef<ProductMediaRef>(null);
   const userData = useHaggleStore((state) => state.userData);
   const setUserData = useHaggleStore((state) => state.setUserData);
   const [saveType, setSaveType] = useState("create");
@@ -627,10 +652,10 @@ const PostProductPage = () => {
     negotiationNote: "",
     location: "",
   });
-
-  // useEffect(()=>{
-
-  // },[productInfo.category, productInfo.subCategory])
+  const [imageGallery, setImageGallery] = useState<GalleryImage[]>([]);
+  const [uploadStatus, setUploadStatus] = useState<
+    "idle" | "uploading" | "done"
+  >("idle");
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>("details");
   const [negotiationStyle, setNegotiationStyle] =
@@ -838,12 +863,13 @@ const PostProductPage = () => {
       negotiation_style: negotiationStyle,
       negotiation_note: productInfo?.negotiationNote,
     };
+    let listing: any = "";
     try {
       // PRODUCT LISTING LOGIC
       const subCategory = await getCategory(productInfo.subCategorySlug);
       if (subCategory?.data) {
         if (saveType === "create") {
-          const listing: any = await createListing({
+          listing = await createListing({
             ...payload,
             category_id: subCategory.data.id,
           });
@@ -862,7 +888,7 @@ const PostProductPage = () => {
             parent_id: category.data.id,
           });
           if (saveType === "create") {
-            const listing: any = await createListing({
+            listing = await createListing({
               ...payload,
               category_id: subCategory.data.id,
             });
@@ -882,7 +908,7 @@ const PostProductPage = () => {
               parent_id: categoryId,
             });
             if (saveType === "create") {
-              const listing: any = await createListing({
+              listing = await createListing({
                 ...payload,
                 category_id: subCategory.data.id,
               });
@@ -896,6 +922,19 @@ const PostProductPage = () => {
           }
         }
       }
+      if (!productMediaRef.current) {
+        console.error("❌ ProductMedia ref is null – cannot upload images");
+        setDraftStatus("idle");
+        return;
+      }
+
+      // 1. Upload all pending images via the ref
+      const uploadResults =
+        await productMediaRef.current?.uploadGalleryImages(listing?.data?.id);
+      console.log("uploadResults", uploadResults);
+
+      // 2. Get uploaded keys
+      const uploadedKeys = productMediaRef.current?.getUploadedKeys() || [];
       const updatedProfile = await updateUserProfile({
         city: productInfo?.location,
         primary_role: "seller",
@@ -1054,9 +1093,13 @@ const PostProductPage = () => {
           <div className="flex-1 grid gap-6 lg:grid-cols-2">
             {/* LEFT COLUMN */}
             <div className="space-y-4">
-              <ProductMedia
+              <ProductMedia                
+                ref={productMediaRef}
                 onImagesChange={(images) => {
                   // Optionally sync images to parent state if needed
+                }}
+                onGalleryChange={(gallery) => {
+                  setImageGallery(gallery);
                 }}
               />
             </div>
@@ -1370,6 +1413,7 @@ const PostProductPage = () => {
                         productName={productInfo.name || "Your Product Name"}
                         price={productInfo.startingPrice || "₦50,000"}
                         negotiationStyle={negotiationStyle}
+                        imageGallery={imageGallery}
                       />
                     </motion.div>
                   )}

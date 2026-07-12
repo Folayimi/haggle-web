@@ -7,12 +7,28 @@ import { useHaggleStore } from "@/lib/app-store";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
+interface Presign {
+  expiresIn: number;
+  uploadUrl: string;
+  key: string;
+}
+
 const setConfig = (accessToken: string) => {
   return {
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${accessToken}`,
       withCredentials: true,
+    },
+  };
+};
+
+const setImageConfig = () => {
+  return {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${localStorage.getItem("haggleAccessToken")}`,
+      // withCredentials: true,
     },
   };
 };
@@ -492,6 +508,118 @@ export const updateListing = async (id: any, data: any) => {
       }
     })
     .catch((err) => {
+      notifyError(err?.response?.data?.error);
+      throw err;
+    });
+
+  return result;
+};
+
+export const createListingMedia = async (data: any, id:string) => {
+  let result = "";
+  await apiClient
+    .post(`/catalog/listings/${id}/media`, data) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
+    .then((response: any) => {
+      if (response?.data?.success === true) {
+        result = response?.data;
+        console.log(result);
+      }
+    })
+    .catch((err) => {
+      notifyError(err?.response?.data?.error);
+      throw err;
+    });
+
+  return result;
+};
+
+export const uploadImage = async (file: any) => {
+  console.log(file);
+  let result: Presign = {
+    expiresIn: 0,
+    uploadUrl: "",
+    key: "",
+  };
+  const payload = {
+    filename: file.name,
+    fileType: file.type,
+    fileSize: file.size,
+  };
+  await axios
+    .post(
+      `${process.env.NEXT_PUBLIC_WORKER_URL}/api/uploads/presign`,
+      payload,
+      setImageConfig(),
+    )
+    .then(async (response: any) => {
+      console.log(response);
+      if (response?.status === 200) {
+        result = response?.data;
+
+        const uploadResponse = await fetch(response?.data?.uploadUrl, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type,
+          },
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error("Upload to R2 failed");
+        }
+      }
+    })
+    .catch((err) => {
+      notifyError(err?.response?.data?.error);
+      throw err;
+    });
+
+  return result;
+};
+
+export const confirmUpload = async (data: any) => {
+  let result = "";
+
+  await axios
+    .post(
+      `${process.env.NEXT_PUBLIC_WORKER_URL}/api/uploads/confirm`,
+      data,
+      setImageConfig(),
+    )
+    .then(async (response: any) => {
+      console.log(response);
+      if (response?.status === 200) {
+        result = response?.data;
+        console.log(result);
+      }
+    })
+    .catch((err) => {
+      console.log(err);
+      notifyError(err?.response?.data?.error);
+      throw err;
+    });
+
+  return result;
+};
+
+export const deleteUpload = async (data: any) => {
+  let result = "";
+
+  await axios
+    .post(
+      `${process.env.NEXT_PUBLIC_WORKER_URL}/api/uploads/delete`,
+      data,
+      setImageConfig(),
+    )
+    .then(async (response: any) => {
+      console.log(response);
+      if (response?.status === 200) {
+        result = response?.data;
+        console.log(result);
+      }
+    })
+    .catch((err) => {
+      console.log(err);
       notifyError(err?.response?.data?.error);
       throw err;
     });

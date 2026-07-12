@@ -17,36 +17,36 @@
   /* ============================================
      HAGGLE BRAND COLORS
      ============================================ */
-  --primary: #F44D24;
-  --primary-strong: #D83E18;
-  --secondary: #6B4EFF;
-  --accent: #FFEEE6;
-  --success: #4CAF50;
-  --warning: #FFC107;
-  --danger: #FF5252;
+  --primary: #f44d24;
+  --primary-strong: #d83e18;
+  --secondary: #6b4eff;
+  --accent: #ffeee6;
+  --success: #4caf50;
+  --warning: #ffc107;
+  --danger: #ff5252;
 
   /* ============================================
      SURFACE & BACKGROUND
      ============================================ */
-  --page-bg: #FFF8F0;
-  --background: #FFF8F0;
-  --background-elevated: #FFFFFF;
-  --surface: #FFF4EC;
-  --surface-strong: #FFFDF9;
-  --surface-inverse: #2C2C2C;
+  --page-bg: #fff8f0;
+  --background: #fff8f0;
+  --background-elevated: #ffffff;
+  --surface: #fff4ec;
+  --surface-strong: #fffdf9;
+  --surface-inverse: #2c2c2c;
 
   /* ============================================
      TEXT COLORS
      ============================================ */
-  --foreground: #1F1712;
-  --muted: #6C625C;
-  --primary-foreground: #FFFFFF;
-  --secondary-foreground: #FFFFFF;
-  --accent-foreground: #1F1712;
-  --muted-foreground: #6C625C;
-  --card-foreground: #1F1712;
-  --popover-foreground: #1F1712;
-  --destructive: #FF5252;
+  --foreground: #1f1712;
+  --muted: #6c625c;
+  --primary-foreground: #ffffff;
+  --secondary-foreground: #ffffff;
+  --accent-foreground: #1f1712;
+  --muted-foreground: #6c625c;
+  --card-foreground: #1f1712;
+  --popover-foreground: #1f1712;
+  --destructive: #ff5252;
 
   /* ============================================
      BORDERS & RINGS
@@ -66,27 +66,27 @@
   /* ============================================
      CARDS & POPOVERS
      ============================================ */
-  --card: #FFFFFF;
-  --popover: #FFFFFF;
+  --card: #ffffff;
+  --popover: #ffffff;
 
   /* ============================================
      SIDEBAR
      ============================================ */
-  --sidebar: #FFF8F0;
-  --sidebar-foreground: #1F1712;
-  --sidebar-primary: #F44D24;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #FFF4EC;
-  --sidebar-accent-foreground: #1F1712;
+  --sidebar: #fff8f0;
+  --sidebar-foreground: #1f1712;
+  --sidebar-primary: #f44d24;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #fff4ec;
+  --sidebar-accent-foreground: #1f1712;
 
   /* ============================================
      CHARTS (Haggle warm palette)
      ============================================ */
-  --chart-1: #F44D24;
-  --chart-2: #6B4EFF;
-  --chart-3: #FFC107;
-  --chart-4: #4CAF50;
-  --chart-5: #FFEEE6;
+  --chart-1: #f44d24;
+  --chart-2: #6b4eff;
+  --chart-3: #ffc107;
+  --chart-4: #4caf50;
+  --chart-5: #ffeee6;
 
   /* ============================================
      RADIUS
@@ -101,21 +101,21 @@
   /* ============================================
      SURFACE & BACKGROUND
      ============================================ */
-  --page-bg: #190C05;
-  --background: #190C05;
-  --background-elevated: #1B1518;
-  --surface: #231B20;
-  --surface-strong: #2D2229;
-  --surface-inverse: #FFF8F0;
+  --page-bg: #190c05;
+  --background: #190c05;
+  --background-elevated: #1b1518;
+  --surface: #231b20;
+  --surface-strong: #2d2229;
+  --surface-inverse: #fff8f0;
 
   /* ============================================
      TEXT COLORS
      ============================================ */
-  --foreground: #FFF3EB;
-  --muted: #C8B8B0;
-  --muted-foreground: #C8B8B0;
-  --card-foreground: #FFF3EB;
-  --popover-foreground: #FFF3EB;
+  --foreground: #fff3eb;
+  --muted: #c8b8b0;
+  --muted-foreground: #c8b8b0;
+  --card-foreground: #fff3eb;
+  --popover-foreground: #fff3eb;
 
   /* ============================================
      BORDERS & RINGS
@@ -135,29 +135,33 @@
   /* ============================================
      CARDS & POPOVERS
      ============================================ */
-  --card: #1B1518;
-  --popover: #1B1518;
+  --card: #1b1518;
+  --popover: #1b1518;
 
   /* ============================================
      SIDEBAR
      ============================================ */
-  --sidebar: #190C05;
-  --sidebar-foreground: #FFF3EB;
-  --sidebar-primary: #F44D24;
-  --sidebar-primary-foreground: #FFFFFF;
-  --sidebar-accent: #231B20;
-  --sidebar-accent-foreground: #FFF3EB;
+  --sidebar: #190c05;
+  --sidebar-foreground: #fff3eb;
+  --sidebar-primary: #f44d24;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: #231b20;
+  --sidebar-accent-foreground: #fff3eb;
 }
 
 /* ============================================
    SHADOW UTILITIES
    ============================================ */
 [data-theme="light"] .shadow-card {
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.08), 0 2px 8px rgba(0, 0, 0, 0.04);
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.08),
+    0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 [data-theme="light"] .shadow-soft {
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.12), 0 4px 12px rgba(0, 0, 0, 0.06);
+  box-shadow:
+    0 16px 48px rgba(0, 0, 0, 0.12),
+    0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 .shadow-card {
@@ -172,7 +176,8 @@
    ANIMATIONS
    ============================================ */
 @keyframes pulse-slow {
-  0%, 100% {
+  0%,
+  100% {
     box-shadow: 0 0 40px rgba(244, 77, 36, 0.4);
     transform: scale(1);
   }
@@ -187,7 +192,8 @@
 }
 
 @keyframes waveform {
-  0%, 100% {
+  0%,
+  100% {
     height: 10px;
     opacity: 0.4;
   }
@@ -198,18 +204,31 @@
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0px) rotate(0deg); }
-  50% { transform: translateY(-15px) rotate(3deg); }
+  0%,
+  100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-15px) rotate(3deg);
+  }
 }
 
 @keyframes spin-slow {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes lds-ring {
-  0% { transform: rotate(0deg); }
-  100% { transform: rotate(360deg); }
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
 /* ============================================
@@ -425,44 +444,102 @@ select {
 /* ============================================
    FLEX UTILITY CLASSES
    ============================================ */
-.flexbm { @apply flex justify-between items-center; }
-.flexbs { @apply flex justify-between items-start; }
-.flexbe { @apply flex justify-between items-end; }
-.flexam { @apply flex justify-around items-center; }
-.flexmm { @apply flex justify-center items-center; }
-.flexem { @apply flex justify-end items-center; }
-.flexme { @apply flex justify-center items-end; }
-.flexsm { @apply flex justify-start items-center; }
-.flexms { @apply flex justify-center items-start; }
-.flexss { @apply flex justify-start items-start; }
-.flexse { @apply flex justify-start items-end; }
-.flexes { @apply flex justify-end items-start; }
+.flexbm {
+  @apply flex justify-between items-center;
+}
+.flexbs {
+  @apply flex justify-between items-start;
+}
+.flexbe {
+  @apply flex justify-between items-end;
+}
+.flexam {
+  @apply flex justify-around items-center;
+}
+.flexmm {
+  @apply flex justify-center items-center;
+}
+.flexem {
+  @apply flex justify-end items-center;
+}
+.flexme {
+  @apply flex justify-center items-end;
+}
+.flexsm {
+  @apply flex justify-start items-center;
+}
+.flexms {
+  @apply flex justify-center items-start;
+}
+.flexss {
+  @apply flex justify-start items-start;
+}
+.flexse {
+  @apply flex justify-start items-end;
+}
+.flexes {
+  @apply flex justify-end items-start;
+}
 
-.cflexbm { @apply flex flex-col justify-between items-center; }
-.cflexbs { @apply flex flex-col justify-between items-start; }
-.cflexbe { @apply flex flex-col justify-between items-end; }
-.cflexam { @apply flex flex-col justify-around items-center; }
-.cflexmm { @apply flex flex-col justify-center items-center; }
-.cflexem { @apply flex flex-col justify-end items-center; }
-.cflexme { @apply flex flex-col justify-center items-end; }
-.cflexsm { @apply flex flex-col justify-start items-center; }
-.cflexms { @apply flex flex-col justify-center items-start; }
-.cflexss { @apply flex flex-col justify-start items-start; }
-.cflexse { @apply flex flex-col justify-start items-end; }
-.cflexes { @apply flex flex-col justify-end items-start; }
+.cflexbm {
+  @apply flex flex-col justify-between items-center;
+}
+.cflexbs {
+  @apply flex flex-col justify-between items-start;
+}
+.cflexbe {
+  @apply flex flex-col justify-between items-end;
+}
+.cflexam {
+  @apply flex flex-col justify-around items-center;
+}
+.cflexmm {
+  @apply flex flex-col justify-center items-center;
+}
+.cflexem {
+  @apply flex flex-col justify-end items-center;
+}
+.cflexme {
+  @apply flex flex-col justify-center items-end;
+}
+.cflexsm {
+  @apply flex flex-col justify-start items-center;
+}
+.cflexms {
+  @apply flex flex-col justify-center items-start;
+}
+.cflexss {
+  @apply flex flex-col justify-start items-start;
+}
+.cflexse {
+  @apply flex flex-col justify-start items-end;
+}
+.cflexes {
+  @apply flex flex-col justify-end items-start;
+}
 
 /* ============================================
    ANIMATION UTILITY CLASSES
    ============================================ */
-.transition-all { transition: all 0.5s ease-in-out; }
-.transition-height { transition: max-height 0.7s ease-in-out; }
+.transition-all {
+  transition: all 0.5s ease-in-out;
+}
+.transition-height {
+  transition: max-height 0.7s ease-in-out;
+}
 
 .animate-float {
   animation: float 6s ease-in-out infinite;
 }
-.delay-300 { animation-delay: 300ms; }
-.delay-500 { animation-delay: 500ms; }
-.delay-700 { animation-delay: 700ms; }
+.delay-300 {
+  animation-delay: 300ms;
+}
+.delay-500 {
+  animation-delay: 500ms;
+}
+.delay-700 {
+  animation-delay: 700ms;
+}
 
 .animate-spin-slow {
   animation: spin-slow 20s linear infinite;
@@ -492,9 +569,15 @@ select {
   animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
   border-color: #fff transparent transparent transparent;
 }
-.lds-ring div:nth-child(1) { animation-delay: -0.45s; }
-.lds-ring div:nth-child(2) { animation-delay: -0.3s; }
-.lds-ring div:nth-child(3) { animation-delay: -0.15s; }
+.lds-ring div:nth-child(1) {
+  animation-delay: -0.45s;
+}
+.lds-ring div:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.lds-ring div:nth-child(3) {
+  animation-delay: -0.15s;
+}
 
 .lds-ring-2 {
   display: inline-block;
@@ -514,9 +597,15 @@ select {
   animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
   border-color: black transparent transparent transparent;
 }
-.lds-ring-2 div:nth-child(1) { animation-delay: -0.45s; }
-.lds-ring-2 div:nth-child(2) { animation-delay: -0.3s; }
-.lds-ring-2 div:nth-child(3) { animation-delay: -0.15s; }
+.lds-ring-2 div:nth-child(1) {
+  animation-delay: -0.45s;
+}
+.lds-ring-2 div:nth-child(2) {
+  animation-delay: -0.3s;
+}
+.lds-ring-2 div:nth-child(3) {
+  animation-delay: -0.15s;
+}
 
 /* ============================================
    REDUCED MOTION PREFERENCE
@@ -545,4 +634,23 @@ select {
   html {
     @apply font-sans;
   }
+}
+
+@keyframes pulse-slow {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-pulse-slow {
+  animation: pulse-slow 2s ease-in-out infinite;
 }

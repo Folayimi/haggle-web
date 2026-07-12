@@ -2,20 +2,24 @@
 "use client";
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronUp,
   ChevronDown,
-  Home,
-  Search,
-  PlusCircle,
-  MessageCircle,
-  User,
   Megaphone,
+  Flame,
+  MapPin,
+  Clock,
+  Sparkles,
+  ShoppingBag,
+  Users,
+  Handshake,
 } from "lucide-react";
-import FeedCard from "@/components/FeedCard";
+import FeedCard from "@/components/feed/FeedCard";
+import { CategoryRail } from "@/components/feed/CategoryRail";
 import { useHaggleStore } from "@/lib/app-store";
 import { AppShell } from "@/components/app-shell";
+import { MarketMood } from "@/components/feed/MarketMood";
 
 // ============================================
 // TYPES
@@ -29,7 +33,14 @@ interface FeedItem {
     avatar: string;
     rating: number;
     totalReviews: number;
-    marketStyle: "fresh" | "boutique" | "workshop" | "kitchen" | "studio" | "farm" | "warehouse";
+    marketStyle:
+      | "fresh"
+      | "boutique"
+      | "workshop"
+      | "kitchen"
+      | "studio"
+      | "farm"
+      | "warehouse";
     location: {
       city: string;
       distance: number;
@@ -54,12 +65,22 @@ interface FeedItem {
     text: string;
     icon: string;
   };
+  story: {
+    headline: string;
+    primaryEmotion:
+      | "trending"
+      | "highly-rated"
+      | "fast-shipping"
+      | "negotiating"
+      | "popular";
+  };
+  sellerStory?: string;
 }
 
 // ============================================
 // MOCK DATA (will be replaced with real API)
 // ============================================
-const generateMockFeed = (): FeedItem[] => {
+const generateMockFeed = (filter?: string): FeedItem[] => {
   const sellers = [
     {
       id: "seller1",
@@ -159,9 +180,17 @@ const generateMockFeed = (): FeedItem[] => {
   const statuses = [
     { text: "Just sold 2 items", icon: "✅" },
     { text: "Responding to offers", icon: "💬" },
-    { text: "🔥 18 buyers watching", icon: "🔥" },
+    { text: "18 buyers watching", icon: "🔥" },
     { text: "Last sale 1 min ago", icon: "⚡" },
-    { text: "🔊 Negotiating now", icon: "🤝" },
+    { text: "Negotiating now", icon: "🤝" },
+    { text: "Packing orders", icon: "📦" },
+    { text: "Accepting offers", icon: "🤝" },
+    { text: "Going viral", icon: "🔥" },
+    { text: "Just sold 3 items", icon: "✅" },
+    { text: "Responding fast", icon: "⚡" },
+    { text: "Closing soon", icon: "⏳" },
+    { text: "Delivering nearby", icon: "📍" },
+    { text: "5 new viewers just joined", icon: "👀" },
   ];
 
   const liveStatuses: ("live" | "trending" | "ending")[] = [
@@ -172,7 +201,37 @@ const generateMockFeed = (): FeedItem[] => {
     "ending",
   ];
 
-  return sellers.map((seller, index) => ({
+  const stories: {
+    headline: string;
+    primaryEmotion: FeedItem["story"]["primaryEmotion"];
+  }[] = [
+    { headline: "🔥 Trending • 107 watching", primaryEmotion: "trending" },
+    { headline: "⭐ Highest Rated • 4.9★", primaryEmotion: "highly-rated" },
+    { headline: "📦 Ships in 1 hour", primaryEmotion: "fast-shipping" },
+    { headline: "💬 Negotiating with 8 buyers", primaryEmotion: "negotiating" },
+    { headline: "❤️ Saved by 312 people", primaryEmotion: "popular" },
+  ];
+
+  const sellerStories = [
+    "I imported these jackets yesterday.",
+    "Only 3 left in stock.",
+    "Negotiating wholesale today.",
+    "Come see how I make this.",
+    "Fresh from Mile 12 market.",
+  ];
+
+  let filteredSellers = sellers;
+  if (filter === "nearby") {
+    filteredSellers = sellers.filter((s) => s.location.distance < 5);
+  } else if (filter === "trending") {
+    filteredSellers = sellers.slice(0, 3);
+  } else if (filter === "fashion") {
+    filteredSellers = sellers.filter((_, i) => i === 0 || i === 2);
+  } else if (filter === "food") {
+    filteredSellers = sellers.filter((_, i) => i === 3 || i === 4);
+  }
+
+  return filteredSellers.map((seller, index) => ({
     id: `feed_${index + 1}`,
     seller,
     product: products[index % products.length],
@@ -182,28 +241,38 @@ const generateMockFeed = (): FeedItem[] => {
       soldToday: Math.floor(Math.random() * 8) + 1,
       duration: Math.floor(Math.random() * 45) + 5,
       status: liveStatuses[index % liveStatuses.length],
-      lastSale: Math.random() > 0.5 ? `${Math.floor(Math.random() * 5) + 1} mins ago` : undefined,
+      lastSale:
+        Math.random() > 0.5
+          ? `${Math.floor(Math.random() * 5) + 1} mins ago`
+          : undefined,
     },
     status: statuses[index % statuses.length],
+    story: stories[index % stories.length],
+    sellerStory: sellerStories[index % sellerStories.length],
   }));
 };
-
-const FEED_DATA = generateMockFeed();
 
 // ============================================
 // MAIN COMPONENT
 // ============================================
 const ForYou = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [touchStart, setTouchStart] = useState(0);
   const [touchEnd, setTouchEnd] = useState(0);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [feedData, setFeedData] = useState<FeedItem[]>([]);
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const userData = useHaggleStore((state) => state.userData);
 
-  const currentFeed = FEED_DATA[currentIndex];
+  useEffect(() => {
+    setFeedData(generateMockFeed(selectedCategory));
+    setCurrentIndex(0);
+  }, [selectedCategory]);
+
+  const currentFeed = feedData[currentIndex];
   const isFirst = currentIndex === 0;
-  const isLast = currentIndex === FEED_DATA.length - 1;
+  const isLast = currentIndex === feedData.length - 1;
 
   const handleNext = useCallback(() => {
     if (!isLast && !isAnimating) {
@@ -258,34 +327,29 @@ const ForYou = () => {
   // Handle join live
   const handleJoinLive = (sellerId: string) => {
     console.log(`Joining live room for seller: ${sellerId}`);
-    // Navigate to live room
   };
 
   // Handle broadcast button
   const handleBroadcast = () => {
     console.log("Opening broadcast modal");
-    // Open broadcast modal or navigate to broadcast page
   };
 
-  if (!currentFeed) return null;
+  if (!currentFeed && feedData.length === 0) return null;
 
   return (
     <AppShell>
       <div
-        className="relative w-full h-screen overflow-hidden"
+        className="relative w-full h-screen overflow-hidden bg-dark-900"
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
         {/* ============================================ */}
-        {/* TOP HEADER - With Broadcast Button */}
+        {/* TOP HEADER - With Broadcast Button & Market Mood */}
         {/* ============================================ */}
-        <div className="absolute top-0 left-0 right-0 z-30 p-4 flex items-center justify-between bg-gradient-to-b from-black/50 to-transparent">
-          {/* Left: Logo / Title */}
-          <div className="flex items-center gap-2">
-            <span className="text-white font-bold text-xl">Haggle</span>
-            <span className="text-white/40 text-xs">Feed</span>
-          </div>
+        <div className="absolute top-0 left-0 right-0 z-30 p-4 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent">
+          {/* Left: Logo / Title + Market Mood */}
+          <MarketMood />
 
           {/* Right: Actions */}
           <div className="flex items-center gap-3">
@@ -310,55 +374,80 @@ const ForYou = () => {
           </div>
         </div>
 
-        {/* Feed Container */}
+        {/* ============================================ */}
+        {/* LEFT - CATEGORY RAIL */}
+        {/* ============================================ */}
+        <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20 overflow-y-auto overflow-x-hidden">
+          <CategoryRail
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+          />
+        </div>
+
+        {/* ============================================ */}
+        {/* FEED CONTAINER */}
+        {/* ============================================ */}
         <div
           ref={feedContainerRef}
           className="relative w-full h-full flex items-center justify-center px-4 py-5"
         >
-          <AnimatePresence mode="wait">
-            <FeedCard
-              key={currentFeed.id}
-              item={currentFeed}
-              onJoin={() => handleJoinLive(currentFeed.seller.id)}
-            />
-          </AnimatePresence>
+          {feedData.length > 0 ? (
+            <AnimatePresence mode="wait">
+              <FeedCard
+                key={currentFeed.id}
+                item={currentFeed}
+                onJoin={() => handleJoinLive(currentFeed.seller.id)}
+              />
+            </AnimatePresence>
+          ) : (
+            <div className="text-center text-white/40">
+              <p className="text-lg font-medium">No sellers live right now</p>
+              <p className="text-sm mt-1">Try adjusting your filter</p>
+            </div>
+          )}
         </div>
 
-        {/* Bottom Navigation Indicator */}
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
-          {FEED_DATA.map((_, index) => (
-            <div
-              key={index}
-              className={`h-1 rounded-full transition-all duration-300 ${
-                index === currentIndex
-                  ? "w-8 bg-primary"
-                  : "w-4 bg-white/30"
+        {/* ============================================ */}
+        {/* BOTTOM NAVIGATION INDICATOR */}
+        {/* ============================================ */}
+        {feedData.length > 0 && (
+          <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex items-center gap-2 z-20">
+            {feedData.map((_, index) => (
+              <div
+                key={index}
+                className={`h-1 rounded-full transition-all duration-300 ${
+                  index === currentIndex ? "w-8 bg-primary" : "w-4 bg-white/30"
+                }`}
+              />
+            ))}
+          </div>
+        )}
+
+        {/* ============================================ */}
+        {/* NAVIGATION ARROWS - Desktop only */}
+        {/* ============================================ */}
+        {feedData.length > 0 && (
+          <div className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 flex-col gap-3 z-20">
+            <button
+              onClick={handlePrevious}
+              disabled={isFirst}
+              className={`p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-all duration-200 ${
+                isFirst ? "opacity-30 cursor-not-allowed" : "hover:scale-110"
               }`}
-            />
-          ))}
-        </div>
-
-        {/* Navigation Arrows - Desktop only */}
-        <div className="hidden md:flex absolute right-6 top-1/2 -translate-y-1/2 flex-col gap-3 z-20">
-          <button
-            onClick={handlePrevious}
-            disabled={isFirst}
-            className={`p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-all duration-200 ${
-              isFirst ? "opacity-30 cursor-not-allowed" : "hover:scale-110"
-            }`}
-          >
-            <ChevronUp size={24} />
-          </button>
-          <button
-            onClick={handleNext}
-            disabled={isLast}
-            className={`p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-all duration-200 ${
-              isLast ? "opacity-30 cursor-not-allowed" : "hover:scale-110"
-            }`}
-          >
-            <ChevronDown size={24} />
-          </button>
-        </div>
+            >
+              <ChevronUp size={24} />
+            </button>
+            <button
+              onClick={handleNext}
+              disabled={isLast}
+              className={`p-2 rounded-full bg-black/40 backdrop-blur-sm text-white hover:bg-black/60 transition-all duration-200 ${
+                isLast ? "opacity-30 cursor-not-allowed" : "hover:scale-110"
+              }`}
+            >
+              <ChevronDown size={24} />
+            </button>
+          </div>
+        )}
       </div>
     </AppShell>
   );

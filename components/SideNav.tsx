@@ -20,7 +20,7 @@ import Link from "next/link";
 import { useHaggleStore } from "@/lib/app-store";
 import { usePathname } from "next/navigation";
 
-const SideNav = ({userData}:{userData:any}) => {  
+const SideNav = ({ userData }: { userData: any }) => {
   const [tab, setTab] = useState("home");
   const [collapsed, setCollapsed] = useState(localStorage.getItem("sideNavCollapsed") === "true");
   const theme = useHaggleStore((state) => state.theme);
@@ -29,7 +29,6 @@ const SideNav = ({userData}:{userData:any}) => {
 
   const navItems = [
     { id: "for-you", label: "Home", icon: HomeIcon, path: "/for-you" },
-    { id: "explore", label: "Explore", icon: Compass, path: "/explore" },
     { id: "market", label: "Market", icon: ShoppingBag, path: "/market" },
     { id: "create", label: "Add", icon: PlusCircle, path: "/create" },
     {
@@ -39,6 +38,9 @@ const SideNav = ({userData}:{userData:any}) => {
       path: "/messages",
     },
   ];
+  // useEffect(() => {
+  //   setCollapsed(localStorage.getItem("sideNavCollapsed") === "true");
+  // }, []);
 
   const isActive = (path: string) =>
     pathname === path || pathname.startsWith(`${path}/`);
@@ -234,8 +236,12 @@ const SideNav = ({userData}:{userData:any}) => {
               ${collapsed ? "w-0 opacity-0" : "w-auto opacity-100"}
             `}
             >
-              <p className="text-sm font-medium text-dark-800">{userData?.profile?.full_name}</p>
-              <p className="text-xs text-neutral-500">{userData?.profile?.email}</p>
+              <p className="text-sm font-medium text-dark-800">
+                {userData?.profile?.full_name}
+              </p>
+              <p className="text-xs text-neutral-500">
+                {userData?.profile?.email}
+              </p>
             </div>
             {!collapsed && (
               <LogOut
