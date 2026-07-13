@@ -23,8 +23,10 @@ type HaggleStore = {
   // ====== NEW: USER & AUTH ======
   userData: any; // Consider typing this properly: UserProfile | null
   activateAuth: boolean;
+  productListingId: string;
   setUserData: (data: any) => void;
   setActivateAuth: (value: boolean) => void;
+  setProductListingId: (value: string) => void;
   clearUserData: () => void; // For logout
 };
 
@@ -81,10 +83,12 @@ export const useHaggleStore = create<HaggleStore>()(
       // ====== NEW STATE ======
       userData: null,
       activateAuth: false,
+      productListingId: "",
 
       // ====== NEW ACTIONS ======
       setUserData: (data) => set({ userData: data }),
       setActivateAuth: (value) => set({ activateAuth: value }),
+      setProductListingId: (value) => set({ productListingId: value }),
       clearUserData: () => set({ userData: null, activateAuth: false }),
     }),
     {

@@ -635,10 +635,14 @@ function PriceInput({
 // ============================================
 const PostProductPage = () => {
   const productMediaRef = useRef<ProductMediaRef>(null);
+  const productListingId = useHaggleStore((state) => state.productListingId);
+  const setProductListingId = useHaggleStore(
+    (state) => state.setProductListingId,
+  );
   const userData = useHaggleStore((state) => state.userData);
   const setUserData = useHaggleStore((state) => state.setUserData);
   const [saveType, setSaveType] = useState("create");
-  const [listingId, setListingId] = useState("");
+  const [listingID, setListingID] = useState("");
   const [productInfo, setProductInfo] = useState({
     name: "",
     category: "",
@@ -737,8 +741,7 @@ const PostProductPage = () => {
         setCompleted((prev) => ({ ...prev, pricing: true }));
       }
       saveDraft();
-      setLastSaved(new Date());
-      setSaveType("update");
+      setLastSaved(new Date());      
       return;
     }
 
@@ -759,8 +762,7 @@ const PostProductPage = () => {
         setCompleted((prev) => ({ ...prev, pricing: true }));
       }
       saveDraft();
-      setLastSaved(new Date());
-      setSaveType("update");
+      setLastSaved(new Date());      
       return;
     }
   };
@@ -832,12 +834,14 @@ const PostProductPage = () => {
       .find((t) => t.startsWith(`${name.toLowerCase()}:`));
     return tag?.split(":")[1] || "";
   };
-
+  let listingId: string | null = null;
+  let subCategoryId: string | null = null;
   // ============================================
   // SAVE DRAFT
   // ============================================
   const saveDraft = async () => {
     setDraftStatus("saving");
+
     const categoryPayload = {
       name: productInfo?.category,
       slug: productInfo?.categorySlug,
@@ -863,90 +867,104 @@ const PostProductPage = () => {
       negotiation_style: negotiationStyle,
       negotiation_note: productInfo?.negotiationNote,
     };
-    let listing: any = "";
+
     try {
-      // PRODUCT LISTING LOGIC
+      // ============================================
+      // GET OR CREATE SUB-CATEGORY
+      // ============================================
       const subCategory = await getCategory(productInfo.subCategorySlug);
       if (subCategory?.data) {
-        if (saveType === "create") {
-          listing = await createListing({
-            ...payload,
-            category_id: subCategory.data.id,
-          });
-          setListingId(listing?.data?.id);
-        } else {
-          await updateListing(listingId, {
-            ...payload,
-            category_id: subCategory.data.id,
-          });
-        }
+        subCategoryId = subCategory.data.id;
       } else {
+        // Create sub-category
         const category = await getCategory(productInfo.categorySlug);
         if (category?.data) {
-          const subCategory = await createCategory({
+          const newSubCategory = await createCategory({
             ...subCategoryPayload,
             parent_id: category.data.id,
           });
-          if (saveType === "create") {
-            listing = await createListing({
-              ...payload,
-              category_id: subCategory.data.id,
-            });
-            setListingId(listing?.data?.id);
-          } else {
-            await updateListing(listingId, {
-              ...payload,
-              category_id: subCategory.data.id,
-            });
-          }
+          subCategoryId = newSubCategory.data.id;
         } else {
-          const data = await createCategory(categoryPayload);
-          if (data) {
-            const categoryId = data?.data?.id;
-            const subCategory = await createCategory({
+          const newCategory = await createCategory(categoryPayload);
+          if (newCategory) {
+            const newSubCategory = await createCategory({
               ...subCategoryPayload,
-              parent_id: categoryId,
+              parent_id: newCategory.data.id,
             });
-            if (saveType === "create") {
-              listing = await createListing({
-                ...payload,
-                category_id: subCategory.data.id,
-              });
-              setListingId(listing?.data?.id);
-            } else {
-              await updateListing(listingId, {
-                ...payload,
-                category_id: subCategory.data.id,
-              });
-            }
+            subCategoryId = newSubCategory.data.id;
           }
         }
       }
+
+      if (!subCategoryId) {
+        console.error("❌ Failed to get or create category");
+        setDraftStatus("idle");
+        return;
+      }
+
+      // ============================================
+      // CREATE OR UPDATE LISTING
+      // ============================================
+      if (saveType === "update") {
+        // Update existing listing
+        if (!productListingId) {
+          console.error("❌ No listing ID available for update");
+          setDraftStatus("idle");
+          return;
+        }
+        await updateListing(productListingId, {
+          ...payload,
+          category_id: subCategoryId, // ✅ categoryId is now defined
+        });
+      } else {
+        // Create new listing
+        const listingResponse = await createListing({
+          ...payload,
+          category_id: subCategoryId,
+        });
+        // listingId = listingResponse?.data?.id;
+        setProductListingId(listingResponse?.data?.id);
+      }
+
+      // If no listingId, fail early (for create)
+      if (!productListingId) {
+        console.error("❌ Failed to create listing");
+        setDraftStatus("idle");
+        return;
+      }
+
+      setSaveType("update");
+
+      // ============================================
+      // UPLOAD IMAGES
+      // ============================================
       if (!productMediaRef.current) {
         console.error("❌ ProductMedia ref is null – cannot upload images");
         setDraftStatus("idle");
         return;
       }
 
-      // 1. Upload all pending images via the ref
       const uploadResults =
-        await productMediaRef.current?.uploadGalleryImages(listing?.data?.id);
-      console.log("uploadResults", uploadResults);
+        await productMediaRef.current.uploadGalleryImages(productListingId);
+      console.log("📸 Upload results:", uploadResults);
 
-      // 2. Get uploaded keys
-      const uploadedKeys = productMediaRef.current?.getUploadedKeys() || [];
+      // ============================================
+      // UPDATE PROFILE
+      // ============================================
       const updatedProfile = await updateUserProfile({
         city: productInfo?.location,
         primary_role: "seller",
         preferred_role: "seller",
       });
       setUserData(updatedProfile);
-      console.log("Draft saved:", payload);
+
+      console.log("✅ Draft saved successfully!");
 
       setDraftStatus("saved");
       setTimeout(() => setDraftStatus("idle"), 3000);
     } catch (error) {
-      console.error("Failed to save draft:", error);
+      console.error("❌ Failed to save draft:", error);
+      saveDraft()
       setDraftStatus("idle");
     }
   };
@@ -968,8 +986,7 @@ const PostProductPage = () => {
           setCompleted((prev) => ({ ...prev, pricing: true }));
         }
         await saveDraft();
-        setLastSaved(new Date());
-        setSaveType("update");
+        setLastSaved(new Date());        
       }
     } else {
       // On media tab, publish
@@ -1093,7 +1110,7 @@ const PostProductPage = () => {
           <div className="flex-1 grid gap-6 lg:grid-cols-2">
             {/* LEFT COLUMN */}
             <div className="space-y-4">
-              <ProductMedia                
+              <ProductMedia
                 ref={productMediaRef}
                 onImagesChange={(images) => {
                   // Optionally sync images to parent state if needed

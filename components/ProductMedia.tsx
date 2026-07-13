@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 import {
   confirmUpload,
   createListingMedia,
+  deleteListingMedia,
   deleteUpload,
   uploadImage,
 } from "@/services/request";
@@ -53,6 +54,7 @@ interface Presign {
 // IMAGE GALLERY ITEM
 // ============================================
 export interface GalleryImage {
+  mediaId: string;
   slotId: SlotId;
   file: File;
   key: string; // Will be populated after upload
@@ -65,7 +67,7 @@ export interface GalleryImage {
 // REF INTERFACE
 // ============================================
 export interface ProductMediaRef {
-  uploadGalleryImages: (listingId:string) => Promise<GalleryImage[]>;
+  uploadGalleryImages: (listingId: string) => Promise<GalleryImage[]>;
   getUploadedKeys: () => { slotId: SlotId; key: string }[];
   getGallery: () => GalleryImage[];
 }
@@ -132,40 +134,49 @@ export const ProductMedia = forwardRef<
   // ============================================
   // UPLOAD GALLERY IMAGES (called from parent via ref)
   // ============================================
-  const uploadGalleryImages = async ({listingId}:{listingId:string}): Promise<GalleryImage[]> => {
+  const uploadGalleryImages = async ({
+    listingId,
+  }: {
+    listingId: string;
+  }): Promise<GalleryImage[]> => {
+    if (!listingId) {
+      console.error("❌ listingId is required for upload");
+      return [];
+    }
+
     const results: GalleryImage[] = [];
 
-    // Update status to uploading for pending items
+    // Get pending items
+    const pendingItems = imageGallery.filter(
+      (item) => item.status === "pending",
+    );
+
+    if (pendingItems.length === 0) {
+      console.log("✅ No pending images to upload.");
+      return imageGallery.filter((item) => item.status === "uploaded");
+    }
+
+    console.log("before uploading...");
+
+    // Mark all pending as uploading
     setImageGallery((prev) =>
       prev.map((item) =>
         item.status === "pending" ? { ...item, status: "uploading" } : item,
       ),
     );
-    console.log("📸 uploadGalleryImages called");
-    // Get the current pending items after state update (we'll use a local copy)
-    const pendingItems = imageGallery.filter(
-      (item) => item.status === "pending",
-    );
 
-    // If no pending items, return early
-    if (pendingItems.length === 0) {
-      console.log("No pending images to upload.");
-      return imageGallery.filter((item) => item.status === "uploaded");
-    }
+    console.log("after uploading...");
 
     for (const item of pendingItems) {
       try {
         // 1. Get presigned URL
-        const response: Presign = await uploadImage(item.file);
-        console.log("Presigned response:", response);
+        const presign: Presign = await uploadImage(item.file);
 
-        // 2. Upload directly to the presigned URL
-        const uploadResponse = await fetch(response.uploadUrl, {
+        // 2. Upload to Cloudflare
+        const uploadResponse = await fetch(presign.uploadUrl, {
           method: "PUT",
           body: item.file,
-          headers: {
-            "Content-Type": item.file.type,
-          },
+          headers: { "Content-Type": item.file.type },
         });
 
         if (!uploadResponse.ok) {
@@ -173,48 +184,73 @@ export const ProductMedia = forwardRef<
         }
 
         // 3. Confirm upload with your Worker
-        const confirmResponse: any = await confirmUpload({ key: response.key });
+        await confirmUpload({ key: presign.key });
 
-        const listedMedia = await createListingMedia(
+        console.log("mediaUploadListingId", listingId);
+
+        // 4. Create listing media in DB
+        const response = await createListingMedia(
           {
             media_type: "IMAGE",
-            url: response.key,
+            url: presign.key,
           },
           listingId,
         );
-        console.log(listedMedia);
 
-        console.log("Confirm response:", confirmResponse);
-
-        // 4. Update gallery item with key and status
+        // 5. All succeeded → mark as uploaded
         const updatedItem: GalleryImage = {
           ...item,
-          key: response.key,
+          key: presign.key,
           status: "uploaded",
+          mediaId: response?.data?.id,
         };
 
-        // Update local state
         setImageGallery((prev) =>
           prev.map((g) => (g.slotId === item.slotId ? updatedItem : g)),
         );
 
         results.push(updatedItem);
+        console.log(`✅ Uploaded ${item.slotId}`);
       } catch (error) {
-        console.error(`Upload failed for ${item.slotId}:`, error);
+        console.error(`❌ Upload failed for ${item.slotId}:`, error);
+
         const errorItem: GalleryImage = {
           ...item,
           status: "error",
           error: (error as Error).message,
         };
+
         setImageGallery((prev) =>
           prev.map((g) => (g.slotId === item.slotId ? errorItem : g)),
         );
+
         results.push(errorItem);
       }
     }
 
-    // Return results
     return results;
+  };
+
+  // ============================================
+  // UPLOAD SINGLE IMAGE (for retry)
+  // ============================================
+  const uploadSingleImage = async (slotId: SlotId) => {
+    // Find the failed item
+    const item = imageGallery.find((g) => g.slotId === slotId);
+    if (!item || item.status !== "error") return;
+
+    // Reset status to pending and trigger upload
+    setImageGallery((prev) =>
+      prev.map((g) =>
+        g.slotId === slotId ? { ...g, status: "pending", error: undefined } : g,
+      ),
+    );
+
+    // The parent's saveDraft will handle the retry
+    // If you want immediate retry, you can call uploadGalleryImages directly
+    // But it's cleaner to let the parent handle it via saveDraft
+
+    console.log(`🔄 Retrying upload for ${slotId}`);
   };
 
   // ============================================
@@ -239,11 +275,12 @@ export const ProductMedia = forwardRef<
   // ============================================
   // EXPOSE METHODS TO PARENT VIA REF
   // ============================================
- useImperativeHandle(ref, () => ({
-  uploadGalleryImages: (listingId: string) => uploadGalleryImages({ listingId }),
-  getUploadedKeys,
-  getGallery,
-}));
+  useImperativeHandle(ref, () => ({
+    uploadGalleryImages: (listingId: string) =>
+      uploadGalleryImages({ listingId }),
+    getUploadedKeys,
+    getGallery,
+  }));
 
   // ============================================
   // HANDLERS
@@ -264,6 +301,7 @@ export const ProductMedia = forwardRef<
 
     // Add to image gallery (pending upload)
     const newGalleryItem: GalleryImage = {
+      mediaId: "",
       slotId,
       file,
       key: "",
@@ -298,8 +336,9 @@ export const ProductMedia = forwardRef<
     delete newImages[slotId];
     setImages(newImages);
     const response = await deleteUpload({ key: imageDeleted?.key });
-
     console.log(response);
+    const response2 = await deleteListingMedia(imageDeleted?.mediaId ?? "");
+    console.log(response2);
   };
 
   const startPhoneConnection = () => {
@@ -337,6 +376,7 @@ export const ProductMedia = forwardRef<
           type: "image/jpeg",
         });
         const newGalleryItem: GalleryImage = {
+          mediaId: "",
           slotId: slot.id,
           file: placeholderFile,
           key: "",
@@ -475,10 +515,19 @@ export const ProductMedia = forwardRef<
                           </div>
                         )}
                         {hasError && (
-                          <div className="absolute inset-0 bg-danger/20 flex items-center justify-center">
+                          <div className="absolute inset-0 bg-danger/20 flex flex-col items-center justify-center">
                             <span className="text-xs text-danger font-medium">
                               Failed
                             </span>
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                uploadSingleImage(slot.id);
+                              }}
+                              className="mt-1 rounded-full bg-danger/80 px-2 py-0.5 text-[8px] text-white hover:bg-danger transition"
+                            >
+                              Retry
+                            </button>
                           </div>
                         )}
                         <button

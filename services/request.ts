@@ -27,7 +27,7 @@ const setImageConfig = () => {
   return {
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${localStorage.getItem("haggleAccessToken")}`,
+      Authorization: `Bearer ${localStorage.getItem("haggleMediaAccessToken")}`,
       // withCredentials: true,
     },
   };
@@ -116,9 +116,11 @@ apiClient.interceptors.response.use(
 
         const newAccessToken = response.data.tokens?.accessToken;
         const newRefreshToken = response.data.tokens?.refreshToken;
+        const newMediaAccessToken = response.data.tokens?.mediaAccessToken;
 
         localStorage.setItem("haggleAccessToken", newAccessToken);
         localStorage.setItem("haggleRefreshToken", newRefreshToken);
+        localStorage.setItem("haggleMediaAccessToken", newMediaAccessToken);
 
         console.log("new tokens: ", response.data.tokens);
 
@@ -133,7 +135,7 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         // Refresh failed - reject all queued requests and log the user out
         processQueue(refreshError, null);
-        localStorage.clear();
+        // localStorage.clear();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
@@ -164,6 +166,10 @@ export const userLogin = async (data: any) => {
         localStorage.setItem(
           "haggleRefreshToken",
           response.data.tokens?.refreshToken,
+        );
+        localStorage.setItem(
+          "haggleMediaAccessToken",
+          response.data.tokens?.mediaAccessToken,
         );
         notify(response?.data?.message);
         result = response;
@@ -480,7 +486,7 @@ export const createCategory = async (data: any) => {
 };
 
 export const createListing = async (data: any) => {
-  let result = "";
+  let result: any = "";
   await apiClient
     .post(`/catalog/listings`, data) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
     .then((response: any) => {
@@ -515,10 +521,28 @@ export const updateListing = async (id: any, data: any) => {
   return result;
 };
 
-export const createListingMedia = async (data: any, id:string) => {
-  let result = "";
+export const createListingMedia = async (data: any, id: string) => {
+  let result:any = "";
   await apiClient
     .post(`/catalog/listings/${id}/media`, data) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
+    .then((response: any) => {
+      if (response?.data?.success === true) {
+        result = response?.data;
+        console.log(result);
+      }
+    })
+    .catch((err) => {
+      notifyError(err?.response?.data?.error);
+      throw err;
+    });
+
+  return result;
+};
+
+export const deleteListingMedia = async (id: string) => {
+  let result = "";
+  await apiClient
+    .delete(`/catalog/listing-media/${id}/delete`) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
     .then((response: any) => {
       if (response?.data?.success === true) {
         result = response?.data;
