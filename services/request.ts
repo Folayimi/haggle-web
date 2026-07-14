@@ -542,7 +542,7 @@ export const createListingMedia = async (data: any, id: string) => {
 export const deleteListingMedia = async (id: string) => {
   let result = "";
   await apiClient
-    .delete(`/catalog/listing-media/${id}/delete`) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
+    .delete(`/catalog/listings-media/${id}/delete`) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
     .then((response: any) => {
       if (response?.data?.success === true) {
         result = response?.data;

@@ -741,7 +741,7 @@ const PostProductPage = () => {
         setCompleted((prev) => ({ ...prev, pricing: true }));
       }
       saveDraft();
-      setLastSaved(new Date());      
+      setLastSaved(new Date());
       return;
     }
 
@@ -762,7 +762,7 @@ const PostProductPage = () => {
         setCompleted((prev) => ({ ...prev, pricing: true }));
       }
       saveDraft();
-      setLastSaved(new Date());      
+      setLastSaved(new Date());
       return;
     }
   };
@@ -922,12 +922,12 @@ const PostProductPage = () => {
           ...payload,
           category_id: subCategoryId,
         });
-        // listingId = listingResponse?.data?.id;
+        listingId = listingResponse?.data?.id;
         setProductListingId(listingResponse?.data?.id);
       }
 
       // If no listingId, fail early (for create)
-      if (!productListingId) {
+      if (!productListingId && !listingId) {
         console.error("❌ Failed to create listing");
         setDraftStatus("idle");
         return;
@@ -944,8 +944,9 @@ const PostProductPage = () => {
         return;
       }
 
-      const uploadResults =
-        await productMediaRef.current.uploadGalleryImages(productListingId);
+      const uploadResults = await productMediaRef.current.uploadGalleryImages(
+        productListingId ?? listingId,
+      );
       console.log("📸 Upload results:", uploadResults);
 
       // ============================================
@@ -964,7 +965,7 @@ const PostProductPage = () => {
       setTimeout(() => setDraftStatus("idle"), 3000);
     } catch (error) {
       console.error("❌ Failed to save draft:", error);
-      saveDraft()
+      saveDraft();
       setDraftStatus("idle");
     }
   };
@@ -986,7 +987,7 @@ const PostProductPage = () => {
           setCompleted((prev) => ({ ...prev, pricing: true }));
         }
         await saveDraft();
-        setLastSaved(new Date());        
+        setLastSaved(new Date());
       }
     } else {
       // On media tab, publish

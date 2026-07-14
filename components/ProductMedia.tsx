@@ -474,7 +474,7 @@ export const ProductMedia = forwardRef<
             className="space-y-4"
           >
             {/* Upload grid */}
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               {UPLOAD_SLOTS.map((slot) => {
                 const image = images[slot.id];
                 const galleryItem = imageGallery.find(
