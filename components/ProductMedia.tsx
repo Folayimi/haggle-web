@@ -1,7 +1,7 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, forwardRef, useImperativeHandle } from "react";
+import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from "react";
 import {
   Camera,
   Check,
@@ -19,6 +19,8 @@ import {
   ArrowRight,
   Sparkles,
   ArrowLeft,
+  Plus,
+  GripVertical,
 } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { cn } from "@/lib/utils";
@@ -29,12 +31,13 @@ import {
   deleteUpload,
   uploadImage,
 } from "@/services/request";
-import axios from "axios";
 
 // ============================================
 // TYPES
 // ============================================
-type SlotId = "front" | "back" | "left" | "right" | "accessories" | "packaging";
+type FixedSlotId = "front" | "back" | "left" | "right" | "accessories" | "packaging";
+type SlotId = FixedSlotId | string; // allow dynamic "moreX"
+
 type ConnectionStatus = "idle" | "scanning" | "connected" | "uploading";
 type Mode = "choose" | "upload" | "connect";
 
@@ -42,6 +45,7 @@ interface Slot {
   id: SlotId;
   label: string;
   starred?: boolean;
+  isFixed?: boolean;
 }
 
 interface Presign {
@@ -57,8 +61,8 @@ export interface GalleryImage {
   mediaId: string;
   slotId: SlotId;
   file: File;
-  key: string; // Will be populated after upload
-  previewUrl: string; // For display
+  key: string;
+  previewUrl: string;
   status: "pending" | "uploading" | "uploaded" | "error";
   error?: string;
 }
@@ -75,13 +79,13 @@ export interface ProductMediaRef {
 // ============================================
 // CONSTANTS
 // ============================================
-const UPLOAD_SLOTS: Slot[] = [
-  { id: "front", label: "Front", starred: true },
-  { id: "back", label: "Back", starred: false },
-  { id: "left", label: "Left", starred: false },
-  { id: "right", label: "Right", starred: false },
-  { id: "accessories", label: "Accessories", starred: false },
-  { id: "packaging", label: "Packaging", starred: false },
+const FIXED_SLOTS: Slot[] = [
+  { id: "front", label: "Front", starred: true, isFixed: true },
+  { id: "back", label: "Back", starred: false, isFixed: true },
+  { id: "left", label: "Left", starred: false, isFixed: true },
+  { id: "right", label: "Right", starred: false, isFixed: true },
+  { id: "accessories", label: "Accessories", starred: false, isFixed: true },
+  { id: "packaging", label: "Packaging", starred: false, isFixed: true },
 ];
 
 const ROTATING_TIPS = [
@@ -102,16 +106,16 @@ export const ProductMedia = forwardRef<
     onGalleryChange?: (gallery: GalleryImage[]) => void;
   }
 >(({ onImagesChange, onGalleryChange }, ref) => {
-  const [images, setImages] = useState<Record<SlotId, string>>(
-    {} as Record<SlotId, string>,
-  );
+  const [images, setImages] = useState<Record<SlotId, string>>({});
   const [imageGallery, setImageGallery] = useState<GalleryImage[]>([]);
-  const [connectionStatus, setConnectionStatus] =
-    useState<ConnectionStatus>("idle");
+  const [extraSlots, setExtraSlots] = useState<Slot[]>([]);
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
   const [deviceName, setDeviceName] = useState<string | null>(null);
   const [guidedStep, setGuidedStep] = useState<number>(0);
   const [mode, setMode] = useState<Mode>("choose");
   const [tipIndex, setTipIndex] = useState(0);
+  const [draggedSlotId, setDraggedSlotId] = useState<SlotId | null>(null);
+  const extraCounter = useRef<number>(1);
 
   // Rotating seller tips
   useEffect(() => {
@@ -132,7 +136,44 @@ export const ProductMedia = forwardRef<
   }, [imageGallery, onGalleryChange]);
 
   // ============================================
-  // UPLOAD GALLERY IMAGES (called from parent via ref)
+  // COMPUTED SLOTS (fixed + extra)
+  // ============================================
+  const allSlots = [...FIXED_SLOTS, ...extraSlots];
+
+  // ============================================
+  // ADD EXTRA SLOT
+  // ============================================
+  const addExtraSlot = (file?: File) => {
+    const count = extraSlots.length + 1;
+    const newSlot: Slot = {
+      id: `more${count}`,
+      label: `More ${count}`,
+      starred: false,
+      isFixed: false,
+    };
+    setExtraSlots((prev) => [...prev, newSlot]);
+    if (file) {
+      // Assign file to this new slot
+      handleFileChange(newSlot.id, { target: { files: [file] } } as any);
+    }
+  };
+
+  // ============================================
+  // REMOVE EXTRA SLOT
+  // ============================================
+  const removeExtraSlot = (slotId: SlotId) => {
+    // Only allow removing extra slots that are empty
+    const hasImage = imageGallery.some((item) => item.slotId === slotId);
+    if (hasImage) {
+      // Optionally confirm or remove image first
+      const item = imageGallery.find((g) => g.slotId === slotId);
+      if (item) removeImage(slotId);
+    }
+    setExtraSlots((prev) => prev.filter((slot) => slot.id !== slotId));
+  };
+
+  // ============================================
+  // UPLOAD FUNCTIONS
   // ============================================
   const uploadGalleryImages = async ({
     listingId,
@@ -145,50 +186,31 @@ export const ProductMedia = forwardRef<
     }
 
     const results: GalleryImage[] = [];
-
-    // Get pending items
-    const pendingItems = imageGallery.filter(
-      (item) => item.status === "pending",
-    );
+    const pendingItems = imageGallery.filter((item) => item.status === "pending");
 
     if (pendingItems.length === 0) {
       console.log("✅ No pending images to upload.");
       return imageGallery.filter((item) => item.status === "uploaded");
     }
 
-    console.log("before uploading...");
-
-    // Mark all pending as uploading
     setImageGallery((prev) =>
       prev.map((item) =>
         item.status === "pending" ? { ...item, status: "uploading" } : item,
       ),
     );
 
-    console.log("after uploading...");
-
     for (const item of pendingItems) {
       try {
-        // 1. Get presigned URL
         const presign: Presign = await uploadImage(item.file);
-
-        // 2. Upload to Cloudflare
         const uploadResponse = await fetch(presign.uploadUrl, {
           method: "PUT",
           body: item.file,
           headers: { "Content-Type": item.file.type },
         });
-
         if (!uploadResponse.ok) {
           throw new Error(`Upload failed: ${uploadResponse.statusText}`);
         }
-
-        // 3. Confirm upload with your Worker
         await confirmUpload({ key: presign.key });
-
-        console.log("mediaUploadListingId", listingId);
-
-        // 4. Create listing media in DB
         const response = await createListingMedia(
           {
             media_type: "IMAGE",
@@ -197,65 +219,44 @@ export const ProductMedia = forwardRef<
           listingId,
         );
 
-        // 5. All succeeded → mark as uploaded
         const updatedItem: GalleryImage = {
           ...item,
           key: presign.key,
           status: "uploaded",
           mediaId: response?.data?.id,
         };
-
         setImageGallery((prev) =>
           prev.map((g) => (g.slotId === item.slotId ? updatedItem : g)),
         );
-
         results.push(updatedItem);
         console.log(`✅ Uploaded ${item.slotId}`);
       } catch (error) {
         console.error(`❌ Upload failed for ${item.slotId}:`, error);
-
         const errorItem: GalleryImage = {
           ...item,
           status: "error",
           error: (error as Error).message,
         };
-
         setImageGallery((prev) =>
           prev.map((g) => (g.slotId === item.slotId ? errorItem : g)),
         );
-
         results.push(errorItem);
       }
     }
-
     return results;
   };
 
-  // ============================================
-  // UPLOAD SINGLE IMAGE (for retry)
-  // ============================================
   const uploadSingleImage = async (slotId: SlotId) => {
-    // Find the failed item
     const item = imageGallery.find((g) => g.slotId === slotId);
     if (!item || item.status !== "error") return;
-
-    // Reset status to pending and trigger upload
     setImageGallery((prev) =>
       prev.map((g) =>
         g.slotId === slotId ? { ...g, status: "pending", error: undefined } : g,
       ),
     );
-
-    // The parent's saveDraft will handle the retry
-    // If you want immediate retry, you can call uploadGalleryImages directly
-    // But it's cleaner to let the parent handle it via saveDraft
-
     console.log(`🔄 Retrying upload for ${slotId}`);
   };
 
-  // ============================================
-  // GET UPLOADED KEYS
-  // ============================================
   const getUploadedKeys = (): { slotId: SlotId; key: string }[] => {
     return imageGallery
       .filter((item) => item.status === "uploaded" && item.key)
@@ -265,16 +266,8 @@ export const ProductMedia = forwardRef<
       }));
   };
 
-  // ============================================
-  // GET FULL GALLERY
-  // ============================================
-  const getGallery = (): GalleryImage[] => {
-    return imageGallery;
-  };
+  const getGallery = (): GalleryImage[] => imageGallery;
 
-  // ============================================
-  // EXPOSE METHODS TO PARENT VIA REF
-  // ============================================
   useImperativeHandle(ref, () => ({
     uploadGalleryImages: (listingId: string) =>
       uploadGalleryImages({ listingId }),
@@ -283,7 +276,7 @@ export const ProductMedia = forwardRef<
   }));
 
   // ============================================
-  // HANDLERS
+  // FILE HANDLING
   // ============================================
   const handleFileSelect = (slotId: SlotId) => {
     document.getElementById(`file-upload-${slotId}`)?.click();
@@ -296,10 +289,7 @@ export const ProductMedia = forwardRef<
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Create preview URL
     const previewUrl = URL.createObjectURL(file);
-
-    // Add to image gallery (pending upload)
     const newGalleryItem: GalleryImage = {
       mediaId: "",
       slotId,
@@ -310,12 +300,10 @@ export const ProductMedia = forwardRef<
     };
 
     setImageGallery((prev) => {
-      // Remove existing item for this slot if any
       const filtered = prev.filter((item) => item.slotId !== slotId);
       return [...filtered, newGalleryItem];
     });
 
-    // Also add to images state for display
     const reader = new FileReader();
     reader.onload = (ev) => {
       setImages((prev) => ({
@@ -327,27 +315,111 @@ export const ProductMedia = forwardRef<
   };
 
   const removeImage = async (slotId: SlotId) => {
-    // Remove from gallery
-    setImageGallery((prev) => prev.filter((item) => item.slotId !== slotId));
     const imageDeleted = imageGallery.find((item) => item.slotId === slotId);
-
-    // Remove from images state
+    setImageGallery((prev) => prev.filter((item) => item.slotId !== slotId));
     const newImages = { ...images };
     delete newImages[slotId];
     setImages(newImages);
-    const response = await deleteUpload({ key: imageDeleted?.key });
-    console.log(response);
-    const response2 = await deleteListingMedia(imageDeleted?.mediaId ?? "");
-    console.log(response2);
+
+    if (imageDeleted?.key) {
+      await deleteUpload({ key: imageDeleted.key });
+    }
+    if (imageDeleted?.mediaId) {
+      await deleteListingMedia(imageDeleted.mediaId);
+    }
+
+    // If it's an extra slot and now empty, remove it
+    const isExtra = extraSlots.some((s) => s.id === slotId);
+    if (isExtra) {
+      const stillHasImage = imageGallery.some((g) => g.slotId === slotId);
+      if (!stillHasImage) {
+        setExtraSlots((prev) => prev.filter((s) => s.id !== slotId));
+      }
+    }
   };
 
+  // ============================================
+  // DRAG AND DROP HANDLERS
+  // ============================================
+  const handleDragStart = (e: React.DragEvent, slotId: SlotId) => {
+    setDraggedSlotId(slotId);
+    e.dataTransfer.effectAllowed = "move";
+    e.dataTransfer.setData("text/plain", slotId);
+  };
+
+  const handleDragEnd = () => {
+    setDraggedSlotId(null);
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = "move";
+  };
+
+  const handleDrop = (e: React.DragEvent, targetSlotId: SlotId) => {
+    e.preventDefault();
+    const sourceSlotId = e.dataTransfer.getData("text/plain") as SlotId;
+
+    if (!sourceSlotId || sourceSlotId === targetSlotId) return;
+
+    // Swap images between source and target slots
+    const sourceItem = imageGallery.find((item) => item.slotId === sourceSlotId);
+    const targetItem = imageGallery.find((item) => item.slotId === targetSlotId);
+
+    // If source has no image, nothing to swap
+    if (!sourceItem) return;
+
+    // Update gallery: swap slotIds
+    const updatedGallery = imageGallery.map((item) => {
+      if (item.slotId === sourceSlotId) {
+        // Move source image to target slot
+        return { ...item, slotId: targetSlotId };
+      }
+      if (item.slotId === targetSlotId) {
+        // Move target image to source slot (if any)
+        return { ...item, slotId: sourceSlotId };
+      }
+      return item;
+    });
+
+    setImageGallery(updatedGallery);
+
+    // Update images state (preview URLs)
+    const newImages: Record<SlotId, string> = {};
+    updatedGallery.forEach((item) => {
+      newImages[item.slotId] = item.previewUrl;
+    });
+    // Also preserve any images that might be in images state but not in gallery
+    // (not needed as gallery is source of truth)
+    setImages(newImages);
+
+    setDraggedSlotId(null);
+  };
+
+  // Special drop handler for the "Add More" area
+  const handleAddMoreDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    // Check if files are being dropped
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      // Add a new extra slot and assign the first file
+      addExtraSlot(files[0]);
+    } else {
+      // If no files, just add an empty slot
+      addExtraSlot();
+    }
+  };
+
+  // ============================================
+  // PHONE CONNECTION (unchanged)
+  // ============================================
   const startPhoneConnection = () => {
     setMode("connect");
     setConnectionStatus("scanning");
     setTimeout(() => {
       setConnectionStatus("connected");
       setDeviceName("Ridwan's iPhone 15 Pro");
-      const firstEmpty = UPLOAD_SLOTS.findIndex((slot) => !images[slot.id]);
+      const firstEmpty = allSlots.findIndex((slot) => !images[slot.id]);
       setGuidedStep(firstEmpty >= 0 ? firstEmpty : 0);
     }, 3000);
   };
@@ -361,17 +433,11 @@ export const ProductMedia = forwardRef<
 
   const simulatePhoneUpload = () => {
     if (connectionStatus === "connected") {
-      const slot = UPLOAD_SLOTS[guidedStep];
+      const slot = allSlots[guidedStep];
       if (slot && !images[slot.id]) {
         const placeholderImage =
           "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200' viewBox='0 0 200 200'%3E%3Crect width='200' height='200' fill='%23f0f0f0'/%3E%3Ctext x='50' y='110' font-family='Arial' font-size='20' fill='%23999'%3E📸%3C/text%3E%3C/svg%3E";
-
-        setImages((prev) => ({
-          ...prev,
-          [slot.id]: placeholderImage,
-        }));
-
-        // Add to gallery
+        setImages((prev) => ({ ...prev, [slot.id]: placeholderImage }));
         const placeholderFile = new File([""], "placeholder.jpg", {
           type: "image/jpeg",
         });
@@ -383,13 +449,11 @@ export const ProductMedia = forwardRef<
           previewUrl: placeholderImage,
           status: "pending",
         };
-
         setImageGallery((prev) => {
           const filtered = prev.filter((item) => item.slotId !== slot.id);
           return [...filtered, newGalleryItem];
         });
-
-        setGuidedStep((prev) => Math.min(prev + 1, UPLOAD_SLOTS.length - 1));
+        setGuidedStep((prev) => Math.min(prev + 1, allSlots.length - 1));
       }
     }
   };
@@ -405,8 +469,8 @@ export const ProductMedia = forwardRef<
   // RENDER HELPERS
   // ============================================
   const currentTip = ROTATING_TIPS[tipIndex];
-  const uploadedCount = UPLOAD_SLOTS.filter((slot) => images[slot.id]).length;
-  const isAllUploaded = UPLOAD_SLOTS.every((slot) => images[slot.id]);
+  const uploadedCount = imageGallery.length;
+  const isAllUploaded = imageGallery.every((item) => item.status === "uploaded");
 
   return (
     <div className="space-y-4">
@@ -417,9 +481,7 @@ export const ProductMedia = forwardRef<
             <Sparkles className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-sm font-medium text-foreground">
-              Pro Seller Tip
-            </p>
+            <p className="text-sm font-medium text-foreground">Pro Seller Tip</p>
             <motion.div
               key={tipIndex}
               initial={{ opacity: 0, y: 8 }}
@@ -441,9 +503,7 @@ export const ProductMedia = forwardRef<
           <div className="rounded-full bg-secondary/10 p-1.5 text-secondary">
             <ImagePlus className="h-4 w-4" />
           </div>
-          <h2 className="text-sm font-semibold text-foreground">
-            Product Media
-          </h2>
+          <h2 className="text-sm font-semibold text-foreground">Product Media</h2>
           <div className="flex flex-wrap items-center justify-between gap-1 ml-auto">
             <div className="flex items-center gap-1.5">
               <span className="text-[9px] text-muted/40">Supported:</span>
@@ -460,7 +520,7 @@ export const ProductMedia = forwardRef<
             <span className="text-[8px] text-muted/40">⭐ = Recommended</span>
           </div>
           <span className="text-[10px] text-muted/40 ml-auto">
-            {uploadedCount}/{UPLOAD_SLOTS.length}
+            {uploadedCount} images
           </span>
         </div>
 
@@ -475,38 +535,40 @@ export const ProductMedia = forwardRef<
           >
             {/* Upload grid */}
             <div className="grid grid-cols-4 gap-2">
-              {UPLOAD_SLOTS.map((slot) => {
-                const image = images[slot.id];
-                const galleryItem = imageGallery.find(
-                  (item) => item.slotId === slot.id,
-                );
-                const isUploading = galleryItem?.status === "uploading";
-                const hasError = galleryItem?.status === "error";
+              {allSlots.map((slot) => {
+                const image = imageGallery.find((item) => item.slotId === slot.id);
+                const hasImage = !!image;
+                const isUploading = image?.status === "uploading";
+                const hasError = image?.status === "error";
+                const isDragged = draggedSlotId === slot.id;
 
                 return (
                   <div
                     key={slot.id}
                     onClick={() => handleFileSelect(slot.id)}
+                    onDragOver={handleDragOver}
+                    onDrop={(e) => handleDrop(e, slot.id)}
                     className={`
                       relative rounded-lg aspect-square
                       border-2 transition-all duration-200
-                      ${
-                        image
-                          ? "border-border/40 bg-background-elevated/30"
-                          : "border-border/30 bg-background-elevated/10 hover:border-primary/30"
-                      }
+                      ${hasImage ? "border-border/40 bg-background-elevated/30" : "border-border/30 bg-background-elevated/10 hover:border-primary/30"}
                       ${hasError ? "border-danger/50 bg-danger/5" : ""}
+                      ${isDragged ? "opacity-50" : ""}
                       flex items-center justify-center
                       overflow-hidden
-                      cursor-pointer
+                      cursor-grab
+                      group
                     `}
                   >
-                    {image ? (
+                    {hasImage ? (
                       <>
                         <img
-                          src={image}
+                          src={image.previewUrl}
                           alt={slot.label}
                           className="w-full h-full object-cover"
+                          draggable
+                          onDragStart={(e) => handleDragStart(e, slot.id)}
+                          onDragEnd={handleDragEnd}
                         />
                         {/* Upload status overlay */}
                         {isUploading && (
@@ -516,9 +578,7 @@ export const ProductMedia = forwardRef<
                         )}
                         {hasError && (
                           <div className="absolute inset-0 bg-danger/20 flex flex-col items-center justify-center">
-                            <span className="text-xs text-danger font-medium">
-                              Failed
-                            </span>
+                            <span className="text-xs text-danger font-medium">Failed</span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -530,22 +590,34 @@ export const ProductMedia = forwardRef<
                             </button>
                           </div>
                         )}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            removeImage(slot.id);
-                          }}
-                          className="absolute top-0.5 right-0.5 rounded-full bg-danger/90 p-0.5 text-white hover:bg-danger"
-                        >
-                          <X className="h-3 w-3" />
-                        </button>
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors" />
+                        <div className="absolute top-0.5 right-0.5 flex gap-1">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeImage(slot.id);
+                            }}
+                            className="rounded-full bg-danger/90 p-0.5 text-white hover:bg-danger transition"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                        {!slot.isFixed && (
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeExtraSlot(slot.id);
+                            }}
+                            className="absolute bottom-0.5 right-0.5 rounded-full bg-black/40 p-0.5 text-white/60 hover:text-white transition"
+                          >
+                            <X className="h-2.5 w-2.5" />
+                          </button>
+                        )}
                       </>
                     ) : (
                       <div className="text-center">
                         <Upload className="mx-auto h-4 w-4 text-muted/30" />
-                        <p className="mt-0.5 text-[9px] text-muted/40">
-                          {slot.label}
-                        </p>
+                        <p className="mt-0.5 text-[9px] text-muted/40">{slot.label}</p>
                         {slot.starred && (
                           <Star className="mx-auto mt-0.5 h-2.5 w-2.5 text-yellow-400/60" />
                         )}
@@ -561,50 +633,34 @@ export const ProductMedia = forwardRef<
                   </div>
                 );
               })}
+
+              {/* "Add More" slot card */}
+              <div
+                onDragOver={handleDragOver}
+                onDrop={handleAddMoreDrop}
+                onClick={() => addExtraSlot()}
+                className="
+                  relative rounded-lg aspect-square
+                  border-2 border-dashed border-border/40
+                  bg-background-elevated/5
+                  hover:border-primary/30 hover:bg-primary/5
+                  transition-all duration-200
+                  flex items-center justify-center
+                  cursor-pointer
+                "
+              >
+                <div className="text-center">
+                  <Plus className="mx-auto h-5 w-5 text-muted/40" />
+                  <p className="mt-1 text-[9px] text-muted/40">Add more</p>
+                </div>
+              </div>
             </div>
 
-            {/* Drag & Drop area */}
-            <div
-              className="
-                rounded-xl border-2 border-dashed border-border/30
-                bg-background-elevated/10 p-3
-                hover:border-primary/30 transition-all cursor-pointer
-                flex items-center justify-center gap-3
-              "
-              onClick={() =>
-                document.getElementById("file-upload-global")?.click()
-              }
-            >
-              <Upload className="h-4 w-4 text-muted/30" />
-              <span className="text-xs text-muted/60">
-                Drop more files or click to browse
-              </span>
-              <input
-                id="file-upload-global"
-                type="file"
-                accept="image/*"
-                multiple
-                className="hidden"
-                onChange={(e) => {
-                  const files = e.target.files;
-                  if (files) {
-                    const emptySlots = UPLOAD_SLOTS.filter(
-                      (slot) => !images[slot.id],
-                    );
-                    Array.from(files).forEach((file, index) => {
-                      if (index < emptySlots.length) {
-                        const slotId = emptySlots[index].id;
-                        handleFileChange(slotId, {
-                          target: { files: [file] },
-                        } as any);
-                      }
-                    });
-                  }
-                }}
-              />
-            </div>
+            {/* Drag & Drop area (hidden now, replaced by the add-more slot) */}
+            {/* Removed the big drag/drop area */}
           </motion.div>
 
+          {/* Phone connection (unchanged) */}
           {mode === "connect" && (
             <motion.div
               key="connect"
@@ -691,10 +747,10 @@ export const ProductMedia = forwardRef<
                     <span className="font-medium text-foreground/70">
                       {isAllUploaded
                         ? "✅ All photos captured!"
-                        : `📸 ${UPLOAD_SLOTS[guidedStep]?.label || "Done"}`}
+                        : `📸 ${allSlots[guidedStep]?.label || "Done"}`}
                     </span>
                     <span className="text-[10px] text-muted/40">
-                      {uploadedCount}/{UPLOAD_SLOTS.length}
+                      {uploadedCount} images
                     </span>
                   </div>
                   {!isAllUploaded && (
@@ -702,7 +758,7 @@ export const ProductMedia = forwardRef<
                       <div
                         className="h-full rounded-full bg-primary transition-all duration-300"
                         style={{
-                          width: `${(uploadedCount / UPLOAD_SLOTS.length) * 100}%`,
+                          width: `${(uploadedCount / Math.max(1, allSlots.length)) * 100}%`,
                         }}
                       />
                     </div>
@@ -712,9 +768,7 @@ export const ProductMedia = forwardRef<
                     className="mt-2 w-full rounded-full bg-primary/10 px-3 py-1 text-[10px] font-medium text-primary hover:bg-primary/20 transition"
                     disabled={isAllUploaded}
                   >
-                    {isAllUploaded
-                      ? "All done! 🎉"
-                      : "📱 Simulate Phone Upload"}
+                    {isAllUploaded ? "All done! 🎉" : "📱 Simulate Phone Upload"}
                   </button>
                 </div>
               )}
@@ -732,9 +786,7 @@ export const ProductMedia = forwardRef<
                     WEBP
                   </span>
                 </div>
-                <span className="text-[8px] text-muted/40">
-                  ⭐ = Recommended
-                </span>
+                <span className="text-[8px] text-muted/40">⭐ = Recommended</span>
               </div>
             </motion.div>
           )}

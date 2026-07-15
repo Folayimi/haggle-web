@@ -834,7 +834,7 @@ const PostProductPage = () => {
       .find((t) => t.startsWith(`${name.toLowerCase()}:`));
     return tag?.split(":")[1] || "";
   };
-  let listingId: string | null = null;
+  let listingId: string = localStorage.getItem("productListingId") ?? "";
   let subCategoryId: string | null = null;
   // ============================================
   // SAVE DRAFT
@@ -907,12 +907,12 @@ const PostProductPage = () => {
       // ============================================
       if (saveType === "update") {
         // Update existing listing
-        if (!productListingId) {
+        if (!listingId) {
           console.error("❌ No listing ID available for update");
           setDraftStatus("idle");
           return;
         }
-        await updateListing(productListingId, {
+        await updateListing(listingId, {
           ...payload,
           category_id: subCategoryId, // ✅ categoryId is now defined
         });
@@ -923,7 +923,9 @@ const PostProductPage = () => {
           category_id: subCategoryId,
         });
         listingId = listingResponse?.data?.id;
-        setProductListingId(listingResponse?.data?.id);
+        console.log("Real Listing ID:", listingResponse);
+        listingId = listingResponse?.data?.id;
+        localStorage.setItem("productListingId", listingResponse?.data?.id);
       }
 
       // If no listingId, fail early (for create)
@@ -944,9 +946,8 @@ const PostProductPage = () => {
         return;
       }
 
-      const uploadResults = await productMediaRef.current.uploadGalleryImages(
-        productListingId ?? listingId,
-      );
+      const uploadResults =
+        await productMediaRef.current.uploadGalleryImages(listingId);
       console.log("📸 Upload results:", uploadResults);
 
       // ============================================
@@ -965,7 +966,7 @@ const PostProductPage = () => {
       setTimeout(() => setDraftStatus("idle"), 3000);
     } catch (error) {
       console.error("❌ Failed to save draft:", error);
-      saveDraft();
+      // saveDraft();
       setDraftStatus("idle");
     }
   };
