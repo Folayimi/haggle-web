@@ -22,7 +22,9 @@ import { usePathname } from "next/navigation";
 
 const SideNav = ({ userData }: { userData: any }) => {
   const [tab, setTab] = useState("home");
-  const [collapsed, setCollapsed] = useState(localStorage.getItem("sideNavCollapsed") === "true");
+  const [collapsed, setCollapsed] = useState(
+    localStorage.getItem("sideNavCollapsed") === "true",
+  );
   const theme = useHaggleStore((state) => state.theme);
   const toggleTheme = useHaggleStore((state) => state.toggleTheme);
   const pathname = usePathname();
@@ -42,8 +44,13 @@ const SideNav = ({ userData }: { userData: any }) => {
   //   setCollapsed(localStorage.getItem("sideNavCollapsed") === "true");
   // }, []);
 
-  const isActive = (path: string) =>
-    pathname === path || pathname.startsWith(`${path}/`);
+  const isActive = (path: string) => {
+    if (pathname === "/post-product" || pathname === '/add-service') {
+      return "/create" === path;
+    } else {
+      return pathname === path || pathname.startsWith(`${path}/`);
+    }
+  };
 
   return (
     <aside

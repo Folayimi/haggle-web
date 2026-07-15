@@ -11,7 +11,9 @@ const Loader = ({ type }: { type: string }) => {
                 ? "Logging in..."
                 : type === "signup"
                   ? "Authenticating..."
-                  : "Verifying..."}
+                  : type === "publishing"
+                    ? "Publishing..."
+                    : "Verifying..."}
           </span>
         </div>
       </div>

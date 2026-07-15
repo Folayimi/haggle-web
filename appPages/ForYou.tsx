@@ -20,6 +20,7 @@ import { CategoryRail } from "@/components/feed/CategoryRail";
 import { useHaggleStore } from "@/lib/app-store";
 import { AppShell } from "@/components/app-shell";
 import { MarketMood } from "@/components/feed/MarketMood";
+import Background from "@/components/Background";
 
 // ============================================
 // TYPES
@@ -338,6 +339,7 @@ const ForYou = () => {
 
   return (
     <AppShell>
+      <Background />
       <div
         className="relative w-full h-screen overflow-hidden bg-dark-900"
         onTouchStart={handleTouchStart}
@@ -347,9 +349,14 @@ const ForYou = () => {
         {/* ============================================ */}
         {/* TOP HEADER - With Broadcast Button & Market Mood */}
         {/* ============================================ */}
-        <div className="absolute top-0 left-0 right-0 z-30 p-4 flex items-center justify-between bg-gradient-to-b from-black/60 to-transparent">
-          {/* Left: Logo / Title + Market Mood */}
-          <MarketMood />
+        <div className="absolute top-0 left-0 right-0 z-30 p-4 flex items-start justify-between">
+          {/* ============================================ */}
+          {/* LEFT - CATEGORY RAIL */}
+          {/* ============================================ */}
+          <CategoryRail
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+          />
 
           {/* Right: Actions */}
           <div className="flex items-center gap-3">
@@ -374,14 +381,9 @@ const ForYou = () => {
           </div>
         </div>
 
-        {/* ============================================ */}
-        {/* LEFT - CATEGORY RAIL */}
-        {/* ============================================ */}
-        <div className="absolute left-3 top-1/2 -translate-y-1/2 z-20 overflow-y-auto overflow-x-hidden">
-          <CategoryRail
-            selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
-          />
+        <div className="absolute left-8 bottom-10 -translate-y-1/2 z-20">
+          {/* Left: Logo / Title + Market Mood */}
+          <MarketMood />
         </div>
 
         {/* ============================================ */}

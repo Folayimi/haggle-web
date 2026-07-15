@@ -58,12 +58,12 @@ const CATEGORIES: Category[] = [
     icon: <Briefcase className="w-4 h-4" />,
     color: "text-purple-400",
   },
-  {
-    id: "food",
-    label: "Food",
-    icon: <Utensils className="w-4 h-4" />,
-    color: "text-emerald-400",
-  },
+  // {
+  //   id: "food",
+  //   label: "Food",
+  //   icon: <Utensils className="w-4 h-4" />,
+  //   color: "text-emerald-400",
+  // },
   {
     id: "trending",
     label: "Trending",
@@ -80,19 +80,19 @@ export const CategoryRail = ({
   onSelectCategory,
 }: CategoryRailProps) => {
   return (
-    <div className="flex flex-col pt-[30px] gap-2 h-[80vh] overflow-y-auto overflow-x-hidden pl-[30px] w-[300px]">
+    <div className="flex items-center justify-start p-[10px] gap-2 w-[30vw] flex-wrap">
       {CATEGORIES.map((category) => {
         const isSelected = selectedCategory === category.id;
         return (
           <motion.button
             key={category.id}
             onClick={() => onSelectCategory(category.id)}
-            whileHover={{ scale: 1.1, x: 4 }}
+            whileHover={{ scale: 1, y: -4 }}
             whileTap={{ scale: 0.95 }}
-            className={`relative group flex items-center justify-start px-[20px] gap-3 w-[130px] py-[20px] rounded-2xl transition-all duration-200 backdrop-blur-sm border ${
+            className={`relative group flex flex-col items-center justify-start px-[15px] gap-1 py-[8px] rounded-xl transition-all duration-200 backdrop-blur-sm border ${
               isSelected
                 ? `bg-primary/20 border-primary/50 ${category.color} shadow-lg shadow-primary/20`
-                : "bg-black/30 border-white/5 hover:bg-white/10 hover:border-white/20"
+                : "bg-black/30 border-white/20 hover:bg-white/10 hover:border-white/20"
             }`}
           >
             <span
@@ -106,11 +106,6 @@ export const CategoryRail = ({
             </span>
 
             <p className="text-white text-[12px]">{category.label}</p>
-
-            {/* Tooltip on hover */}
-            <div className="absolute left-full ml-3 px-2 py-1 rounded-lg bg-black/90 backdrop-blur-sm text-white text-[10px] font-medium whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none border border-white/5">
-              {category.label}
-            </div>
 
             {/* Small indicator dot for active */}
             {isSelected && (

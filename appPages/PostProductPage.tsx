@@ -49,6 +49,8 @@ import {
   updateUserProfile,
 } from "@/services/request";
 import Image from "next/image";
+import Loader from "@/reusables/loader";
+import { useRouter } from "next/navigation";
 
 // ============================================
 // TYPES
@@ -318,7 +320,11 @@ function CompletionSummary({
           <div
             key={i}
             className={`h-1.5 w-5 rounded-full transition-all ${
-              i < completed ? "bg-primary" : "bg-border/40"
+              i < completed
+                ? completed === total
+                  ? "bg-success"
+                  : "bg-primary"
+                : "bg-border/40"
             }`}
           />
         ))}
@@ -412,7 +418,7 @@ function NegotiationStylePicker({
       <span className="text-sm font-medium text-foreground/80">
         Negotiation Style
       </span>
-      <div className="grid grid-cols-3 gap-2">
+      <div className="grid grid-cols-3 gap-2 mt-1.5">
         {NEGOTIATION_STYLES.map((style) => (
           <button
             key={style.id}
@@ -678,6 +684,8 @@ const PostProductPage = () => {
     "idle",
   );
 
+  const [publishing, setPublishing] = useState(false);
+
   const tabs: { id: TabId; label: string }[] = [
     { id: "details", label: "Product Details" },
     { id: "pricing", label: "Pricing & Negotiation" },
@@ -685,6 +693,8 @@ const PostProductPage = () => {
   ];
 
   const completedCount = Object.values(completed).filter(Boolean).length;
+
+  const router = useRouter();
 
   // ============================================
   // VALIDATE A SPECIFIC TAB
@@ -739,6 +749,12 @@ const PostProductPage = () => {
         setCompleted((prev) => ({ ...prev, details: true }));
       } else if (activeTab === "pricing") {
         setCompleted((prev) => ({ ...prev, pricing: true }));
+      } else {
+        if (imageGallery.length > 0) {
+          setCompleted((prev) => ({ ...prev, media: true }));
+        } else {
+          setCompleted((prev) => ({ ...prev, media: false }));
+        }
       }
       saveDraft();
       setLastSaved(new Date());
@@ -839,20 +855,25 @@ const PostProductPage = () => {
   // ============================================
   // SAVE DRAFT
   // ============================================
-  const saveDraft = async () => {
+  const saveDraft = async (status?: string) => {
+    if (imageGallery.length > 0) {
+      setCompleted((prev) => ({ ...prev, media: true }));
+    } else {
+      setCompleted((prev) => ({ ...prev, media: false }));
+    }
     setDraftStatus("saving");
 
     const categoryPayload = {
       name: productInfo?.category,
       slug: productInfo?.categorySlug,
       kind: "product",
-      status: "draft",
+      status: status ?? "draft",
     };
     const subCategoryPayload = {
       name: productInfo?.subCategory,
       slug: productInfo?.subCategorySlug,
       kind: "product",
-      status: "draft",
+      status: status ?? "draft",
     };
     const payload = {
       seller_id: userData?.profile?.user_id,
@@ -863,7 +884,7 @@ const PostProductPage = () => {
       lowest_amount: productInfo?.lowestAcceptablePrice,
       auto_decline_amount: productInfo?.autoDeclinePrice,
       tags: tags,
-      status: "draft",
+      status: status ?? "draft",
       negotiation_style: negotiationStyle,
       negotiation_note: productInfo?.negotiationNote,
     };
@@ -899,6 +920,7 @@ const PostProductPage = () => {
       if (!subCategoryId) {
         console.error("❌ Failed to get or create category");
         setDraftStatus("idle");
+        setPublishing(false);
         return;
       }
 
@@ -910,6 +932,7 @@ const PostProductPage = () => {
         if (!listingId) {
           console.error("❌ No listing ID available for update");
           setDraftStatus("idle");
+          setPublishing(false);
           return;
         }
         await updateListing(listingId, {
@@ -932,6 +955,7 @@ const PostProductPage = () => {
       if (!productListingId && !listingId) {
         console.error("❌ Failed to create listing");
         setDraftStatus("idle");
+        setPublishing(false);
         return;
       }
 
@@ -943,6 +967,7 @@ const PostProductPage = () => {
       if (!productMediaRef.current) {
         console.error("❌ ProductMedia ref is null – cannot upload images");
         setDraftStatus("idle");
+        setPublishing(false);
         return;
       }
 
@@ -968,6 +993,7 @@ const PostProductPage = () => {
       console.error("❌ Failed to save draft:", error);
       // saveDraft();
       setDraftStatus("idle");
+      setPublishing(false);
     }
   };
 
@@ -997,13 +1023,10 @@ const PostProductPage = () => {
   };
 
   const handleSubmit = async () => {
-    const payload = {
-      ...productInfo,
-      tags,
-      negotiationStyle,
-    };
-
-    console.log("Publishing product:", payload);
+    setPublishing(true);
+    await saveDraft("published");
+    setPublishing(false);
+    router.push("/create");
   };
 
   // ============================================
@@ -1029,6 +1052,7 @@ const PostProductPage = () => {
 
   return (
     <AppShell>
+      {publishing && <Loader type="publishing" />}
       <div className="min-h-screen flex flex-col bg-transparent">
         <div className="relative flex-1 mx-auto max-w-7xl w-full px-3 py-4 lg:px-6 flex flex-col">
           {/* HEADER ROW */}
@@ -1254,6 +1278,23 @@ const PostProductPage = () => {
                           />
                         </div>
                       </div>
+                      {productInfo.subCategory && (
+                        <div className="space-y-1.5">
+                          <GlassyField
+                            label="Location"
+                            placeholder="Your current Location. e.g. Lagos, Nigeria"
+                            prominent
+                            value={productInfo.location}
+                            onChange={(e) =>
+                              setProductInfo({
+                                ...productInfo,
+                                location: e.target.value,
+                              })
+                            }
+                            error={validationErrors.location}
+                          />
+                        </div>
+                      )}
                       {productInfo.subCategory ? (
                         <div className="space-y-1.5">
                           <p className="text-xs font-medium text-foreground/60">
@@ -1300,24 +1341,6 @@ const PostProductPage = () => {
                           </div>
                         </div>
                       ) : null}
-
-                      {productInfo.subCategory && (
-                        <div className="space-y-1.5">
-                          <GlassyField
-                            label="Location"
-                            placeholder="Your current Location. e.g. Lagos, Nigeria"
-                            prominent
-                            value={productInfo.location}
-                            onChange={(e) =>
-                              setProductInfo({
-                                ...productInfo,
-                                location: e.target.value,
-                              })
-                            }
-                            error={validationErrors.location}
-                          />
-                        </div>
-                      )}
                     </motion.div>
                   )}
 

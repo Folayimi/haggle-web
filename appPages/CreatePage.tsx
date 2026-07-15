@@ -1,9 +1,6 @@
 "use client";
 
-import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
-import { useState, useEffect } from "react";
 import {
   Calendar,
   Clock,
@@ -33,114 +30,8 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
-
-// ============================================
-// TYPES
-// ============================================
-type CarouselImage = {
-  id: number;
-  src: string;
-  alt: string;
-  dynamicLabel: string;
-  icon: React.ReactNode;
-};
-
-// ============================================
-// CONSTANTS - Carousel Images with Dynamic Labels
-// ============================================
-const CAROUSEL_IMAGES: CarouselImage[] = [
-  {
-    id: 1,
-    src: "/img1.jpg",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "🔥 27 Offers Today",
-    icon: <Flame className="h-4 w-4 text-orange-400" />,
-  },
-  {
-    id: 2,
-    src: "/img2.jpg",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "💬 14 Active Negotiations",
-    icon: <MessageCircle className="h-4 w-4 text-blue-400" />,
-  },
-  {
-    id: 3,
-    src: "/img3.webp",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "📈 ₦84.5k Earned This Week",
-    icon: <TrendingUp className="h-4 w-4 text-green-400" />,
-  },
-  {
-    id: 4,
-    src: "/img4.jpg",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "⭐ 4.8 Seller Rating",
-    icon: <Star className="h-4 w-4 text-yellow-400" />,
-  },
-  {
-    id: 5,
-    src: "/img5.jpg",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "🎯 32 Products Listed",
-    icon: <Package className="h-4 w-4 text-purple-400" />,
-  },
-  {
-    id: 6,
-    src: "/img6.jpg",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "🤝 6 Deals Closed Today",
-    icon: <Handshake className="h-4 w-4 text-green-400" />,
-  },
-  {
-    id: 7,
-    src: "/img7.jpg",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "📅 4 Upcoming Lives",
-    icon: <Calendar className="h-4 w-4 text-blue-400" />,
-  },
-  {
-    id: 8,
-    src: "/img8.jpg",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "🚀 Top 5% Seller",
-    icon: <Award className="h-4 w-4 text-yellow-400" />,
-  },
-  {
-    id: 9,
-    src: "/img9.jpg",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "📦 2.4k Products Sold",
-    icon: <ShoppingBag className="h-4 w-4 text-orange-400" />,
-  },
-  {
-    id: 10,
-    src: "/img10.jpg",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "⏰ 92% Response Rate",
-    icon: <Clock className="h-4 w-4 text-green-400" />,
-  },
-  {
-    id: 11,
-    src: "/img11.jpg",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "💰 68% Offer Acceptance",
-    icon: <CheckCircle className="h-4 w-4 text-teal-400" />,
-  },
-  {
-    id: 12,
-    src: "/img12.webp",
-    alt: "Marketplace negotiation",
-    dynamicLabel: "👥 12 Active Buyers",
-    icon: <Users className="h-4 w-4 text-blue-400" />,
-  },
-  {
-    id: 13,
-    src: "/img13.jpg",
-    alt: "Shopping marketplace",
-    dynamicLabel: "🏪 Haggle Studio",
-    icon: <Sparkles className="h-4 w-4 text-yellow-400" />,
-  },
-];
+import { BroadCastShowRoom } from "@/components/BroadCastShowRoom";
+import Link from "next/link";
 
 // ============================================
 // CONSTANTS - Right Column Cards (Shortened Descriptions)
@@ -191,187 +82,6 @@ const RIGHT_CARDS = [
     label: "GO LIVE",
   },
 ];
-
-// ============================================
-// CAROUSEL COMPONENT (With Dynamic Labels)
-// ============================================
-function LiveCarousel() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-
-  useEffect(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % CAROUSEL_IMAGES.length);
-    }, 8000);
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const currentImage = CAROUSEL_IMAGES[currentIndex];
-
-  const imageVariants = {
-    enter: { opacity: 0, scale: 1.02 },
-    center: { opacity: 1, scale: 1 },
-    exit: { opacity: 0, scale: 0.98 },
-  };
-
-  return (
-    <div className="relative w-full h-full">
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentIndex}
-          variants={imageVariants}
-          initial="enter"
-          animate="center"
-          exit="exit"
-          transition={{ duration: 0.8, ease: [0.25, 0.1, 0.25, 1] }}
-          className="absolute inset-0"
-        >
-          <Image
-            src={`/images/${currentImage.src}`}
-            alt={currentImage.alt}
-            fill
-            className="object-cover"
-            priority
-            unoptimized
-          />
-          {/* STRONGER OVERLAY - ensures readability */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-black/10" />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/40 to-transparent" />
-        </motion.div>
-      </AnimatePresence>
-
-      {/* Dynamic Label - Top Left */}
-      <motion.div
-        key={currentIndex}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -10 }}
-        transition={{ duration: 0.5, delay: 0.2 }}
-        className="absolute top-6 left-6 z-10 flex items-center gap-2"
-      >
-        <div className="rounded-full bg-black/40 backdrop-blur-sm px-4 py-2 border border-white/10">
-          <span className="text-sm font-semibold text-white flex items-center gap-2">
-            {currentImage.icon}
-            {currentImage.dynamicLabel}
-          </span>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
-// ============================================
-// TOOLTIP BUTTON COMPONENT
-// ============================================
-function TooltipButton({
-  icon,
-  label,
-  onClick,
-}: {
-  icon: React.ReactNode;
-  label: string;
-  onClick?: () => void;
-}) {
-  return (
-    <div className="relative group">
-      <button
-        onClick={onClick}
-        className="
-          rounded-full bg-white/15 backdrop-blur-sm p-3
-          text-white hover:bg-white/25 transition border border-white/10
-        "
-      >
-        {icon}
-      </button>
-      <div
-        className="
-        absolute bottom-full left-1/2 -translate-x-1/2 mb-2
-        opacity-0 group-hover:opacity-100 transition-opacity duration-200
-        pointer-events-none whitespace-nowrap
-      "
-      >
-        <span className="bg-black/80 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg backdrop-blur-sm border border-white/10">
-          {label}
-        </span>
-        <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-black/80 border-r border-b border-white/10" />
-      </div>
-    </div>
-  );
-}
-
-// ============================================
-// LIVE ROOM PREVIEW CARD - Enhanced with larger radius + subtle glow
-// ============================================
-function LiveRoomPreview() {
-  return (
-    <div
-      className="
-        relative overflow-hidden rounded-[32px]
-        border border-border
-        bg-surface-strong
-        shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_20px_60px_rgba(0,0,0,0.35)]
-        flex-1
-        min-h-[300px]
-      "
-    >
-      <div className="absolute inset-0">
-        <LiveCarousel />
-      </div>
-
-      <div className="relative z-10 flex h-full flex-col justify-between p-6">
-        <div />
-
-        {/* Controls */}
-        <div className="space-y-2">
-          <p className="text-xs font-medium text-white/60 tracking-wider uppercase">
-            Manage Controls
-          </p>
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="flex flex-wrap items-center gap-3">
-              <TooltipButton
-                icon={<Camera className="h-5 w-5" />}
-                label="Set up camera"
-              />
-              <TooltipButton
-                icon={<Mic className="h-5 w-5" />}
-                label="Configure microphone"
-              />
-              <TooltipButton
-                icon={<MessageSquare className="h-5 w-5" />}
-                label="Open chat settings"
-              />
-              <TooltipButton
-                icon={<ShoppingBag className="h-5 w-5" />}
-                label="Manage products"
-              />
-            </div>
-
-            {/* REFINED GO LIVE BUTTON */}
-            <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-              <Link
-                href="/instant-live"
-                className="
-      inline-flex items-center gap-2.5
-      rounded-full bg-primary px-7 py-3.5
-      text-base font-bold text-white
-      shadow-lg shadow-primary/25
-      hover:shadow-xl hover:shadow-primary/35
-      transition-all duration-300
-      hover:bg-primary-strong
-      border border-primary/20
-      relative
-    "
-              >
-                <Zap className="h-5 w-5" />
-                <span>Go Live</span>
-              </Link>
-            </motion.div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-}
 
 // ============================================
 // GLASSY ACTION CARD (With Hierarchy Support)
@@ -648,10 +358,10 @@ const CreatePage = () => {
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 py-5 lg:px-6 flex flex-col">
           {/* MAIN SPLIT LAYOUT */}
           <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-            <LiveRoomPreview />
+            <BroadCastShowRoom />
 
             {/* RIGHT CARDS - 2x2 Grid with Hierarchy */}
-            <div className="grid grid-cols-2 grid-rows-[1.2fr_0.8fr] gap-4">
+            <div className="grid grid-cols-2 grid-rows-[1fr_1fr] gap-4">
               {RIGHT_CARDS.map((card, index) => (
                 <GlassyActionCard
                   key={card.id}
@@ -719,42 +429,6 @@ const CreatePage = () => {
               timeLabel="Last 30 Days"
               sparkline={[60, 62, 65, 68, 70, 72, 74]}
             />
-          </div>
-
-          {/* BOTTOM BAR */}
-          <div
-            className="
-            mt-4 flex flex-wrap items-center justify-between gap-3 
-            rounded-2xl border border-border/50 
-            bg-surface-strong 
-            px-4 py-3 
-            shadow-card
-            flex-shrink-0
-          "
-          >
-            <div className="flex items-center gap-4 text-xs text-muted">
-              <span className="flex items-center gap-1.5">
-                <Award className="h-3.5 w-3.5 text-warning" />
-                Level 4 Seller
-              </span>
-              <span className="h-4 w-px bg-border" />
-              <span className="flex items-center gap-1.5">
-                <TrendingUp className="h-3.5 w-3.5 text-success" />
-                12 listings this week
-              </span>
-              <span className="h-4 w-px bg-border" />
-              <span className="flex items-center gap-1.5">
-                <CheckCircle className="h-3.5 w-3.5 text-primary" />
-                92% response rate
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="text-xs text-muted">Next level:</span>
-              <div className="h-1.5 w-24 rounded-full bg-border overflow-hidden">
-                <div className="h-full w-3/4 rounded-full bg-gradient-to-r from-primary to-secondary" />
-              </div>
-              <span className="text-xs font-medium text-foreground">75%</span>
-            </div>
           </div>
         </div>
       </div>

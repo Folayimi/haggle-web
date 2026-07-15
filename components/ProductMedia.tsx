@@ -141,7 +141,92 @@ export const ProductMedia = forwardRef<
   const allSlots = [...FIXED_SLOTS, ...extraSlots];
 
   // ============================================
-  // ADD EXTRA SLOT
+  // CORE: FILL SLOTS WITH MULTIPLE FILES
+  // ============================================
+  const fillSlotsWithFiles = (files: FileList | File[], startSlotId?: SlotId) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    // Get current occupied slot IDs
+    const occupiedSlotIds = new Set(imageGallery.map(item => item.slotId));
+
+    // Determine the order of slots to fill
+    let slotsToFill = [...allSlots];
+    let startIndex = 0;
+    if (startSlotId) {
+      const idx = slotsToFill.findIndex(s => s.id === startSlotId);
+      if (idx !== -1) startIndex = idx;
+    }
+    // Reorder slots to start from startIndex
+    slotsToFill = slotsToFill.slice(startIndex);
+
+    let fileIndex = 0;
+    let newExtraCount = 0;
+
+    // Helper to assign a file to a specific slot
+    const assignFileToSlot = (slot: Slot, file: File) => {
+      const previewUrl = URL.createObjectURL(file);
+      const newGalleryItem: GalleryImage = {
+        mediaId: "",
+        slotId: slot.id,
+        file,
+        key: "",
+        previewUrl,
+        status: "pending",
+      };
+      // Remove any existing image in that slot (replace)
+      setImageGallery((prev) => {
+        const filtered = prev.filter((item) => item.slotId !== slot.id);
+        return [...filtered, newGalleryItem];
+      });
+      // Update images state for preview
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setImages((prev) => ({
+          ...prev,
+          [slot.id]: ev.target?.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
+    };
+
+    // First, iterate over existing slots
+    for (let i = 0; i < slotsToFill.length && fileIndex < fileArray.length; i++) {
+      const slot = slotsToFill[i];
+      // If slot already has an image, we skip it (keep existing)
+      if (occupiedSlotIds.has(slot.id)) continue;
+      assignFileToSlot(slot, fileArray[fileIndex]);
+      fileIndex++;
+      // Mark as occupied for future checks
+      occupiedSlotIds.add(slot.id);
+    }
+
+    // If there are remaining files, create new extra slots
+    while (fileIndex < fileArray.length) {
+      newExtraCount++;
+      const newSlotId = `more${extraSlots.length + newExtraCount}`;
+      const newSlot: Slot = {
+        id: newSlotId,
+        label: `More ${extraSlots.length + newExtraCount}`,
+        starred: false,
+        isFixed: false,
+      };
+      // Add to extraSlots state
+      setExtraSlots((prev) => [...prev, newSlot]);
+      // Assign file to this new slot
+      assignFileToSlot(newSlot, fileArray[fileIndex]);
+      fileIndex++;
+    }
+
+    // Update guided step if connected
+    if (connectionStatus === "connected") {
+      const firstEmpty = allSlots.findIndex((slot) => !imageGallery.some((g) => g.slotId === slot.id));
+      setGuidedStep(firstEmpty >= 0 ? firstEmpty : allSlots.length - 1);
+    }
+  };
+
+  // ============================================
+  // ADD EXTRA SLOT (single empty)
   // ============================================
   const addExtraSlot = (file?: File) => {
     const count = extraSlots.length + 1;
@@ -154,7 +239,24 @@ export const ProductMedia = forwardRef<
     setExtraSlots((prev) => [...prev, newSlot]);
     if (file) {
       // Assign file to this new slot
-      handleFileChange(newSlot.id, { target: { files: [file] } } as any);
+      const previewUrl = URL.createObjectURL(file);
+      const newGalleryItem: GalleryImage = {
+        mediaId: "",
+        slotId: newSlot.id,
+        file,
+        key: "",
+        previewUrl,
+        status: "pending",
+      };
+      setImageGallery((prev) => [...prev, newGalleryItem]);
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setImages((prev) => ({
+          ...prev,
+          [newSlot.id]: ev.target?.result as string,
+        }));
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -162,10 +264,8 @@ export const ProductMedia = forwardRef<
   // REMOVE EXTRA SLOT
   // ============================================
   const removeExtraSlot = (slotId: SlotId) => {
-    // Only allow removing extra slots that are empty
     const hasImage = imageGallery.some((item) => item.slotId === slotId);
     if (hasImage) {
-      // Optionally confirm or remove image first
       const item = imageGallery.find((g) => g.slotId === slotId);
       if (item) removeImage(slotId);
     }
@@ -276,7 +376,7 @@ export const ProductMedia = forwardRef<
   }));
 
   // ============================================
-  // FILE HANDLING
+  // FILE HANDLING (Multi-file support)
   // ============================================
   const handleFileSelect = (slotId: SlotId) => {
     document.getElementById(`file-upload-${slotId}`)?.click();
@@ -286,32 +386,12 @@ export const ProductMedia = forwardRef<
     slotId: SlotId,
     e: React.ChangeEvent<HTMLInputElement>,
   ) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    const previewUrl = URL.createObjectURL(file);
-    const newGalleryItem: GalleryImage = {
-      mediaId: "",
-      slotId,
-      file,
-      key: "",
-      previewUrl,
-      status: "pending",
-    };
-
-    setImageGallery((prev) => {
-      const filtered = prev.filter((item) => item.slotId !== slotId);
-      return [...filtered, newGalleryItem];
-    });
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      setImages((prev) => ({
-        ...prev,
-        [slotId]: ev.target?.result as string,
-      }));
-    };
-    reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (!files || files.length === 0) return;
+    // Use the multi-file fill function starting from the clicked slot
+    fillSlotsWithFiles(files, slotId);
+    // Clear the input value to allow re-selection of same files
+    e.target.value = '';
   };
 
   const removeImage = async (slotId: SlotId) => {
@@ -339,7 +419,7 @@ export const ProductMedia = forwardRef<
   };
 
   // ============================================
-  // DRAG AND DROP HANDLERS
+  // DRAG AND DROP HANDLERS (unchanged)
   // ============================================
   const handleDragStart = (e: React.DragEvent, slotId: SlotId) => {
     setDraggedSlotId(slotId);
@@ -362,21 +442,17 @@ export const ProductMedia = forwardRef<
 
     if (!sourceSlotId || sourceSlotId === targetSlotId) return;
 
-    // Swap images between source and target slots
     const sourceItem = imageGallery.find((item) => item.slotId === sourceSlotId);
     const targetItem = imageGallery.find((item) => item.slotId === targetSlotId);
 
-    // If source has no image, nothing to swap
     if (!sourceItem) return;
 
-    // Update gallery: swap slotIds
+    // Swap images between source and target slots
     const updatedGallery = imageGallery.map((item) => {
       if (item.slotId === sourceSlotId) {
-        // Move source image to target slot
         return { ...item, slotId: targetSlotId };
       }
       if (item.slotId === targetSlotId) {
-        // Move target image to source slot (if any)
         return { ...item, slotId: sourceSlotId };
       }
       return item;
@@ -384,28 +460,21 @@ export const ProductMedia = forwardRef<
 
     setImageGallery(updatedGallery);
 
-    // Update images state (preview URLs)
     const newImages: Record<SlotId, string> = {};
     updatedGallery.forEach((item) => {
       newImages[item.slotId] = item.previewUrl;
     });
-    // Also preserve any images that might be in images state but not in gallery
-    // (not needed as gallery is source of truth)
     setImages(newImages);
 
     setDraggedSlotId(null);
   };
 
-  // Special drop handler for the "Add More" area
   const handleAddMoreDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    // Check if files are being dropped
     const files = e.dataTransfer.files;
     if (files && files.length > 0) {
-      // Add a new extra slot and assign the first file
-      addExtraSlot(files[0]);
+      fillSlotsWithFiles(files);
     } else {
-      // If no files, just add an empty slot
       addExtraSlot();
     }
   };
@@ -613,20 +682,29 @@ export const ProductMedia = forwardRef<
                             <X className="h-2.5 w-2.5" />
                           </button>
                         )}
+                        <div className="absolute bottom-0.5 left-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] text-white/80">
+                          {slot.label}
+                        </div>
                       </>
                     ) : (
-                      <div className="text-center">
-                        <Upload className="mx-auto h-4 w-4 text-muted/30" />
-                        <p className="mt-0.5 text-[9px] text-muted/40">{slot.label}</p>
-                        {slot.starred && (
-                          <Star className="mx-auto mt-0.5 h-2.5 w-2.5 text-yellow-400/60" />
-                        )}
-                      </div>
+                      <>
+                        <div className="text-center">
+                          <Upload className="mx-auto h-4 w-4 text-muted/30" />
+                          <p className="mt-0.5 text-[9px] text-muted/40">{slot.label}</p>
+                          {slot.starred && (
+                            <Star className="mx-auto mt-0.5 h-2.5 w-2.5 text-yellow-400/60" />
+                          )}
+                        </div>
+                        <div className="absolute bottom-0.5 left-0.5 bg-black/40 backdrop-blur-sm px-1.5 py-0.5 rounded text-[8px] text-white/80">
+                          {slot.label}
+                        </div>
+                      </>
                     )}
                     <input
                       id={`file-upload-${slot.id}`}
                       type="file"
                       accept="image/*"
+                      multiple
                       className="hidden"
                       onChange={(e) => handleFileChange(slot.id, e)}
                     />
@@ -638,7 +716,7 @@ export const ProductMedia = forwardRef<
               <div
                 onDragOver={handleDragOver}
                 onDrop={handleAddMoreDrop}
-                onClick={() => addExtraSlot()}
+                onClick={() => document.getElementById('file-upload-add-more')?.click()}
                 className="
                   relative rounded-lg aspect-square
                   border-2 border-dashed border-border/40
@@ -653,11 +731,22 @@ export const ProductMedia = forwardRef<
                   <Plus className="mx-auto h-5 w-5 text-muted/40" />
                   <p className="mt-1 text-[9px] text-muted/40">Add more</p>
                 </div>
+                <input
+                  id="file-upload-add-more"
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  className="hidden"
+                  onChange={(e) => {
+                    const files = e.target.files;
+                    if (files && files.length > 0) {
+                      fillSlotsWithFiles(files);
+                      e.target.value = '';
+                    }
+                  }}
+                />
               </div>
             </div>
-
-            {/* Drag & Drop area (hidden now, replaced by the add-more slot) */}
-            {/* Removed the big drag/drop area */}
           </motion.div>
 
           {/* Phone connection (unchanged) */}

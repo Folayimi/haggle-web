@@ -1,4 +1,4 @@
-import { MarketPage } from "@/components/workspace-pages";
+import MarketPage from "@/appPages/MarketPage";
 
 export default function Page() {
   return <MarketPage />;
