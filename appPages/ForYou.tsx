@@ -6,14 +6,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   ChevronUp,
   ChevronDown,
-  Megaphone,
-  Flame,
-  MapPin,
-  Clock,
-  Sparkles,
-  ShoppingBag,
-  Users,
-  Handshake,
+  Megaphone, 
 } from "lucide-react";
 import FeedCard from "@/components/feed/FeedCard";
 import { CategoryRail } from "@/components/feed/CategoryRail";

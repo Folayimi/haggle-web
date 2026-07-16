@@ -1,9 +1,9 @@
-// components/LiveRoomPreview.tsx
+// components/BroadCastShowRoom.tsx
 "use client";
 
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Camera,
   Mic,
@@ -22,7 +22,6 @@ import {
   Send,
   MessageCircle,
 } from "lucide-react";
-import { url } from "inspector";
 
 // ============================================
 // TYPES
@@ -46,6 +45,7 @@ type BroadcastRequest = {
     | "scheduled";
   quantity?: string;
   timestamp: string;
+  type: "product" | "service";
 };
 
 // ============================================
@@ -79,7 +79,7 @@ const BADGE_CONFIG = {
 };
 
 // ============================================
-// MOCK DATA (extended)
+// MOCK DATA
 // ============================================
 const generateMockBroadcasts = (): BroadcastRequest[] => {
   const names = [
@@ -106,19 +106,29 @@ const generateMockBroadcasts = (): BroadcastRequest[] => {
     "Home",
     "Automobile",
   ];
-  const titles = [
+  const productTitles = [
     "Vintage Wedding Dress",
     "Handcrafted Wooden Table",
     "Custom Portrait Painting",
-    "Fresh Organic Vegetables",
-    "Professional Logo Design",
     "iPhone 15 Pro Max",
     "Luxury Sofa Set",
     "Toyota Camry 2022",
-    "Wedding Photography",
-    "Plumbing Services",
     "Gaming Laptop",
     "Designer Handbag",
+    "Fresh Organic Vegetables",
+    "Smart TV 65 Inch",
+  ];
+  const serviceTitles = [
+    "Professional Logo Design",
+    "Wedding Photography",
+    "Plumbing Services",
+    "Interior Design Consultation",
+    "Personal Training Sessions",
+    "Catering Services",
+    "Web Development",
+    "Digital Marketing Strategy",
+    "Event Planning",
+    "Home Cleaning Services",
   ];
   const urgencyList: BroadcastRequest["urgency"][] = [
     "urgent",
@@ -140,7 +150,7 @@ const generateMockBroadcasts = (): BroadcastRequest[] => {
   ];
   const quantities = ["2 units", "3 units", "5kg", "1 unit", "10kg", "4 units"];
 
-  return Array.from({ length: 20 }, (_, i) => {
+  const productItems = Array.from({ length: 12 }, (_, i) => {
     const name = names[i % names.length];
     const initials = name
       .split(" ")
@@ -153,11 +163,11 @@ const generateMockBroadcasts = (): BroadcastRequest[] => {
     const quantity =
       Math.random() > 0.6 ? quantities[i % quantities.length] : undefined;
     const category = categories[i % categories.length];
-    const title = titles[i % titles.length];
+    const title = productTitles[i % productTitles.length];
     const timestamp = `${Math.floor(Math.random() * 60 + 1)} min${Math.random() > 0.5 ? "s" : ""} ago`;
 
     return {
-      id: `broadcast-${i + 1}`,
+      id: `product-${i + 1}`,
       buyer: {
         name,
         avatar: initials,
@@ -169,12 +179,216 @@ const generateMockBroadcasts = (): BroadcastRequest[] => {
       urgency,
       quantity,
       timestamp: timestamp,
+      type: "product" as const,
     };
   });
+
+  const serviceItems = Array.from({ length: 12 }, (_, i) => {
+    const name = names[(i + 3) % names.length];
+    const initials = name
+      .split(" ")
+      .map((n) => n[0])
+      .join("");
+    const distance = `${(Math.random() * 10 + 0.5).toFixed(1)} km away`;
+    const urgency = urgencyList[(i + 2) % urgencyList.length];
+    const budget =
+      Math.random() > 0.3 ? budgets[(i + 1) % budgets.length] : undefined;
+    const quantity =
+      Math.random() > 0.6 ? quantities[(i + 2) % quantities.length] : undefined;
+    const category = categories[(i + 3) % categories.length];
+    const title = serviceTitles[i % serviceTitles.length];
+    const timestamp = `${Math.floor(Math.random() * 60 + 1)} min${Math.random() > 0.5 ? "s" : ""} ago`;
+
+    return {
+      id: `service-${i + 1}`,
+      buyer: {
+        name,
+        avatar: initials,
+        distance,
+      },
+      title,
+      category,
+      budget,
+      urgency,
+      quantity,
+      timestamp: timestamp,
+      type: "service" as const,
+    };
+  });
+
+  return [...productItems, ...serviceItems].sort(() => Math.random() - 0.5);
 };
 
 // ============================================
-// TOOLTIP BUTTON (for right controls)
+// SINGLE BROADCAST ITEM (chat‑style)
+// ============================================
+function BroadcastItem({
+  broadcast,
+  isNew,
+  onAction,
+  side,
+}: {
+  broadcast: BroadcastRequest;
+  isNew: boolean;
+  onAction: (action: "go-live" | "message", id: string) => void;
+  side: "left" | "right";
+}) {
+  const badge = broadcast.urgency ? BADGE_CONFIG[broadcast.urgency] : null;
+
+  // Chat bubble style based on side
+  const bubbleClasses =
+    side === "left"
+      ? "rounded-tl-xl rounded-tr-xl rounded-br-xl rounded-bl-md"
+      : "rounded-tl-xl rounded-tr-xl rounded-bl-xl rounded-br-md";
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 15 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -15 }}
+      transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
+      className="mb-3 last:mb-0 px-1"
+    >
+      <div
+        className={`${bubbleClasses} bg-white/60 backdrop-blur-sm border border-white/20 p-2.5 shadow-sm relative ${isNew ? "ring-1 ring-primary/30" : ""}`}
+      >
+        {isNew && (
+          <div className="absolute -top-1 -right-1 bg-primary text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full shadow-lg">
+            NEW
+          </div>
+        )}
+
+        <div className="flex flex-col gap-0.5">
+          {/* Top row: name + distance + badge */}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            <span className="text-black font-medium text-xs truncate">
+              {broadcast.buyer.name}
+            </span>
+            <span className="text-black/40 text-[9px] flex items-center gap-0.5">
+              <MapPin className="h-2.5 w-2.5" />
+              {broadcast.buyer.distance}
+            </span>
+            {badge && (
+              <span
+                className={`text-[7px] font-medium px-1.5 py-0.5 rounded-full border ${badge.color} ml-auto`}
+              >
+                {badge.label}
+              </span>
+            )}
+          </div>
+
+          {/* Title & category */}
+          <div className="flex items-center gap-1.5">
+            <span className="text-black/50 text-[8px] uppercase tracking-wider font-medium">
+              {broadcast.category}
+            </span>
+            <span className="text-black/80 text-xs truncate font-medium">
+              {broadcast.title}
+            </span>
+          </div>
+
+          {/* Details row: budget, quantity, timestamp */}
+          <div className="flex items-center gap-2 text-[9px] flex-wrap text-black/50">
+            {broadcast.budget && (
+              <span className="flex items-center gap-0.5">
+                <span className="text-primary font-medium">₦</span>
+                {broadcast.budget.replace("₦", "")}
+              </span>
+            )}
+            {broadcast.quantity && (
+              <span className="flex items-center gap-0.5">
+                <span className="text-black/30">Qty:</span>
+                {broadcast.quantity}
+              </span>
+            )}
+            <span className="flex items-center gap-0.5">
+              <Clock className="h-2.5 w-2.5 text-primary/60" />
+              {broadcast.timestamp}
+            </span>
+          </div>
+
+          {/* Actions - Smaller text */}
+          <div className="flex items-center gap-1.5 pt-0.5">
+            <button
+              onClick={() => onAction("go-live", broadcast.id)}
+              className="text-[7px] font-medium text-primary hover:text-primary-strong transition px-2 py-0.5 rounded-full border border-primary/30 hover:bg-primary/10"
+            >
+              Go Live
+            </button>
+            <button
+              onClick={() => onAction("message", broadcast.id)}
+              className="text-[7px] font-medium text-black/30 hover:text-black/60 transition px-2 py-0.5 rounded-full border border-black/10 hover:bg-black/5"
+            >
+              Message
+            </button>
+          </div>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+// ============================================
+// COLUMN COMPONENT (scrollable, clean)
+// ============================================
+function BroadcastColumn({
+  title,
+  icon,
+  broadcasts,
+  newBroadcastId,
+  onAction,
+  side,
+}: {
+  title: string;
+  icon: React.ReactNode;
+  broadcasts: BroadcastRequest[];
+  newBroadcastId: string | null;
+  onAction: (action: "go-live" | "message", id: string) => void;
+  side: "left" | "right";
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to bottom when new items added
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [broadcasts]);
+
+  return (
+    <div className="flex flex-col h-full">
+      <div className="flex items-center gap-2 px-3 py-2 flex-shrink-0">
+        {icon}
+        <span className="text-xs font-semibold text-white/80 uppercase tracking-wider">
+          {title}
+        </span>
+        <span className="text-[10px] text-white/30 ml-auto">
+          {broadcasts.length} live
+        </span>
+      </div>
+
+      <div
+        ref={scrollRef}
+        className="flex-1 overflow-y-auto p-2 space-y-2 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent"
+      >
+        <AnimatePresence initial={false} mode="popLayout">
+          {broadcasts.map((broadcast) => (
+            <BroadcastItem
+              key={broadcast.id}
+              broadcast={broadcast}
+              isNew={newBroadcastId === broadcast.id}
+              onAction={onAction}
+              side={side}
+            />
+          ))}
+        </AnimatePresence>
+      </div>
+    </div>
+  );
+}
+
+// ============================================
+// TOOLTIP BUTTON
 // ============================================
 function TooltipButton({
   icon,
@@ -190,9 +404,9 @@ function TooltipButton({
       <button
         onClick={onClick}
         className="
-          rounded-full bg-white/15 backdrop-blur-sm p-3
+          rounded-full bg-white/15 backdrop-blur-sm p-2.5
           text-white hover:bg-white/25 transition border border-white/10
-          w-12 h-12 flex items-center justify-center
+          w-10 h-10 flex items-center justify-center
         "
       >
         {icon}
@@ -204,7 +418,7 @@ function TooltipButton({
           pointer-events-none whitespace-nowrap
         "
       >
-        <span className="bg-black/80 text-white text-xs px-3 py-1.5 rounded-lg shadow-lg backdrop-blur-sm border border-white/10">
+        <span className="bg-black/80 text-white text-[10px] px-2.5 py-1 rounded-lg shadow-lg backdrop-blur-sm border border-white/10">
           {label}
         </span>
         <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-2 h-2 rotate-45 bg-black/80 border-r border-b border-white/10" />
@@ -214,255 +428,154 @@ function TooltipButton({
 }
 
 // ============================================
-// SINGLE BROADCAST ITEM (compact)
-// ============================================
-function BroadcastItem({
-  broadcast,
-  isNew,
-  onAction,
-}: {
-  broadcast: BroadcastRequest;
-  isNew: boolean;
-  onAction: (action: "go-live" | "message", id: string) => void;
-}) {
-  const badge = broadcast.urgency ? BADGE_CONFIG[broadcast.urgency] : null;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
-      className={`
-        relative py-3 px-4
-        ${isNew ? "bg-primary/5" : ""}
-      `}
-    >
-      {/* New indicator */}
-      {isNew && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          className="absolute top-2 right-2 bg-primary text-white text-[8px] font-semibold px-2 py-0.5 rounded-full shadow-lg"
-        >
-          NEW
-        </motion.div>
-      )}
-
-      <div className="flex items-end gap-3">
-        {/* Avatar */}
-        <div className="w-8 h-8 rounded-full bg-primary/50 flex items-center justify-center text-white font-semibold text-xs flex-shrink-0">
-          {broadcast.buyer.avatar}
-        </div>
-
-        <div className="w-[310px] flex flex-col gap-[10px] bg-black/80 border-white/20 border px-[20px] py-[10px] rounded-2xl rounded-bl-sm">
-          {/* Top row: name + distance + badge */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-white font-medium text-sm truncate">
-              {broadcast.buyer.name}
-            </span>
-            <span className="text-white/40 text-xs flex items-center gap-0.5">
-              <MapPin className="h-3 w-3" />
-              {broadcast.buyer.distance}
-            </span>
-            {badge && (
-              <span
-                className={`text-[8px] font-medium px-2 py-0.5 rounded-full border ${badge.color}`}
-              >
-                {badge.label}
-              </span>
-            )}
-          </div>
-
-          {/* Title & category */}
-          <div className="flex items-center gap-2">
-            <span className="text-white/50 text-[10px] uppercase tracking-wider">
-              {broadcast.category}
-            </span>
-            <span className="text-white text-sm font-medium truncate">
-              {broadcast.title}
-            </span>
-          </div>
-
-          {/* Details row: budget, quantity, timestamp */}
-          <div className="flex items-center gap-3 text-xs text-white/40 flex-wrap">
-            {broadcast.budget && (
-              <span className="flex items-center gap-0.5">
-                <span className="text-primary/60">Budget:</span>
-                {broadcast.budget}
-              </span>
-            )}
-            {broadcast.quantity && (
-              <span className="flex items-center gap-0.5">
-                <span>Qty:</span>
-                {broadcast.quantity}
-              </span>
-            )}
-            <span className="flex items-center gap-0.5">
-              <Clock className="h-3 w-3" />
-              {broadcast.timestamp}
-            </span>
-          </div>
-
-          {/* Actions: subtle buttons */}
-          <div className="flex items-center gap-2 pt-1">
-            <button
-              onClick={() => onAction("go-live", broadcast.id)}
-              className="text-[10px] font-medium text-primary hover:text-primary-strong transition px-2 py-0.5 rounded-full border border-primary/30 hover:bg-primary/10"
-            >
-              Go Live
-            </button>
-            <button
-              onClick={() => onAction("message", broadcast.id)}
-              className="text-[10px] font-medium text-white/50 hover:text-white transition px-2 py-0.5 rounded-full border border-white/10 hover:bg-white/5"
-            >
-              Message
-            </button>
-          </div>
-        </div>
-      </div>
-    </motion.div>
-  );
-}
-
-// ============================================
 // MAIN EXPORT: BroadCastShowRoom
 // ============================================
 export function BroadCastShowRoom() {
-  const [broadcastQueue, setBroadcastQueue] = useState<BroadcastRequest[]>([]);
-  const [newBroadcastId, setNewBroadcastId] = useState<string | null>(null);
   const [allBroadcasts] = useState<BroadcastRequest[]>(() =>
     generateMockBroadcasts(),
   );
-  const [pointer, setPointer] = useState(0);
-  const VISIBLE_COUNT = 5; // number of visible items
+  const [productQueue, setProductQueue] = useState<BroadcastRequest[]>([]);
+  const [serviceQueue, setServiceQueue] = useState<BroadcastRequest[]>([]);
+  const [newBroadcastId, setNewBroadcastId] = useState<string | null>(null);
+  const [productPointer, setProductPointer] = useState(0);
+  const [servicePointer, setServicePointer] = useState(0);
+  const VISIBLE_COUNT = 20;
 
-  // Initialize queue with first VISIBLE_COUNT items
+  const allProducts = useMemo(
+    () => allBroadcasts.filter((b) => b.type === "product"),
+    [allBroadcasts],
+  );
+  const allServices = useMemo(
+    () => allBroadcasts.filter((b) => b.type === "service"),
+    [allBroadcasts],
+  );
+
+  // Initialize queues
   useEffect(() => {
-    const initial = allBroadcasts.slice(0, VISIBLE_COUNT);
-    setBroadcastQueue(initial);
-    setPointer(VISIBLE_COUNT);
-  }, [allBroadcasts]);
+    const initialProducts = allProducts.slice(0, VISIBLE_COUNT);
+    const initialServices = allServices.slice(0, VISIBLE_COUNT);
+    setProductQueue(initialProducts);
+    setServiceQueue(initialServices);
+    setProductPointer(initialProducts.length);
+    setServicePointer(initialServices.length);
+  }, [allProducts, allServices]);
 
-  // Timer: every 20 seconds, shift oldest out, add new one
+  // Product queue timer
   useEffect(() => {
-    if (broadcastQueue.length === 0) return;
-
+    if (allProducts.length === 0) return;
     const interval = setInterval(() => {
-      // Get next broadcast from mock list, loop if needed
-      const nextIndex = pointer % allBroadcasts.length;
-      const nextBroadcast = allBroadcasts[nextIndex];
-
-      // Update queue: remove first, add new at end
-      setBroadcastQueue((prev) => {
-        const newQueue = [...prev.slice(1), nextBroadcast];
+      const nextIndex = productPointer % allProducts.length;
+      const nextBroadcast = allProducts[nextIndex];
+      setProductQueue((prev) => {
+        let newQueue = [...prev, nextBroadcast];
+        if (newQueue.length > VISIBLE_COUNT) {
+          newQueue = newQueue.slice(-VISIBLE_COUNT);
+        }
         return newQueue;
       });
-
-      // Mark the new item as "new"
       setNewBroadcastId(nextBroadcast.id);
       setTimeout(() => setNewBroadcastId(null), 1500);
-
-      setPointer((prev) => prev + 1);
+      setProductPointer((prev) => prev + 1);
     }, 5000);
-
     return () => clearInterval(interval);
-  }, [broadcastQueue, pointer, allBroadcasts]);
+  }, [productPointer, allProducts]);
 
-  // Handle action (for now, just log)
+  // Service queue timer
+  useEffect(() => {
+    if (allServices.length === 0) return;
+    const interval = setInterval(() => {
+      const nextIndex = servicePointer % allServices.length;
+      const nextBroadcast = allServices[nextIndex];
+      setServiceQueue((prev) => {
+        let newQueue = [...prev, nextBroadcast];
+        if (newQueue.length > VISIBLE_COUNT) {
+          newQueue = newQueue.slice(-VISIBLE_COUNT);
+        }
+        return newQueue;
+      });
+      setNewBroadcastId(nextBroadcast.id);
+      setTimeout(() => setNewBroadcastId(null), 1500);
+      setServicePointer((prev) => prev + 1);
+    }, 6000);
+    return () => clearInterval(interval);
+  }, [servicePointer, allServices]);
+
   const handleAction = (action: "go-live" | "message", id: string) => {
     console.log(`Action: ${action} on broadcast ${id}`);
-    // TODO: navigate or open modal
   };
 
-  // Count active broadcasts
-  const activeCount = broadcastQueue.length;
-
   return (
-    <div
-      className="
-      border border-border/40
-          bg-background-elevated/70 backdrop-blur-md backdrop-saturate-150
-        relative overflow-hidden rounded-[32px]
-        shadow-[0_0_0_1px_rgba(255,255,255,0.05),0_20px_60px_rgba(0,0,0,0.35)]
-        flex-1
-        h-100
-        flex
-      "
-      style={{ backgroundImage: 'url("./bg3.jpg")', backgroundRepeat: 'no-repeat', backgroundPosition: 'center', objectFit:'contain' }}
-    >
-      {/* LEFT: Broadcast Feed */}
-      <div className="flex-1 flex flex-col min-w-0">
-        {/* Fixed Header */}
-        <div className="flex items-center justify-between px-4 py-3 flex-shrink-0">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <span className="text-white font-semibold text-sm uppercase tracking-wider">
-              Live Buyer Requests
-            </span>
-          </div>
-          <div className="text-xs text-white/40">
-            {activeCount} buyer{activeCount !== 1 ? "s" : ""} nearby
-          </div>
+    <div className="relative flex flex-col rounded-[32px] overflow-hidden border border-border/40 bg-black/0 flex-1 h-[400px]">
+      {/* Two-Column Feed - Clean, no outlines/borders/backgrounds */}
+      <div className="flex-1 grid grid-cols-2 gap-2 p-2 min-h-0">
+        {/* Left Column - Products */}
+        <div className="overflow-hidden">
+          <BroadcastColumn
+            title="Products"
+            icon={<Package className="h-3.5 w-3.5 text-green-400" />}
+            broadcasts={productQueue}
+            newBroadcastId={newBroadcastId}
+            onAction={handleAction}
+            side="left"
+          />
         </div>
 
-        {/* Feed Items with overflow hidden and scroll? We'll keep it as a flex column with height auto but overflow hidden and animate items. */}
-        <div className="flex-1 overflow-hidden relative">
-          <AnimatePresence initial={false} mode="popLayout">
-            {broadcastQueue.map((broadcast, index) => (
-              <BroadcastItem
-                key={broadcast.id}
-                broadcast={broadcast}
-                isNew={newBroadcastId === broadcast.id}
-                onAction={handleAction}
-              />
-            ))}
-          </AnimatePresence>
+        {/* Right Column - Services */}
+        <div className="overflow-hidden">
+          <BroadcastColumn
+            title="Services"
+            icon={<Wrench className="h-3.5 w-3.5 text-purple-400" />}
+            broadcasts={serviceQueue}
+            newBroadcastId={newBroadcastId}
+            onAction={handleAction}
+            side="right"
+          />
         </div>
       </div>
 
-      {/* RIGHT: Controls (vertical) */}
-      <div className="flex-shrink-0 w-30 flex flex-col items-center justify-center gap-2 px-2 py-4">
-        <TooltipButton
-          icon={<Camera className="h-5 w-5" />}
-          label="Set up camera"
-        />
-        <TooltipButton
-          icon={<Mic className="h-5 w-5" />}
-          label="Configure microphone"
-        />
-        <TooltipButton
-          icon={<MessageSquare className="h-5 w-5" />}
-          label="Open chat settings"
-        />
-        <TooltipButton
-          icon={<ShoppingBag className="h-5 w-5" />}
-          label="Manage products"
-        />
+      {/* Controls */}
+      <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-10 pb-4 px-6">
+        <div className="flex items-center justify-between gap-4 max-w-2xl mx-auto">
+          <div className="flex items-center gap-2">
+            <TooltipButton
+              icon={<Camera className="h-4 w-4" />}
+              label="Set up camera"
+            />
+            <TooltipButton
+              icon={<Mic className="h-4 w-4" />}
+              label="Configure microphone"
+            />
+            <TooltipButton
+              icon={<MessageSquare className="h-4 w-4" />}
+              label="Open chat settings"
+            />
+            <TooltipButton
+              icon={<ShoppingBag className="h-4 w-4" />}
+              label="Manage products"
+            />
+          </div>
 
-        <div className="w-8 h-px bg-white/10 my-1" />
+          <div className="h-8 w-px bg-white/10" />
 
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Link
-            href="/instant-live"
-            className="
-              flex items-center justify-center
-              rounded-full bg-primary px-4 py-2.5
-              text-xs font-bold text-white
-              shadow-lg shadow-primary/25
-              hover:shadow-xl hover:shadow-primary/35
-              transition-all duration-300
-              hover:bg-primary-strong
-              border border-primary/20
-              min-w-[80px]
-              text-center
-            "
-          >
-            <Zap className="h-4 w-4 mr-1.5" />
-            Go Live
-          </Link>
-        </motion.div>
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Link
+              href="/instant-live"
+              className="
+                flex items-center justify-center gap-2
+                rounded-full bg-primary px-6 py-2.5
+                text-sm font-bold text-white
+                shadow-lg shadow-primary/25
+                hover:shadow-xl hover:shadow-primary/35
+                transition-all duration-300
+                hover:bg-primary-strong
+                border border-primary/20
+              "
+            >
+              <Zap className="h-4 w-4" />
+              Go Live
+            </Link>
+          </motion.div>
+        </div>
       </div>
     </div>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import {
   Calendar,
   Clock,
@@ -27,6 +27,8 @@ import {
   Flame,
   Gift,
   Star,
+  Eye,
+  ThumbsUp,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -215,32 +217,54 @@ function GlassyActionCard({
 }
 
 // ============================================
-// CIRCULAR PROGRESS INDICATOR (With Sparkline + Visible Time Labels)
+// ANALYTICS SECTION (Single Large Card)
 // ============================================
-function CircularProgress({
-  label,
-  value,
-  progress,
-  color = "primary",
-  icon,
-  trend,
-  trendValue,
-  timeLabel,
-  sparkline = [],
-}: {
-  label: string;
-  value: string;
-  progress: number;
-  color?: "primary" | "secondary" | "success" | "warning" | "gold";
-  icon?: React.ReactNode;
-  trend?: "up" | "down";
-  trendValue?: string;
-  timeLabel?: string;
-  sparkline?: number[];
-}) {
-  const radius = 40;
-  const circumference = 2 * Math.PI * radius;
-  const offset = circumference - (progress / 100) * circumference;
+function AnalyticsSection() {
+  const metrics = [
+    {
+      label: "Total Earnings",
+      value: "₦84,500",
+      change: "+12%",
+      trend: "up",
+      icon: <DollarSign className="h-5 w-5" />,
+      color: "gold" as const,
+      detail: "This week",
+    },
+    {
+      label: "Response Rate",
+      value: "92%",
+      change: "+4%",
+      trend: "up",
+      icon: <MessageCircle className="h-5 w-5" />,
+      color: "success" as const,
+      detail: "Today",
+    },
+    {
+      label: "Offer Acceptance",
+      value: "68%",
+      change: "-2%",
+      trend: "down",
+      icon: <CheckCircle className="h-5 w-5" />,
+      color: "primary" as const,
+      detail: "This month",
+    },
+    {
+      label: "Live Attendance",
+      value: "74%",
+      change: "+8%",
+      trend: "up",
+      icon: <Users className="h-5 w-5" />,
+      color: "secondary" as const,
+      detail: "Last 30 days",
+    },
+  ];
+
+  const sparklines = [
+    [30, 45, 38, 55, 62, 70, 78],
+    [88, 89, 90, 91, 92, 92, 93],
+    [72, 70, 68, 69, 68, 67, 68],
+    [60, 62, 65, 68, 70, 72, 74],
+  ];
 
   const colorMap = {
     primary: "text-primary stroke-primary",
@@ -250,101 +274,99 @@ function CircularProgress({
     gold: "text-amber-500 stroke-amber-500",
   };
 
-  // Generate sparkline path
-  const sparklinePath =
-    sparkline.length > 0
-      ? sparkline
-          .map((value, i) => {
-            const x = (i / (sparkline.length - 1)) * 40;
-            const y = 16 - (value / 100) * 14;
-            return `${i === 0 ? "M" : "L"} ${x} ${y}`;
-          })
-          .join(" ")
-      : "";
-
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.3, duration: 0.5 }}
-      className="flex flex-col items-center rounded-2xl border border-border/40 bg-background-elevated/30 p-4 shadow-card backdrop-blur-sm relative"
+    <div
+      className="
+        rounded-2xl
+        border border-border/40
+        bg-background-elevated/30 backdrop-blur-md backdrop-saturate-150
+        p-6
+        shadow-card
+        w-full
+        transition-all duration-200
+        hover:shadow-soft
+        hover:border-border
+      "
     >
-      {/* Time label - More visible */}
-      {timeLabel && (
-        <span className="absolute top-2 right-3 text-[11px] font-medium uppercase tracking-[0.15em] text-muted/60">
-          {timeLabel}
-        </span>
-      )}
-
-      <div className="relative">
-        <svg className="h-24 w-24 -rotate-90">
-          <circle
-            cx="48"
-            cy="48"
-            r={radius}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="6"
-            className="text-border/30"
-          />
-          <circle
-            cx="48"
-            cy="48"
-            r={radius}
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="6"
-            className={`${colorMap[color]} transition-all duration-1000 ease-out`}
-            strokeDasharray={circumference}
-            strokeDashoffset={offset}
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="absolute inset-0 flex flex-col items-center justify-center">
-          {icon && <span className="text-muted/30">{icon}</span>}
-          <span className="text-lg font-bold text-foreground">{value}</span>
-          {trend && trendValue && (
-            <div
-              className={`flex items-center gap-0.5 text-xs font-medium mt-0.5 ${
-                trend === "up" ? "text-success" : "text-danger"
-              }`}
-            >
-              {trend === "up" ? (
-                <TrendingUp className="h-3 w-3" />
-              ) : (
-                <TrendingUp className="h-3 w-3 rotate-180" />
-              )}
-              <span>{trendValue}</span>
-            </div>
-          )}
+      {/* Header */}
+      <div className="flex items-center justify-between mb-6">
+        <div className="flex items-center gap-3">
+          <div className="rounded-full bg-primary/10 p-2 text-primary">
+            <BarChart3 className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-foreground">Performance Overview</h3>
+            <p className="text-xs text-muted">Your seller metrics at a glance</p>
+          </div>
         </div>
+        <span className="text-[10px] text-muted/40">Updated just now</span>
       </div>
 
-      {/* Sparkline chart */}
-      {sparkline.length > 0 && (
-        <div className="mt-1 w-16 h-5">
-          <svg viewBox="0 0 40 16" className="w-full h-full">
-            <polyline
-              points={sparklinePath}
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="1.2"
-              className={`${colorMap[color]}`}
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            {/* Area fill under sparkline */}
-            <polygon
-              points={`0,16 ${sparklinePath} 40,16`}
-              fill="currentColor"
-              className={`${colorMap[color]} opacity-10`}
-            />
-          </svg>
-        </div>
-      )}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {metrics.map((metric, idx) => (
+          <div
+            key={idx}
+            className="
+              rounded-xl
+              bg-background-elevated/20 backdrop-blur-sm
+              border border-border/30
+              p-4
+              transition-all duration-200
+              hover:border-primary/30 hover:shadow-sm
+            "
+          >
+            <div className="flex items-start justify-between">
+              <div className={`rounded-lg ${colorMap[metric.color].split(" ")[0]} bg-primary/5 p-1.5`}>
+                {metric.icon}
+              </div>
+              <span
+                className={`text-[10px] font-medium ${
+                  metric.trend === "up" ? "text-success" : "text-danger"
+                } flex items-center gap-0.5`}
+              >
+                {metric.change}
+              </span>
+            </div>
 
-      <p className="mt-1 text-xs font-medium text-muted/70">{label}</p>
-    </motion.div>
+            <p className="mt-3 text-xl font-bold text-foreground">{metric.value}</p>
+            <p className="text-xs text-muted">{metric.label}</p>
+            <p className="text-[10px] text-muted/40 mt-1">{metric.detail}</p>
+
+            <div className="mt-2 h-6 w-full">
+              <svg viewBox="0 0 60 16" className="w-full h-full">
+                <polyline
+                  points={sparklines[idx]
+                    .map((v, i) => {
+                      const x = (i / (sparklines[idx].length - 1)) * 60;
+                      const y = 16 - (v / 100) * 14;
+                      return `${x},${y}`;
+                    })
+                    .join(" ")}
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.2"
+                  className={colorMap[metric.color]}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+                <polygon
+                  points={sparklines[idx]
+                    .map((v, i) => {
+                      const x = (i / (sparklines[idx].length - 1)) * 60;
+                      const y = 16 - (v / 100) * 14;
+                      return `${x},${y}`;
+                    })
+                    .join(" ")}
+                  pointsSuffix={` 60,16 0,16`}
+                  fill="currentColor"
+                  className={`${colorMap[metric.color]} opacity-10`}
+                />
+              </svg>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -357,78 +379,38 @@ const CreatePage = () => {
       <div className="min-h-screen flex flex-col">
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 py-5 lg:px-6 flex flex-col">
           {/* MAIN SPLIT LAYOUT */}
-          <div className="grid gap-5 lg:grid-cols-[1.2fr_0.8fr]">
-            <BroadCastShowRoom />
-
-            {/* RIGHT CARDS - 2x2 Grid with Hierarchy */}
-            <div className="grid grid-cols-2 grid-rows-[1fr_1fr] gap-4">
-              {RIGHT_CARDS.map((card, index) => (
-                <GlassyActionCard
-                  key={card.id}
-                  title={card.title}
-                  description={card.description}
-                  icon={card.icon}
-                  href={card.href}
-                  color={card.color}
-                  stat={card.stat}
-                  step={card.step}
-                  label={card.label}
-                  index={index}
-                  isTop={index < 2}
-                />
-              ))}
+          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-5 flex-1">
+            {/* LEFT: BroadcastShowRoom */}
+            <div className="h-full min-h-[500px]">
+              <BroadCastShowRoom />
             </div>
-          </div>
 
-          {/* METRICS - KPI with Time Labels & Sparklines */}
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4 flex-shrink-0">
-            <CircularProgress
-              label="Total Earnings"
-              value="₦84.5k"
-              progress={78}
-              color="gold"
-              icon={<DollarSign className="h-4 w-4" />}
-              trend="up"
-              trendValue="12%"
-              timeLabel="This Week"
-              sparkline={[30, 45, 38, 55, 62, 70, 78]}
-            />
+            {/* RIGHT: Action Cards + Analytics */}
+            <div className="flex flex-col h-full gap-4">
+              {/* Action Cards - 2x2 grid, fixed height based on content */}
+              <div className="grid grid-cols-2 gap-4 flex-shrink-0">
+                {RIGHT_CARDS.map((card, index) => (
+                  <GlassyActionCard
+                    key={card.id}
+                    title={card.title}
+                    description={card.description}
+                    icon={card.icon}
+                    href={card.href}
+                    color={card.color}
+                    stat={card.stat}
+                    step={card.step}
+                    label={card.label}
+                    index={index}
+                    isTop={index < 2}
+                  />
+                ))}
+              </div>
 
-            <CircularProgress
-              label="Response Rate"
-              value="92%"
-              progress={92}
-              color="success"
-              icon={<MessageCircle className="h-4 w-4" />}
-              trend="up"
-              trendValue="4%"
-              timeLabel="Today"
-              sparkline={[88, 89, 90, 91, 92, 92, 93]}
-            />
-
-            <CircularProgress
-              label="Offer Acceptance"
-              value="68%"
-              progress={68}
-              color="primary"
-              icon={<CheckCircle className="h-4 w-4" />}
-              trend="down"
-              trendValue="2%"
-              timeLabel="This Month"
-              sparkline={[72, 70, 68, 69, 68, 67, 68]}
-            />
-
-            <CircularProgress
-              label="Live Attendance"
-              value="74%"
-              progress={74}
-              color="secondary"
-              icon={<Users className="h-4 w-4" />}
-              trend="up"
-              trendValue="8%"
-              timeLabel="Last 30 Days"
-              sparkline={[60, 62, 65, 68, 70, 72, 74]}
-            />
+              {/* Analytics - fills remaining height */}
+              <div className="flex-1 min-h-[200px]">
+                <AnalyticsSection />
+              </div>
+            </div>
           </div>
         </div>
       </div>
