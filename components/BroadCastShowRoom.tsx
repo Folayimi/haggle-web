@@ -250,7 +250,7 @@ function BroadcastItem({
       className="mb-3 last:mb-0 px-1"
     >
       <div
-        className={`${bubbleClasses} bg-white/60 backdrop-blur-sm border border-white/20 p-2.5 shadow-sm relative ${isNew ? "ring-1 ring-primary/30" : ""}`}
+        className={`${bubbleClasses} bg-white/40 backdrop-blur-sm border border-white/20 p-2.5 shadow-sm relative ${isNew ? "ring-1 ring-primary/30" : ""}`}
       >
         {isNew && (
           <div className="absolute -top-1 -right-1 bg-primary text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full shadow-lg">
@@ -505,7 +505,10 @@ export function BroadCastShowRoom() {
   };
 
   return (
-    <div className="relative flex flex-col rounded-[32px] overflow-hidden border border-border/40 bg-black/0 flex-1 h-[400px]">
+    <div
+      className="relative flex flex-col rounded-[32px] overflow-hidden border border-border/40 bg-black/0 flex-1 h-[400px]"
+      style={{ backgroundImage: "url('./bg3.jpg')" }}
+    >
       {/* Two-Column Feed - Clean, no outlines/borders/backgrounds */}
       <div className="flex-1 grid grid-cols-2 gap-2 p-2 min-h-0">
         {/* Left Column - Products */}

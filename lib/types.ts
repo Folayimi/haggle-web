@@ -1,3 +1,5 @@
+// lib/types.ts
+
 export type ThemeMode = "light" | "dark";
 
 export type SellerSummary = {
@@ -62,19 +64,6 @@ export type SellerLiveSession = {
   reminderMessage: string;
 };
 
-export type SellerProfile = SellerSummary & {
-  tradeMark: string;
-  coverImageUrl: string;
-  bio: string;
-  sellsSummary: string;
-  trustPills: string[];
-  whatTheyOffer: string[];
-  products: SellerProduct[];
-  services: MarketService[];
-  ongoingLives: SellerLiveSession[];
-  upcomingLives: SellerLiveSession[];
-};
-
 export type ChatMessage = {
   id: string;
   sender: "buyer" | "seller" | "system";
@@ -102,6 +91,23 @@ export type Conversation = {
   messages: ChatMessage[];
 };
 
+export interface Review {
+  id: string;
+  buyerName: string;
+  buyerAvatar: string;
+  rating: number;
+  content: string;
+  createdAt: string;
+  verifiedPurchase: boolean;
+  images?: string[];
+  sellerResponse?: {
+    content: string;
+    createdAt: string;
+  };
+  helpfulCount?: number;
+  sellerId: string;
+}
+
 export type NegotiationParticipant = {
   id: string;
   name: string;
@@ -111,6 +117,16 @@ export type NegotiationParticipant = {
   isHandRaised: boolean;
   isPinned?: boolean;
 };
+
+export interface GalleryItem {
+  id: string;
+  type: "image" | "video";
+  url: string;
+  thumbnail?: string;
+  category?:string;
+  caption?: string;
+  createdAt: string;
+}
 
 export type ReminderTicket = {
   id: string;
@@ -137,6 +153,165 @@ export type RoomPreset = {
   previewColors: string[];
 };
 
+export interface LiveSession {
+  id: string;
+  title: string;
+  description?: string;
+  coverImage?: string;
+  date: string;
+  time?: string;
+  status: "live" | "upcoming" | "past";
+  viewers?: number;
+  orders?: number;
+  watchTime?: string;
+  conversion?: number;
+  replayUrl?: string;
+  sellerId: string;
+  totalViewers?: number; // lifetime viewers
+  topViewed?: boolean;
+  upcomingCountdown?: string;
+}
+
+export interface BroadcastActivity {
+  id: string;
+  buyerName: string;
+  buyerAvatar: string;
+  requestTitle: string;
+  category: string;
+  budget: string;
+  status: "responded" | "accepted" | "completed" | "declined";
+  respondedAt: string;
+  sellerId: string;
+  revenue?: number; // money earned from this activity
+  responseTime?: number; // in hours
+  location?: string; // nearby opportunity
+  isNearby?: boolean;
+}
+
+// ============================================
+// NEW TYPES FOR BUSINESS WEBSITE
+// ============================================
+
+export type StoryBlockType =
+  | "mission"
+  | "story"
+  | "team"
+  | "values"
+  | "timeline"
+  | "why";
+
+export interface StoryBlock {
+  id: string;
+  type: StoryBlockType;
+  title: string;
+  content: string;
+  imageUrl?: string;
+  order: number;
+}
+
+export interface BusinessHours {
+  day: string;
+  open: string;
+  close: string;
+  isClosed: boolean;
+}
+
+export interface HeroSettings {
+  slogan?: string;
+  category?: string;
+  status?: "open" | "closed" | "live" | "away" | "holiday";
+  location?: string;
+  yearsInBusiness?: number;
+  businessHours?: BusinessHours[];
+  deliveryRadius?: number;
+  averageResponseTime?: string;
+  verifiedBadge?: boolean;
+}
+
+export interface CompletionStatus {
+  logo: boolean;
+  cover: boolean;
+  story: boolean;
+  contact: boolean;
+  hours: boolean;
+  delivery: boolean;
+  gallery: boolean;
+  social: boolean;
+  team: boolean;
+}
+
+export interface AnalyticsData {
+  visitors: number;
+  profileViews: number;
+  clicks: number;
+  followers: number;
+  productViews: number;
+  messages: number;
+  broadcastResponses: number;
+  conversionRate: number;
+  revenue: number;
+  topProducts: { name: string; sales: number }[];
+  returningCustomers: number;
+  nearbyAudience: number;
+}
+
+export type AchievementId =
+  | "top-seller"
+  | "100-sales"
+  | "verified-business"
+  | "fast-responder"
+  | "trusted"
+  | "wholesale-partner"
+  | "community-favorite"
+  | "early-adopter"
+  | "live-star"
+  | "review-champion";
+
+export interface Achievement {
+  id: AchievementId;
+  name: string;
+  description: string;
+  icon: string;
+  earned: boolean;
+  earnedAt?: string;
+}
+
+export interface Preferences {
+  accentColor?: string;
+  sectionOrder?: string[];
+  hiddenSections?: string[];
+  heroLayout?: "default" | "centered" | "compact";
+  buttonStyle?: "rounded" | "pill" | "sharp";
+  galleryStyle?: "grid" | "masonry" | "carousel";
+  theme?: ThemeMode;
+}
+
+// ============================================
+// EXTENDED SELLER PROFILE
+// ============================================
+
+export interface SellerProfile extends SellerSummary {
+  tradeMark: string;
+  coverImageUrl: string;
+  bio: string;
+  sellsSummary: string;
+  trustPills: string[];
+  whatTheyOffer: string[];
+  products: SellerProduct[];
+  services: MarketService[];
+  ongoingLives: SellerLiveSession[];
+  upcomingLives: SellerLiveSession[];
+  gallery?: GalleryItem[];
+
+  // NEW FIELDS
+  storyBlocks?: StoryBlock[];
+  hero?: HeroSettings;
+  completion?: CompletionStatus;
+  analytics?: AnalyticsData;
+  achievements?: Achievement[];
+  preferences?: Preferences;
+}
+
 export type UserProfile = {
   id: string;
   fullName: string;
@@ -150,4 +325,5 @@ export type UserProfile = {
     upcomingLives: number;
     roomsJoined: number;
   };
+  sellerId?: string;
 };

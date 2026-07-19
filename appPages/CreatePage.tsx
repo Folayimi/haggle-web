@@ -34,9 +34,11 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { BroadCastShowRoom } from "@/components/BroadCastShowRoom";
 import Link from "next/link";
+import { useHaggleStore } from "@/lib/app-store";
+import SellerOnboardingPage from "./SellerOnboardingPage";
 
 // ============================================
-// CONSTANTS - Right Column Cards (Shortened Descriptions)
+// CONSTANTS - Right Column Cards
 // ============================================
 const RIGHT_CARDS = [
   {
@@ -166,7 +168,7 @@ function GlassyActionCard({
         className={`
           h-full rounded-2xl
           border border-border/40
-          bg-background-elevated/70 backdrop-blur-md backdrop-saturate-150
+        bg-background-elevated/20 backdrop-blur-sm
           transition-all duration-200
           shadow-card hover:shadow-soft
           hover:border-border
@@ -174,11 +176,12 @@ function GlassyActionCard({
           overflow-hidden
           relative
           ${!isTop ? "opacity-85" : ""}
+          flex flex-col p-5
         `}
       >
         <Link
           href={href}
-          className="flex flex-col items-start gap-1.5 p-4 h-full"
+          className="flex flex-col items-start gap-1.5 h-full w-full"
         >
           <div className="flex items-center gap-2 mb-1">
             <span className="text-xs font-bold text-muted/40">{step}</span>
@@ -217,7 +220,7 @@ function GlassyActionCard({
 }
 
 // ============================================
-// ANALYTICS SECTION (Single Large Card)
+// ANALYTICS SECTION (Full Width)
 // ============================================
 function AnalyticsSection() {
   const metrics = [
@@ -277,31 +280,11 @@ function AnalyticsSection() {
   return (
     <div
       className="
-        rounded-2xl
-        border border-border/40
-        bg-background-elevated/30 backdrop-blur-md backdrop-saturate-150
-        p-6
-        shadow-card
         w-full
         transition-all duration-200
-        hover:shadow-soft
-        hover:border-border
+        flex-shrink-0
       "
     >
-      {/* Header */}
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-3">
-          <div className="rounded-full bg-primary/10 p-2 text-primary">
-            <BarChart3 className="h-5 w-5" />
-          </div>
-          <div>
-            <h3 className="text-sm font-semibold text-foreground">Performance Overview</h3>
-            <p className="text-xs text-muted">Your seller metrics at a glance</p>
-          </div>
-        </div>
-        <span className="text-[10px] text-muted/40">Updated just now</span>
-      </div>
-
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {metrics.map((metric, idx) => (
           <div
@@ -316,7 +299,9 @@ function AnalyticsSection() {
             "
           >
             <div className="flex items-start justify-between">
-              <div className={`rounded-lg ${colorMap[metric.color].split(" ")[0]} bg-primary/5 p-1.5`}>
+              <div
+                className={`rounded-lg ${colorMap[metric.color].split(" ")[0]} bg-primary/5 p-1.5`}
+              >
                 {metric.icon}
               </div>
               <span
@@ -328,7 +313,9 @@ function AnalyticsSection() {
               </span>
             </div>
 
-            <p className="mt-3 text-xl font-bold text-foreground">{metric.value}</p>
+            <p className="mt-3 text-xl font-bold text-foreground">
+              {metric.value}
+            </p>
             <p className="text-xs text-muted">{metric.label}</p>
             <p className="text-[10px] text-muted/40 mt-1">{metric.detail}</p>
 
@@ -374,43 +361,41 @@ function AnalyticsSection() {
 // MAIN PAGE
 // ============================================
 const CreatePage = () => {
+  const userData = useHaggleStore((state) => state.userData);
   return (
     <AppShell>
       <div className="min-h-screen flex flex-col">
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 py-5 lg:px-6 flex flex-col">
-          {/* MAIN SPLIT LAYOUT */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-5 flex-1">
-            {/* LEFT: BroadcastShowRoom */}
-            <div className="h-full min-h-[500px]">
+          {/* Top Row: BroadcastShowRoom + Action Cards */}
+          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-5">
+            {/* LEFT: BroadcastShowRoom - fills height */}
+            <div className="h-full">
               <BroadCastShowRoom />
             </div>
 
-            {/* RIGHT: Action Cards + Analytics */}
-            <div className="flex flex-col h-full gap-4">
-              {/* Action Cards - 2x2 grid, fixed height based on content */}
-              <div className="grid grid-cols-2 gap-4 flex-shrink-0">
-                {RIGHT_CARDS.map((card, index) => (
-                  <GlassyActionCard
-                    key={card.id}
-                    title={card.title}
-                    description={card.description}
-                    icon={card.icon}
-                    href={card.href}
-                    color={card.color}
-                    stat={card.stat}
-                    step={card.step}
-                    label={card.label}
-                    index={index}
-                    isTop={index < 2}
-                  />
-                ))}
-              </div>
-
-              {/* Analytics - fills remaining height */}
-              <div className="flex-1 min-h-[200px]">
-                <AnalyticsSection />
-              </div>
+            {/* RIGHT: Action Cards - 2x2 grid, fills height */}
+            <div className="grid grid-cols-2 grid-rows-2 gap-4 h-100">
+              {RIGHT_CARDS.map((card, index) => (
+                <GlassyActionCard
+                  key={card.id}
+                  title={card.title}
+                  description={card.description}
+                  icon={card.icon}
+                  href={card.href}
+                  color={card.color}
+                  stat={card.stat}
+                  step={card.step}
+                  label={card.label}
+                  index={index}
+                  isTop={index < 2}
+                />
+              ))}
             </div>
+          </div>
+
+          {/* Bottom Row: Analytics - Full Width */}
+          <div className="mt-6 w-full">
+            <AnalyticsSection />
           </div>
         </div>
       </div>

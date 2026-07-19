@@ -1,9 +1,9 @@
+// lib/app-store.ts
 "use client";
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-
-import type { ThemeMode } from "@/lib/types";
+import type { ThemeMode, SellerProfile } from "@/lib/types";
 
 type HaggleStore = {
   // ====== EXISTING ======
@@ -20,14 +20,24 @@ type HaggleStore = {
   removeRecentSearch: (query: string) => void;
   setActiveConversationId: (conversationId: string) => void;
 
-  // ====== NEW: USER & AUTH ======
-  userData: any; // Consider typing this properly: UserProfile | null
+  // ====== USER & AUTH ======
+  userData: any;
   activateAuth: boolean;
   productListingId: string;
   setUserData: (data: any) => void;
   setActivateAuth: (value: boolean) => void;
   setProductListingId: (value: string) => void;
-  clearUserData: () => void; // For logout
+  clearUserData: () => void;
+
+  // ====== DRAFT & PUBLISH ======
+  draftProfile: SellerProfile | null;
+  isDraftMode: boolean;
+  isPreviewMode: boolean;
+  setDraftProfile: (profile: SellerProfile) => void;
+  setDraftMode: (mode: boolean) => void;
+  setPreviewMode: (mode: boolean) => void;
+  publishDraft: () => void;
+  discardDraft: () => void;
 };
 
 export const useHaggleStore = create<HaggleStore>()(
@@ -61,14 +71,10 @@ export const useHaggleStore = create<HaggleStore>()(
       addRecentSearch: (query) =>
         set((state) => {
           const trimmed = query.trim();
-          if (!trimmed) {
-            return state;
-          }
-
+          if (!trimmed) return state;
           const deduped = state.recentSearches.filter(
-            (entry) => entry.toLowerCase() !== trimmed.toLowerCase(),
+            (entry) => entry.toLowerCase() !== trimmed.toLowerCase()
           );
-
           return {
             recentSearches: [trimmed, ...deduped].slice(0, 6),
           };
@@ -80,25 +86,44 @@ export const useHaggleStore = create<HaggleStore>()(
       setActiveConversationId: (conversationId) =>
         set({ activeConversationId: conversationId }),
 
-      // ====== NEW STATE ======
+      // ====== USER & AUTH ======
       userData: null,
       activateAuth: false,
       productListingId: "",
-
-      // ====== NEW ACTIONS ======
       setUserData: (data) => set({ userData: data }),
       setActivateAuth: (value) => set({ activateAuth: value }),
       setProductListingId: (value) => set({ productListingId: value }),
       clearUserData: () => set({ userData: null, activateAuth: false }),
+
+      // ====== DRAFT & PUBLISH ======
+      draftProfile: null,
+      isDraftMode: false,
+      isPreviewMode: false,
+
+      setDraftProfile: (profile) => set({ draftProfile: profile, isDraftMode: true }),
+      setDraftMode: (mode) => set({ isDraftMode: mode }),
+      setPreviewMode: (mode) => set({ isPreviewMode: mode }),
+
+      publishDraft: () => {
+        const draft = get().draftProfile;
+        if (draft) {
+          // In real app: call API to update published profile
+          // For now, just clear the draft
+          set({ draftProfile: null, isDraftMode: false });
+        }
+      },
+
+      discardDraft: () => {
+        set({ draftProfile: null, isDraftMode: false });
+      },
     }),
     {
       name: "haggle-web-store",
-      // 👇 Optional: Exclude userData from persistence (recommended for security)
       partialize: (state) => {
-        // Exclude userData and activateAuth from persistence
-        const { userData, activateAuth, ...rest } = state;
-        return rest; // Only persist non-auth data
+        // Exclude auth and draft from persistence (optional)
+        const { userData, activateAuth, draftProfile, isDraftMode, ...rest } = state;
+        return rest;
       },
-    },
-  ),
+    }
+  )
 );
