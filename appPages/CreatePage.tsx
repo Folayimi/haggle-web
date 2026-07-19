@@ -1,6 +1,8 @@
+// app/create/page.tsx
 "use client";
 
 import { motion } from "framer-motion";
+import { useState, useEffect, useMemo } from "react";
 import {
   Calendar,
   Clock,
@@ -29,63 +31,15 @@ import {
   Star,
   Eye,
   ThumbsUp,
+  Globe,        // ← NEW
+  LayoutDashboard, // alternative icon
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
 import { BroadCastShowRoom } from "@/components/BroadCastShowRoom";
 import Link from "next/link";
 import { useHaggleStore } from "@/lib/app-store";
-import SellerOnboardingPage from "./SellerOnboardingPage";
-
-// ============================================
-// CONSTANTS - Right Column Cards
-// ============================================
-const RIGHT_CARDS = [
-  {
-    id: "post-product",
-    title: "Post Product",
-    description: "List items with pricing and negotiation settings.",
-    icon: <Package className="h-6 w-6" />,
-    href: "/post-product",
-    color: "success" as const,
-    stat: "2.4k listed",
-    step: "②",
-    label: "CREATE",
-  },
-  {
-    id: "add-service",
-    title: "Add Service",
-    description: "Create service listings and packages.",
-    icon: <Sparkles className="h-6 w-6" />,
-    href: "/add-service",
-    color: "warning" as const,
-    stat: "1.8k added",
-    step: "③",
-    label: "CREATE",
-  },
-  {
-    id: "seller-studio",
-    title: "Seller Studio",
-    description: "Configure your live room.",
-    icon: <Layers className="h-6 w-6" />,
-    href: "/room-styling",
-    color: "primary" as const,
-    stat: "12 presets",
-    step: "①",
-    label: "SETUP",
-  },
-  {
-    id: "host-live",
-    title: "Host Live Shopping",
-    description: "Schedule and manage live sessions.",
-    icon: <Play className="h-6 w-6" />,
-    href: "/schedule-live",
-    color: "secondary" as const,
-    stat: "3.1k scheduled",
-    step: "④",
-    label: "GO LIVE",
-  },
-];
+import WelcomeModal from "@/components/business-profile/WelcomeModal";
 
 // ============================================
 // GLASSY ACTION CARD (With Hierarchy Support)
@@ -362,6 +316,83 @@ function AnalyticsSection() {
 // ============================================
 const CreatePage = () => {
   const userData = useHaggleStore((state) => state.userData);
+  const [showWelcome, setShowWelcome] = useState(false);
+
+  // Check if the user has already seen the welcome modal
+  useEffect(() => {
+    // Only show if we have user data and the flag isn't set
+    if (userData) {
+      const hasSeen = localStorage.getItem("haggle_welcome_seen");
+      if (!hasSeen) {
+        setShowWelcome(true);
+      }
+    }
+  }, [userData]);
+
+  const handleWelcomeClose = () => {
+    localStorage.setItem("haggle_welcome_seen", "true");
+    setShowWelcome(false);
+  };
+
+  const handleContinue = () => {
+    localStorage.setItem("haggle_welcome_seen", "true");
+    setShowWelcome(false);
+    // Navigation is handled inside the modal
+  };
+
+  // Extract username from userData
+  const username = userData?.username || userData?.profile?.username || "";
+
+  // Build the action cards dynamically using the username
+  const RIGHT_CARDS = useMemo(() => {
+    return [
+      {
+        id: "setup-profile",
+        title: "Set Up Your Business Website",
+        description: "Complete your business profile and build your website.",
+        icon: <Globe className="h-6 w-6" />,
+        href: `/profile/${username}`,
+        color: "primary" as const,
+        stat: "1.2k businesses",
+        step: "①",
+        label: "SETUP",
+      },
+      {
+        id: "post-product",
+        title: "Post Product",
+        description: "List items with pricing and negotiation settings.",
+        icon: <Package className="h-6 w-6" />,
+        href: "/post-product",
+        color: "success" as const,
+        stat: "2.4k listed",
+        step: "②",
+        label: "CREATE",
+      },
+      {
+        id: "add-service",
+        title: "Add Service",
+        description: "Create service listings and packages.",
+        icon: <Sparkles className="h-6 w-6" />,
+        href: "/add-service",
+        color: "warning" as const,
+        stat: "1.8k added",
+        step: "③",
+        label: "CREATE",
+      },
+      {
+        id: "seller-studio",
+        title: "Seller Studio",
+        description: "Configure your live room.",
+        icon: <Layers className="h-6 w-6" />,
+        href: "/room-styling",
+        color: "secondary" as const,
+        stat: "12 presets",
+        step: "④",
+        label: "SETUP",
+      },
+    ];
+  }, [username]);
+
   return (
     <AppShell>
       <div className="min-h-screen flex flex-col">
@@ -399,6 +430,14 @@ const CreatePage = () => {
           </div>
         </div>
       </div>
+
+      {/* Welcome Modal */}
+      <WelcomeModal
+        isOpen={showWelcome}
+        onClose={handleWelcomeClose}
+        username={username}
+        onContinue={handleContinue}
+      />
     </AppShell>
   );
 };

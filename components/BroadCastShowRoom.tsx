@@ -247,7 +247,7 @@ function BroadcastItem({
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -15 }}
       transition={{ duration: 0.4, ease: [0.25, 0.1, 0.25, 1] }}
-      className="mb-3 last:mb-0 px-1"
+      className="mb-3 last:mb-0 px-1 w-[250px]"
     >
       <div
         className={`${bubbleClasses} bg-white/40 backdrop-blur-sm border border-white/20 p-2.5 shadow-sm relative ${isNew ? "ring-1 ring-primary/30" : ""}`}
@@ -507,7 +507,7 @@ export function BroadCastShowRoom() {
   return (
     <div
       className="relative flex flex-col rounded-[32px] overflow-hidden border border-border/40 bg-black/0 flex-1 h-[400px]"
-      style={{ backgroundImage: "url('./bg3.jpg')" }}
+      style={{ backgroundImage: "url('./bg2.jpg')" }}
     >
       {/* Two-Column Feed - Clean, no outlines/borders/backgrounds */}
       <div className="flex-1 grid grid-cols-2 gap-2 p-2 min-h-0">

@@ -2,7 +2,17 @@
 "use client";
 
 import { useState } from "react";
-import { Edit, Eye, EyeOff, GripVertical, MoreHorizontal, Settings, Plus } from "lucide-react";
+import {
+  Edit,
+  Eye,
+  EyeOff,
+  GripVertical,
+  MoreHorizontal,
+  Settings,
+  Plus,
+  ChevronUp,
+  ChevronDown,
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   DropdownMenu,
@@ -16,12 +26,16 @@ interface SectionToolbarProps {
   title: string;
   isOwner: boolean;
   isHidden?: boolean;
+  isFirst?: boolean;
+  isLast?: boolean;
   onEdit?: () => void;
   onHide?: () => void;
   onPreview?: () => void;
   onReorder?: () => void;
   onSettings?: () => void;
-  onAdd?: () => void; // for adding new items (products, services, etc.)
+  onAdd?: () => void;
+  onMoveUp?: () => void;
+  onMoveDown?: () => void;
   className?: string;
   children?: React.ReactNode;
 }
@@ -30,12 +44,16 @@ export default function SectionToolbar({
   title,
   isOwner,
   isHidden = false,
+  isFirst = false,
+  isLast = false,
   onEdit,
   onHide,
   onPreview,
   onReorder,
   onSettings,
   onAdd,
+  onMoveUp,
+  onMoveDown,
   className,
   children,
 }: SectionToolbarProps) {
@@ -58,6 +76,39 @@ export default function SectionToolbar({
       <span className="text-sm font-medium text-muted/60">{title}</span>
 
       <div className="flex items-center gap-0.5">
+        {/* Reorder buttons - Up and Down */}
+        {onMoveUp && (
+          <button
+            onClick={onMoveUp}
+            disabled={isFirst}
+            className={cn(
+              "h-7 w-7 p-0 rounded-md transition",
+              isFirst
+                ? "text-muted/20 cursor-not-allowed"
+                : "text-muted/40 hover:text-foreground hover:bg-background-elevated/30"
+            )}
+            title="Move section up"
+          >
+            <ChevronUp className="h-3.5 w-3.5" />
+          </button>
+        )}
+
+        {onMoveDown && (
+          <button
+            onClick={onMoveDown}
+            disabled={isLast}
+            className={cn(
+              "h-7 w-7 p-0 rounded-md transition",
+              isLast
+                ? "text-muted/20 cursor-not-allowed"
+                : "text-muted/40 hover:text-foreground hover:bg-background-elevated/30"
+            )}
+            title="Move section down"
+          >
+            <ChevronDown className="h-3.5 w-3.5" />
+          </button>
+        )}
+
         {children}
 
         {onAdd && (

@@ -1,9 +1,9 @@
 // app/profile/[username]/page.tsx
 "use client";
 
-import { useParams, useSearchParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation"; // ← added useRouter
 import { motion } from "framer-motion";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import {
   Package,
   Sparkles,
@@ -100,25 +100,34 @@ const NAV_SECTIONS: NavSection[] = [
 ];
 
 // ============================================
+// DEFAULT SECTION ORDER
+// ============================================
+const DEFAULT_SECTION_ORDER: SectionId[] = [
+  "story",
+  "products",
+  "services",
+  "live",
+  "broadcast",
+  "reviews",
+  "gallery",
+  "information",
+  "achievements",
+  "analytics",
+  "ai-assistant",
+];
+
+// ============================================
 // SECTION NAVIGATION
 // ============================================
 function SectionNavigation({
   sections,
   activeSection,
   onSectionClick,
-  isOwner,
 }: {
   sections: NavSection[];
   activeSection: SectionId | null;
   onSectionClick: (id: SectionId) => void;
-  isOwner: boolean;
 }) {
-  const filteredSections = sections.filter((s) => {
-    if (s.id === "analytics" && !isOwner) return false;
-    if (s.id === "ai-assistant" && !isOwner) return false;
-    return true;
-  });
-
   return (
     <motion.nav
       initial={{ opacity: 0, x: 10 }}
@@ -127,7 +136,7 @@ function SectionNavigation({
       className="hidden lg:block w-14 xl:w-16 flex-shrink-0 sticky top-24 self-start"
     >
       <div className="rounded-2xl border border-border/40 bg-background-elevated/20 backdrop-blur-md p-2 shadow-card">
-        {filteredSections.map((section) => {
+        {sections.map((section) => {
           const isActive = activeSection === section.id;
           return (
             <button
@@ -166,6 +175,7 @@ function SectionNavigation({
 export default function BusinessProfilePage() {
   const params = useParams();
   const searchParams = useSearchParams();
+  const router = useRouter(); // ← added router
   const username = params.username as string;
 
   const viewParam = searchParams.get("view");
@@ -246,6 +256,11 @@ export default function BusinessProfilePage() {
     publishedUser.preferences?.hiddenSections || []
   );
 
+  // Section order state
+  const [sectionOrder, setSectionOrder] = useState<SectionId[]>(
+    publishedUser.preferences?.sectionOrder || DEFAULT_SECTION_ORDER
+  );
+
   const sectionRefs = useRef<Record<SectionId, HTMLDivElement | null>>(
     {} as Record<SectionId, HTMLDivElement | null>
   );
@@ -270,6 +285,21 @@ export default function BusinessProfilePage() {
   >("schedule");
 
   // ============================================
+  // COMPUTED NAV SECTIONS (sync with order & visibility)
+  // ============================================
+  const navSections = useMemo(() => {
+    return sectionOrder
+      .filter((id) => {
+        if (id === "analytics" && !isOwner) return false;
+        if (id === "ai-assistant" && !isOwner) return false;
+        if (isPreviewMode && hiddenSections.includes(id)) return false;
+        return true;
+      })
+      .map((id) => NAV_SECTIONS.find((s) => s.id === id))
+      .filter((s): s is NavSection => s !== undefined);
+  }, [sectionOrder, isOwner, isPreviewMode, hiddenSections]);
+
+  // ============================================
   // SCROLL TRACKING
   // ============================================
   useEffect(() => {
@@ -288,14 +318,19 @@ export default function BusinessProfilePage() {
       }
     );
 
-    const sectionIds = NAV_SECTIONS.map((s) => s.id);
+    const sectionIds = sectionOrder.filter((id) => {
+      if (id === "analytics" && !isOwner) return false;
+      if (id === "ai-assistant" && !isOwner) return false;
+      if (isPreviewMode && hiddenSections.includes(id)) return false;
+      return true;
+    });
     sectionIds.forEach((id) => {
       const el = sectionRefs.current[id];
       if (el) observer.observe(el);
     });
 
     return () => observer.disconnect();
-  }, []);
+  }, [sectionOrder, isOwner, isPreviewMode, hiddenSections]);
 
   // ============================================
   // SCROLL TO SECTION
@@ -344,6 +379,31 @@ export default function BusinessProfilePage() {
   };
 
   // ============================================
+  // REORDER HANDLER
+  // ============================================
+  const handleMoveSection = (sectionId: SectionId, direction: "up" | "down") => {
+    const currentIndex = sectionOrder.indexOf(sectionId);
+    if (currentIndex === -1) return;
+
+    const targetIndex = direction === "up" ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= sectionOrder.length) return;
+
+    const newOrder = [...sectionOrder];
+    const [removed] = newOrder.splice(currentIndex, 1);
+    newOrder.splice(targetIndex, 0, removed);
+    setSectionOrder(newOrder);
+    setIsDirty(true);
+
+    setDraftUser((prev) => ({
+      ...prev,
+      preferences: {
+        ...prev.preferences,
+        sectionOrder: newOrder,
+      },
+    }));
+  };
+
+  // ============================================
   // DRAFT & PUBLISH HANDLERS
   // ============================================
   const handleSaveDraft = async () => {
@@ -361,6 +421,7 @@ export default function BusinessProfilePage() {
       preferences: {
         ...draftUser.preferences,
         hiddenSections,
+        sectionOrder,
       },
     };
     setDraftUser(updatedUser);
@@ -383,6 +444,7 @@ export default function BusinessProfilePage() {
       preferences: {
         ...publishedUser.preferences,
         hiddenSections,
+        sectionOrder,
       },
     };
     setDraftUser(updatedUser);
@@ -411,6 +473,7 @@ export default function BusinessProfilePage() {
       }
     );
     setHiddenSections(publishedUser.preferences?.hiddenSections || []);
+    setSectionOrder(publishedUser.preferences?.sectionOrder || DEFAULT_SECTION_ORDER);
     setDraftUser(publishedUser);
     setIsDirty(false);
   };
@@ -420,11 +483,10 @@ export default function BusinessProfilePage() {
   };
 
   // ============================================
-  // EXISTING HANDLERS (modified to mark dirty)
+  // PRODUCT HANDLERS (Add → Navigate, Edit → Modal)
   // ============================================
   const handleAddProduct = () => {
-    setEditingProduct(null);
-    setIsEditProductOpen(true);
+    router.push("/post-product");
   };
 
   const handleEditProduct = (product: any) => {
@@ -460,9 +522,11 @@ export default function BusinessProfilePage() {
     setIsDirty(true);
   };
 
+  // ============================================
+  // SERVICE HANDLERS (Add → Navigate, Edit → Modal)
+  // ============================================
   const handleAddService = () => {
-    setEditingService(null);
-    setIsEditServiceOpen(true);
+    router.push("/add-service");
   };
 
   const handleEditService = (service: any) => {
@@ -497,6 +561,9 @@ export default function BusinessProfilePage() {
     setIsDirty(true);
   };
 
+  // ============================================
+  // LIVE SESSION HANDLERS
+  // ============================================
   const handleScheduleLive = () => {
     setEditingLive(null);
     setLiveModalMode("schedule");
@@ -543,6 +610,9 @@ export default function BusinessProfilePage() {
     setIsDirty(true);
   };
 
+  // ============================================
+  // GALLERY HANDLERS
+  // ============================================
   const handleAddGallery = () => {
     setEditingGalleryItem(null);
     setIsEditGalleryOpen(true);
@@ -575,10 +645,16 @@ export default function BusinessProfilePage() {
     setIsDirty(true);
   };
 
+  // ============================================
+  // BROADCAST HANDLERS
+  // ============================================
   const handleViewAllBroadcasts = () => {
     console.log("View all broadcasts");
   };
 
+  // ============================================
+  // REVIEW HANDLERS
+  // ============================================
   const handleRespondToReview = (reviewId: string, response: string) => {
     setReviews((prev) =>
       prev.map((review) =>
@@ -596,6 +672,9 @@ export default function BusinessProfilePage() {
     setIsDirty(true);
   };
 
+  // ============================================
+  // HERO & STORY HANDLERS
+  // ============================================
   const handleSaveHero = (updatedUser: any) => {
     setDraftUser((prev) => ({ ...prev, ...updatedUser }));
     setIsDirty(true);
@@ -607,14 +686,7 @@ export default function BusinessProfilePage() {
   };
 
   const handleSaveBusinessInfo = (data: any) => {
-    // In real app, update the backend and mark dirty
     console.log("Save business info:", data);
-    // Merge into draftUser
-    setDraftUser((prev) => ({
-      ...prev,
-      // We don't have a dedicated businessInfo field, so we'd update hero or other fields.
-      // For now, we just log and mark dirty.
-    }));
     setIsDirty(true);
   };
 
@@ -713,351 +785,252 @@ export default function BusinessProfilePage() {
                   </motion.div>
                 )}
 
-                {/* 1. Story */}
-                <motion.div
-                  ref={(el) => {
-                    sectionRefs.current["story"] = el;
-                  }}
-                  id="story"
-                  variants={itemVariants}
-                  className="scroll-mt-20"
-                >
-                  {isOwner && !isPreviewMode && (
-                    <SectionToolbar
-                      title="Story"
-                      isOwner={isOwner}
-                      isHidden={hiddenSections.includes("story")}
-                      onEdit={() => setIsEditStoryOpen(true)}
-                      onHide={() => handleToggleHide("story")}
-                    />
-                  )}
-                  {!hiddenSections.includes("story") && (
-                    <BusinessStory
-                      story={displayUser.businessStory || ""}
-                      isOwner={isOwner}
-                      isPreviewMode={isPreviewMode}
-                      onEdit={() => !isPreviewMode && setIsEditStoryOpen(true)}
-                    />
-                  )}
-                </motion.div>
+                {/* ============================================ */}
+                {/* SECTIONS RENDERED IN ORDER */}
+                {/* ============================================ */}
+                {sectionOrder
+                  .filter((id) => {
+                    if (id === "analytics" && !isOwner) return false;
+                    if (id === "ai-assistant" && !isOwner) return false;
+                    return true;
+                  })
+                  .map((sectionId, index) => {
+                    const isFirst = index === 0;
+                    const isLast = index === sectionOrder.length - 1;
+                    const isHidden = hiddenSections.includes(sectionId);
 
-                {/* 2. Products */}
-                <motion.div
-                  ref={(el) => {
-                    sectionRefs.current["products"] = el;
-                  }}
-                  id="products"
-                  variants={itemVariants}
-                  className="scroll-mt-20 mt-8"
-                >
-                  {isOwner && !isPreviewMode && (
-                    <SectionToolbar
-                      title="Products"
-                      isOwner={isOwner}
-                      isHidden={hiddenSections.includes("products")}
-                      onAdd={handleAddProduct}
-                      onEdit={handleAddProduct}
-                      onHide={() => handleToggleHide("products")}
-                    />
-                  )}
-                  {!hiddenSections.includes("products") && (
-                    <ProductsSection
-                      products={products}
-                      isOwner={isOwner}
-                      isPreviewMode={isPreviewMode}
-                      onAddProduct={handleAddProduct}
-                      onEditProduct={handleEditProduct}
-                      onDeleteProduct={handleDeleteProduct}
-                    />
-                  )}
-                </motion.div>
+                    if (isPreviewMode && isHidden) return null;
 
-                {/* 3. Services */}
-                <motion.div
-                  ref={(el) => {
-                    sectionRefs.current["services"] = el;
-                  }}
-                  id="services"
-                  variants={itemVariants}
-                  className="scroll-mt-20 mt-8"
-                >
-                  {isOwner && !isPreviewMode && (
-                    <SectionToolbar
-                      title="Services"
-                      isOwner={isOwner}
-                      isHidden={hiddenSections.includes("services")}
-                      onAdd={handleAddService}
-                      onEdit={handleAddService}
-                      onHide={() => handleToggleHide("services")}
-                    />
-                  )}
-                  {!hiddenSections.includes("services") && (
-                    <ServicesSection
-                      services={services}
-                      isOwner={isOwner}
-                      isPreviewMode={isPreviewMode}
-                      onAddService={handleAddService}
-                      onEditService={handleEditService}
-                      onDeleteService={handleDeleteService}
-                    />
-                  )}
-                </motion.div>
+                    // Helper function to render a section
+                    const renderSection = (
+                      id: SectionId,
+                      component: React.ReactNode,
+                      toolbarTitle: string,
+                      onEdit?: () => void,
+                      onAdd?: () => void,
+                      customActions?: React.ReactNode
+                    ) => {
+                      const showToolbar = isOwner && !isPreviewMode;
+                      return (
+                        <motion.div
+                          key={id}
+                          ref={(el) => { sectionRefs.current[id] = el; }}
+                          id={id}
+                          variants={itemVariants}
+                          className="scroll-mt-20 mt-8"
+                        >
+                          {showToolbar && (
+                            <SectionToolbar
+                              title={toolbarTitle}
+                              isOwner={isOwner}
+                              isHidden={isHidden}
+                              isFirst={isFirst}
+                              isLast={isLast}
+                              onEdit={onEdit}
+                              onAdd={onAdd}
+                              onHide={() => handleToggleHide(id)}
+                              onMoveUp={() => handleMoveSection(id, "up")}
+                              onMoveDown={() => handleMoveSection(id, "down")}
+                            >
+                              {customActions}
+                            </SectionToolbar>
+                          )}
+                          {!isHidden && component}
+                        </motion.div>
+                      );
+                    };
 
-                {/* 4. Live Shopping */}
-                <motion.div
-                  ref={(el) => {
-                    sectionRefs.current["live"] = el;
-                  }}
-                  id="live"
-                  variants={itemVariants}
-                  className="scroll-mt-20 mt-8"
-                >
-                  {isOwner && !isPreviewMode && (
-                    <SectionToolbar
-                      title="Live Shopping"
-                      isOwner={isOwner}
-                      isHidden={hiddenSections.includes("live")}
-                      onAdd={handleScheduleLive}
-                      onEdit={handleScheduleLive}
-                      onHide={() => handleToggleHide("live")}
-                    />
-                  )}
-                  {!hiddenSections.includes("live") && (
-                    <LiveShoppingSection
-                      sessions={liveSessions}
-                      isOwner={isOwner}
-                      isPreviewMode={isPreviewMode}
-                      onScheduleLive={handleScheduleLive}
-                      onEditLive={handleEditLive}
-                      onDeleteLive={handleDeleteLive}
-                      onStartLive={handleStartLive}
-                    />
-                  )}
-                </motion.div>
+                    // Switch case for each section
+                    switch (sectionId) {
+                      case "story":
+                        return renderSection(
+                          "story",
+                          <BusinessStory
+                            story={displayUser.businessStory || ""}
+                            isOwner={isOwner}
+                            isPreviewMode={isPreviewMode}
+                            onEdit={() => !isPreviewMode && setIsEditStoryOpen(true)}
+                          />,
+                          "Story",
+                          () => setIsEditStoryOpen(true)
+                        );
 
-                {/* 5. Broadcast Activity */}
-                <motion.div
-                  ref={(el) => {
-                    sectionRefs.current["broadcast"] = el;
-                  }}
-                  id="broadcast"
-                  variants={itemVariants}
-                  className="scroll-mt-20 mt-8"
-                >
-                  {isOwner && !isPreviewMode && (
-                    <SectionToolbar
-                      title="Broadcast Activity"
-                      isOwner={isOwner}
-                      isHidden={hiddenSections.includes("broadcast")}
-                      onHide={() => handleToggleHide("broadcast")}
-                    />
-                  )}
-                  {!hiddenSections.includes("broadcast") && (
-                    <BroadcastActivitySection
-                      activities={broadcastActivities}
-                      isOwner={isOwner}
-                      isPreviewMode={isPreviewMode}
-                      onViewAll={handleViewAllBroadcasts}
-                    />
-                  )}
-                </motion.div>
+                      case "products":
+                        return renderSection(
+                          "products",
+                          <ProductsSection
+                            products={products}
+                            isOwner={isOwner}
+                            isPreviewMode={isPreviewMode}
+                            onAddProduct={handleAddProduct} // now navigates
+                            onEditProduct={handleEditProduct}
+                            onDeleteProduct={handleDeleteProduct}
+                          />,
+                          "Products",
+                          handleEditProduct, // edit uses modal
+                          handleAddProduct // add uses navigation, but we pass both
+                        );
 
-                {/* 6. Reviews */}
-                <motion.div
-                  ref={(el) => {
-                    sectionRefs.current["reviews"] = el;
-                  }}
-                  id="reviews"
-                  variants={itemVariants}
-                  className="scroll-mt-20 mt-8"
-                >
-                  {isOwner && !isPreviewMode && (
-                    <SectionToolbar
-                      title="Reviews"
-                      isOwner={isOwner}
-                      isHidden={hiddenSections.includes("reviews")}
-                      onHide={() => handleToggleHide("reviews")}
-                    />
-                  )}
-                  {!hiddenSections.includes("reviews") && (
-                    <ReviewsSection
-                      reviews={reviews}
-                      isOwner={isOwner}
-                      isPreviewMode={isPreviewMode}
-                      onRespond={handleRespondToReview}
-                      sellerName={displayUser.businessName}
-                    />
-                  )}
-                </motion.div>
+                      case "services":
+                        return renderSection(
+                          "services",
+                          <ServicesSection
+                            services={services}
+                            isOwner={isOwner}
+                            isPreviewMode={isPreviewMode}
+                            onAddService={handleAddService} // now navigates
+                            onEditService={handleEditService}
+                            onDeleteService={handleDeleteService}
+                          />,
+                          "Services",
+                          handleEditService, // edit uses modal
+                          handleAddService // add uses navigation
+                        );
 
-                {/* 7. Gallery */}
-                <motion.div
-                  ref={(el) => {
-                    sectionRefs.current["gallery"] = el;
-                  }}
-                  id="gallery"
-                  variants={itemVariants}
-                  className="scroll-mt-20 mt-8"
-                >
-                  {isOwner && !isPreviewMode && (
-                    <SectionToolbar
-                      title="Gallery"
-                      isOwner={isOwner}
-                      isHidden={hiddenSections.includes("gallery")}
-                      onAdd={handleAddGallery}
-                      onEdit={handleAddGallery}
-                      onHide={() => handleToggleHide("gallery")}
-                    />
-                  )}
-                  {!hiddenSections.includes("gallery") && (
-                    <GallerySection
-                      items={galleryItems}
-                      isOwner={isOwner}
-                      isPreviewMode={isPreviewMode}
-                      onAddItem={handleAddGallery}
-                      onEditItem={handleEditGallery}
-                      onDeleteItem={handleDeleteGallery}
-                    />
-                  )}
-                </motion.div>
+                      case "live":
+                        return renderSection(
+                          "live",
+                          <LiveShoppingSection
+                            sessions={liveSessions}
+                            isOwner={isOwner}
+                            isPreviewMode={isPreviewMode}
+                            onScheduleLive={handleScheduleLive}
+                            onEditLive={handleEditLive}
+                            onDeleteLive={handleDeleteLive}
+                            onStartLive={handleStartLive}
+                          />,
+                          "Live Shopping",
+                          handleScheduleLive,
+                          handleScheduleLive
+                        );
 
-                {/* 8. Business Information */}
-                <motion.div
-                  ref={(el) => {
-                    sectionRefs.current["information"] = el;
-                  }}
-                  id="information"
-                  variants={itemVariants}
-                  className="scroll-mt-20 mt-8"
-                >
-                  {isOwner && !isPreviewMode && (
-                    <SectionToolbar
-                      title="Business Information"
-                      isOwner={isOwner}
-                      isHidden={hiddenSections.includes("information")}
-                      onHide={() => handleToggleHide("information")}
-                    >
-                      <button
-                        onClick={() => setIsEditBusinessInfoOpen(true)}
-                        className="text-xs text-primary hover:text-primary-strong px-2 py-1 rounded-full border border-primary/20 hover:bg-primary/10 transition"
-                      >
-                        Edit All
-                      </button>
-                    </SectionToolbar>
-                  )}
-                  {!hiddenSections.includes("information") && (
-                    <BusinessInformation
-                      {...businessInfoData}
-                      isOwner={isOwner}
-                      isPreviewMode={isPreviewMode}
-                      onSave={handleSaveBusinessInfo}
-                    />
-                  )}
-                </motion.div>
+                      case "broadcast":
+                        return renderSection(
+                          "broadcast",
+                          <BroadcastActivitySection
+                            activities={broadcastActivities}
+                            isOwner={isOwner}
+                            isPreviewMode={isPreviewMode}
+                            onViewAll={handleViewAllBroadcasts}
+                          />,
+                          "Broadcast Activity"
+                        );
 
-                {/* 9. Analytics (owner only, hidden in preview) */}
-                {isOwner && !isPreviewMode && (
-                  <motion.div
-                    ref={(el) => {
-                      sectionRefs.current["analytics"] = el;
-                    }}
-                    id="analytics"
-                    variants={itemVariants}
-                    className="scroll-mt-20 mt-8"
-                  >
-                    <SectionToolbar
-                      title="Analytics"
-                      isOwner={isOwner}
-                      isHidden={hiddenSections.includes("analytics")}
-                      onHide={() => handleToggleHide("analytics")}
-                    />
-                    {!hiddenSections.includes("analytics") && (
-                      <AnalyticsDashboard
-                        data={
-                          displayUser.analytics || {
-                            visitors: 0,
-                            profileViews: 0,
-                            clicks: 0,
-                            followers: 0,
-                            productViews: 0,
-                            messages: 0,
-                            broadcastResponses: 0,
-                            conversionRate: 0,
-                            revenue: 0,
-                            topProducts: [],
-                            returningCustomers: 0,
-                            nearbyAudience: 0,
-                          }
-                        }
-                        isOwner={isOwner}
-                      />
-                    )}
-                  </motion.div>
-                )}
+                      case "reviews":
+                        return renderSection(
+                          "reviews",
+                          <ReviewsSection
+                            reviews={reviews}
+                            isOwner={isOwner}
+                            isPreviewMode={isPreviewMode}
+                            onRespond={handleRespondToReview}
+                            sellerName={displayUser.businessName}
+                          />,
+                          "Reviews"
+                        );
 
-                {/* 10. Achievements */}
-                <motion.div
-                  ref={(el) => {
-                    sectionRefs.current["achievements"] = el;
-                  }}
-                  id="achievements"
-                  variants={itemVariants}
-                  className="scroll-mt-20 mt-8"
-                >
-                  {isOwner && !isPreviewMode && (
-                    <SectionToolbar
-                      title="Achievements"
-                      isOwner={isOwner}
-                      isHidden={hiddenSections.includes("achievements")}
-                      onHide={() => handleToggleHide("achievements")}
-                    />
-                  )}
-                  {!hiddenSections.includes("achievements") && (
-                    <AchievementsSection
-                      achievements={displayUser.achievements || []}
-                      isOwner={isOwner}
-                    />
-                  )}
-                </motion.div>
+                      case "gallery":
+                        return renderSection(
+                          "gallery",
+                          <GallerySection
+                            items={galleryItems}
+                            isOwner={isOwner}
+                            isPreviewMode={isPreviewMode}
+                            onAddItem={handleAddGallery}
+                            onEditItem={handleEditGallery}
+                            onDeleteItem={handleDeleteGallery}
+                          />,
+                          "Gallery",
+                          handleAddGallery,
+                          handleAddGallery
+                        );
 
-                {/* 11. AI Assistant (section placeholder, hidden in preview) */}
-                {isOwner && !isPreviewMode && (
-                  <motion.div
-                    ref={(el) => {
-                      sectionRefs.current["ai-assistant"] = el;
-                    }}
-                    id="ai-assistant"
-                    variants={itemVariants}
-                    className="scroll-mt-20 mt-8"
-                  >
-                    <SectionToolbar
-                      title="AI Assistant"
-                      isOwner={isOwner}
-                      isHidden={hiddenSections.includes("ai-assistant")}
-                      onHide={() => handleToggleHide("ai-assistant")}
-                    />
-                    {!hiddenSections.includes("ai-assistant") && (
-                      <SectionPlaceholder
-                        title="AI Business Assistant"
-                        description="Smart suggestions to grow your business. The AI assistant will appear as a floating widget."
-                        icon={<Bot className="h-5 w-5" />}
-                        onAction={() => console.log("AI Assistant settings")}
-                        actionLabel="Configure"
-                        isOwner={isOwner}
-                        hasContent={false}
-                      />
-                    )}
-                  </motion.div>
-                )}
+                      case "information":
+                        return renderSection(
+                          "information",
+                          <BusinessInformation
+                            {...businessInfoData}
+                            isOwner={isOwner}
+                            isPreviewMode={isPreviewMode}
+                            onSave={handleSaveBusinessInfo}
+                          />,
+                          "Business Information",
+                          undefined,
+                          undefined,
+                          <button
+                            onClick={() => setIsEditBusinessInfoOpen(true)}
+                            className="text-xs text-primary hover:text-primary-strong px-2 py-1 rounded-full border border-primary/20 hover:bg-primary/10 transition"
+                          >
+                            Edit All
+                          </button>
+                        );
+
+                      case "achievements":
+                        return renderSection(
+                          "achievements",
+                          <AchievementsSection
+                            achievements={displayUser.achievements || []}
+                            isOwner={isOwner}
+                          />,
+                          "Achievements"
+                        );
+
+                      case "analytics":
+                        return isOwner
+                          ? renderSection(
+                              "analytics",
+                              <AnalyticsDashboard
+                                data={
+                                  displayUser.analytics || {
+                                    visitors: 0,
+                                    profileViews: 0,
+                                    clicks: 0,
+                                    followers: 0,
+                                    productViews: 0,
+                                    messages: 0,
+                                    broadcastResponses: 0,
+                                    conversionRate: 0,
+                                    revenue: 0,
+                                    topProducts: [],
+                                    returningCustomers: 0,
+                                    nearbyAudience: 0,
+                                  }
+                                }
+                                isOwner={isOwner}
+                              />,
+                              "Analytics"
+                            )
+                          : null;
+
+                      case "ai-assistant":
+                        return isOwner && !isPreviewMode
+                          ? renderSection(
+                              "ai-assistant",
+                              <SectionPlaceholder
+                                title="AI Business Assistant"
+                                description="Smart suggestions to grow your business. The AI assistant will appear as a floating widget."
+                                icon={<Bot className="h-5 w-5" />}
+                                onAction={() => console.log("AI Assistant settings")}
+                                actionLabel="Configure"
+                                isOwner={isOwner}
+                                hasContent={false}
+                              />,
+                              "AI Assistant"
+                            )
+                          : null;
+
+                      default:
+                        return null;
+                    }
+                  })}
               </motion.div>
             </div>
 
-            {/* Sidebar Navigation */}
+            {/* Sidebar Navigation - uses synced navSections */}
             <SectionNavigation
-              sections={NAV_SECTIONS}
+              sections={navSections}
               activeSection={activeSection}
               onSectionClick={scrollToSection}
-              isOwner={isOwner}
             />
           </div>
         </div>
