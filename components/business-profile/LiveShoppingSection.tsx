@@ -14,20 +14,15 @@ import {
   Play,
   CalendarPlus,
   Users,
-  BarChart3,
+  Award,
   Edit3,
   Trash2,
   ArrowRight,
-  Zap,
-  Award,
 } from "lucide-react";
 import Link from "next/link";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
 
-// ============================================
-// TYPES
-// ============================================
 interface LiveSession {
   id: string;
   title: string;
@@ -42,13 +37,14 @@ interface LiveSession {
   conversion?: number;
   replayUrl?: string;
   sellerId?: string;
-  totalViewers?: number; // lifetime viewers
+  totalViewers?: number;
   topViewed?: boolean;
 }
 
 interface LiveShoppingSectionProps {
   sessions: LiveSession[];
   isOwner: boolean;
+  isPreviewMode?: boolean;
   onScheduleLive: () => void;
   onEditLive: (session: LiveSession) => void;
   onDeleteLive: (sessionId: string) => void;
@@ -56,9 +52,6 @@ interface LiveShoppingSectionProps {
   className?: string;
 }
 
-// ============================================
-// STATUS BADGE CONFIG
-// ============================================
 const STATUS_CONFIG = {
   live: {
     label: "🔴 Live Now",
@@ -74,27 +67,13 @@ const STATUS_CONFIG = {
   },
 };
 
-// ============================================
-// STAT CARD (for session stats)
-// ============================================
-function StatCard({
-  icon,
-  label,
-  value,
-  color = "primary",
-}: {
-  icon: React.ReactNode;
-  label: string;
-  value: string | number;
-  color?: "primary" | "secondary" | "success" | "warning";
-}) {
+function StatCard({ icon, label, value, color = "primary" }: any) {
   const colorMap = {
     primary: "text-primary bg-primary/10",
     secondary: "text-secondary bg-secondary/10",
     success: "text-success bg-success/10",
     warning: "text-warning bg-warning/10",
   };
-
   return (
     <div className="flex items-center gap-2">
       <div className={`rounded-full p-1.5 ${colorMap[color]}`}>{icon}</div>
@@ -106,15 +85,11 @@ function StatCard({
   );
 }
 
-// ============================================
-// COUNTDOWN TIMER
-// ============================================
 function CountdownTimer({ targetDate }: { targetDate: string }) {
   const [timeLeft, setTimeLeft] = useState<string>("");
-
   useEffect(() => {
     const interval = setInterval(() => {
-      const now = new Date().getTime();
+      const now = Date.now();
       const target = new Date(targetDate).getTime();
       const diff = target - now;
       if (diff <= 0) {
@@ -135,22 +110,20 @@ function CountdownTimer({ targetDate }: { targetDate: string }) {
     }, 1000);
     return () => clearInterval(interval);
   }, [targetDate]);
-
   return <span className="text-xs text-primary font-mono">{timeLeft}</span>;
 }
 
-// ============================================
-// SESSION CARD
-// ============================================
 function SessionCard({
   session,
   isOwner,
+  isPreviewMode,
   onEdit,
   onDelete,
   onStart,
 }: {
   session: LiveSession;
   isOwner: boolean;
+  isPreviewMode?: boolean;
   onEdit: (session: LiveSession) => void;
   onDelete: (sessionId: string) => void;
   onStart?: (session: LiveSession) => void;
@@ -169,7 +142,6 @@ function SessionCard({
         session.topViewed && "border-primary/40 bg-primary/5"
       )}
     >
-      {/* Status Badge */}
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-2">
           <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full border ${status.color}`}>
@@ -199,9 +171,7 @@ function SessionCard({
         )}
       </div>
 
-      {/* Content */}
       <div className="flex items-start gap-3">
-        {/* Thumbnail */}
         <div className="relative h-16 w-24 rounded-lg overflow-hidden flex-shrink-0 bg-surface">
           {session.coverImage ? (
             <Image src={session.coverImage} alt={session.title} fill className="object-cover" />
@@ -219,17 +189,13 @@ function SessionCard({
           )}
         </div>
 
-        {/* Info */}
         <div className="flex-1 min-w-0">
           <h4 className="text-sm font-semibold text-foreground truncate">{session.title}</h4>
           <p className="text-xs text-muted/70 line-clamp-1">{session.description}</p>
           <div className="flex items-center gap-3 mt-1 text-[10px] text-muted/50">
             <span className="flex items-center gap-0.5">
               <Calendar className="h-3 w-3" />
-              {new Date(session.date).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-              })}
+              {new Date(session.date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
             </span>
             {session.time && (
               <span className="flex items-center gap-0.5">
@@ -240,8 +206,8 @@ function SessionCard({
           </div>
         </div>
 
-        {/* Actions */}
-        {isOwner && (
+        {/* Actions – hidden in preview */}
+        {isOwner && !isPreviewMode && (
           <div className="flex items-center gap-1 flex-shrink-0">
             {isLive && onStart && (
               <button
@@ -267,37 +233,15 @@ function SessionCard({
         )}
       </div>
 
-      {/* Stats (for past sessions) */}
       {session.status === "past" && (
         <div className="mt-3 pt-3 border-t border-border/30 grid grid-cols-4 gap-2">
-          <StatCard
-            icon={<Eye className="h-3.5 w-3.5" />}
-            label="Viewers"
-            value={session.viewers || 0}
-            color="primary"
-          />
-          <StatCard
-            icon={<ShoppingBag className="h-3.5 w-3.5" />}
-            label="Orders"
-            value={session.orders || 0}
-            color="success"
-          />
-          <StatCard
-            icon={<Clock className="h-3.5 w-3.5" />}
-            label="Avg Watch"
-            value={session.watchTime || "—"}
-            color="warning"
-          />
-          <StatCard
-            icon={<TrendingUp className="h-3.5 w-3.5" />}
-            label="Conversion"
-            value={session.conversion ? `${session.conversion}%` : "—"}
-            color="secondary"
-          />
+          <StatCard icon={<Eye className="h-3.5 w-3.5" />} label="Viewers" value={session.viewers || 0} color="primary" />
+          <StatCard icon={<ShoppingBag className="h-3.5 w-3.5" />} label="Orders" value={session.orders || 0} color="success" />
+          <StatCard icon={<Clock className="h-3.5 w-3.5" />} label="Avg Watch" value={session.watchTime || "—"} color="warning" />
+          <StatCard icon={<TrendingUp className="h-3.5 w-3.5" />} label="Conversion" value={session.conversion ? `${session.conversion}%` : "—"} color="secondary" />
         </div>
       )}
 
-      {/* Replay button for past sessions */}
       {session.status === "past" && session.replayUrl && (
         <div className="mt-2 pt-2 border-t border-border/20">
           <Link
@@ -314,12 +258,10 @@ function SessionCard({
   );
 }
 
-// ============================================
-// MAIN COMPONENT
-// ============================================
 export default function LiveShoppingSection({
   sessions,
   isOwner,
+  isPreviewMode = false,
   onScheduleLive,
   onEditLive,
   onDeleteLive,
@@ -332,7 +274,6 @@ export default function LiveShoppingSection({
   const upcomingSessions = sessions.filter((s) => s.status === "upcoming");
   const pastSessions = sessions.filter((s) => s.status === "past");
 
-  // Compute aggregates
   const totalViewers = sessions.reduce((sum, s) => sum + (s.viewers || 0), 0);
   const topViewed = sessions.reduce((a, b) => (a.viewers || 0) > (b.viewers || 0) ? a : b, sessions[0]);
 
@@ -347,20 +288,18 @@ export default function LiveShoppingSection({
 
   const currentSessions =
     activeTab === "live" ? liveSessions : activeTab === "upcoming" ? upcomingSessions : pastSessions;
-
   const totalSessions = sessions.length;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{ duration: 0.5 }}
       className={cn(
         "rounded-3xl border border-border/40 bg-background-elevated/20 backdrop-blur-sm p-6 shadow-card",
         className
       )}
     >
-      {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-6">
         <div>
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
@@ -372,7 +311,7 @@ export default function LiveShoppingSection({
             {liveSessions.length} live now · {upcomingSessions.length} upcoming · {pastSessions.length} past
           </p>
         </div>
-        {isOwner && (
+        {isOwner && !isPreviewMode && (
           <button
             onClick={onScheduleLive}
             className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-strong shadow-lg shadow-primary/25"
@@ -383,7 +322,6 @@ export default function LiveShoppingSection({
         )}
       </div>
 
-      {/* Stats Row */}
       {totalSessions > 0 && (
         <div className="flex flex-wrap gap-4 mb-4 text-sm">
           <div className="flex items-center gap-1 text-muted/70">
@@ -399,24 +337,17 @@ export default function LiveShoppingSection({
         </div>
       )}
 
-      {/* Tabs */}
       <div className="flex gap-1 mb-5 border-b border-border/30">
         {["live", "upcoming", "past"].map((tab) => {
           const count = getTabCount(tab);
-          const labels = {
-            live: "Live Now",
-            upcoming: "Upcoming",
-            past: "Past",
-          };
+          const labels = { live: "Live Now", upcoming: "Upcoming", past: "Past" };
           return (
             <button
               key={tab}
               onClick={() => setActiveTab(tab as any)}
               className={cn(
                 "px-4 py-2 text-sm font-medium transition relative",
-                activeTab === tab
-                  ? "text-foreground"
-                  : "text-muted hover:text-foreground/80"
+                activeTab === tab ? "text-foreground" : "text-muted hover:text-foreground/80"
               )}
             >
               {labels[tab as keyof typeof labels]}
@@ -432,7 +363,6 @@ export default function LiveShoppingSection({
         })}
       </div>
 
-      {/* Content */}
       {currentSessions.length === 0 ? (
         <div className="py-8 text-center">
           <div className="mx-auto w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mb-3">
@@ -446,13 +376,15 @@ export default function LiveShoppingSection({
               : "No past live sessions"}
           </h4>
           <p className="text-sm text-muted mt-1">
-            {isOwner && activeTab === "upcoming"
+            {isPreviewMode
+              ? "Check back later for live sessions."
+              : isOwner && activeTab === "upcoming"
               ? "Schedule your first live session to connect with buyers."
               : isOwner && activeTab === "live"
               ? "Go live to start selling in real-time."
               : "Check back later for live sessions."}
           </p>
-          {isOwner && activeTab !== "past" && (
+          {isOwner && !isPreviewMode && activeTab !== "past" && (
             <button
               onClick={onScheduleLive}
               className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition hover:bg-primary-strong shadow-lg shadow-primary/25"
@@ -469,6 +401,7 @@ export default function LiveShoppingSection({
               key={session.id}
               session={session}
               isOwner={isOwner}
+              isPreviewMode={isPreviewMode}
               onEdit={onEditLive}
               onDelete={onDeleteLive}
               onStart={onStartLive}

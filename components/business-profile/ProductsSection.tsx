@@ -2,26 +2,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Plus,
-  Search,
-  Filter,
-  Package,
-  TrendingUp,
-  Clock,
-  Flame,
-  Sparkles,
-  Edit3,
-  Trash2,
-  Eye,
-} from "lucide-react";
+import { motion } from "framer-motion";
+import { Plus, Search, Package, Edit3, Trash2 } from "lucide-react";
 import { ProductCard } from "@/components/haggle-ui";
 import { cn } from "@/lib/utils";
 
-// ============================================
-// TYPES
-// ============================================
 interface Product {
   id: string;
   name: string;
@@ -39,6 +24,7 @@ interface Product {
 interface ProductsSectionProps {
   products: Product[];
   isOwner: boolean;
+  isPreviewMode?: boolean;
   onAddProduct: () => void;
   onEditProduct: (product: Product) => void;
   onDeleteProduct: (productId: string) => void;
@@ -47,9 +33,6 @@ interface ProductsSectionProps {
 
 type FilterType = "all" | "live" | "trending" | "most-viewed" | "recent" | "negotiable" | "wholesale";
 
-// ============================================
-// FILTER CONFIG
-// ============================================
 const FILTERS: { value: FilterType; label: string }[] = [
   { value: "all", label: "All" },
   { value: "live", label: "Live" },
@@ -60,12 +43,10 @@ const FILTERS: { value: FilterType; label: string }[] = [
   { value: "wholesale", label: "Wholesale" },
 ];
 
-// ============================================
-// MAIN COMPONENT
-// ============================================
 export default function ProductsSection({
   products,
   isOwner,
+  isPreviewMode = false,
   onAddProduct,
   onEditProduct,
   onDeleteProduct,
@@ -73,13 +54,9 @@ export default function ProductsSection({
 }: ProductsSectionProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
-  const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
 
-  // Filter and search products
   const filteredProducts = useMemo(() => {
     let result = [...products];
-
-    // Search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       result = result.filter(
@@ -89,8 +66,6 @@ export default function ProductsSection({
           p.description.toLowerCase().includes(query)
       );
     }
-
-    // Filters
     switch (activeFilter) {
       case "live":
         result = result.filter((p) => p.isLive);
@@ -115,7 +90,6 @@ export default function ProductsSection({
       default:
         break;
     }
-
     return result;
   }, [products, searchQuery, activeFilter]);
 
@@ -126,7 +100,7 @@ export default function ProductsSection({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{ duration: 0.5 }}
       className={cn(
         "rounded-3xl border border-border/40 bg-background-elevated/20 backdrop-blur-sm p-6 shadow-card",
         className
@@ -138,17 +112,15 @@ export default function ProductsSection({
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Package className="h-5 w-5 text-primary" />
             Products
-            <span className="text-sm font-normal text-muted/60">
-              ({productCount})
-            </span>
+            <span className="text-sm font-normal text-muted/60">({productCount})</span>
           </h3>
           <p className="text-sm text-muted/70">
             {filteredCount} product{filteredCount !== 1 ? "s" : ""} available
           </p>
         </div>
 
-        {/* Owner Actions */}
-        {isOwner && (
+        {/* Add Product – hidden in preview */}
+        {isOwner && !isPreviewMode && (
           <button
             onClick={onAddProduct}
             className="inline-flex items-center gap-2 rounded-full bg-primary px-4 py-2 text-sm font-medium text-white transition hover:bg-primary-strong shadow-lg shadow-primary/25"
@@ -159,7 +131,7 @@ export default function ProductsSection({
         )}
       </div>
 
-      {/* Search & Filters */}
+      {/* Search & Filters (visible in preview too – it's visitor-friendly) */}
       <div className="flex flex-col sm:flex-row gap-3 mb-5">
         <div className="relative flex-1">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/40" />
@@ -199,11 +171,14 @@ export default function ProductsSection({
           <p className="text-sm text-muted mt-1">
             {searchQuery
               ? "Try adjusting your search or filters"
+              : isPreviewMode
+              ? "This business hasn't listed any products yet."
               : isOwner
               ? "Start by adding your first product"
               : "This business hasn't listed any products yet"}
           </p>
-          {isOwner && (
+          {/* CTA only shown in edit mode */}
+          {isOwner && !isPreviewMode && (
             <button
               onClick={onAddProduct}
               className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2 text-sm font-medium text-white transition hover:bg-primary-strong shadow-lg shadow-primary/25"
@@ -226,11 +201,10 @@ export default function ProductsSection({
               transition={{ delay: index * 0.05, duration: 0.3 }}
               className="relative group"
             >
-              {/* Product Card */}
               <ProductCard product={product} />
 
-              {/* Owner Actions Overlay */}
-              {isOwner && (
+              {/* Owner Actions Overlay – hidden in preview */}
+              {isOwner && !isPreviewMode && (
                 <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => onEditProduct(product)}

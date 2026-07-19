@@ -1,3 +1,4 @@
+// components/business-profile/EditGalleryModal.tsx
 "use client";
 
 import { useState, useEffect } from "react";
@@ -10,6 +11,17 @@ interface EditGalleryModalProps {
   onSave: (item: GalleryItem) => void;
 }
 
+const CATEGORIES = [
+  "Store",
+  "Products",
+  "Behind the Scenes",
+  "Team",
+  "Customer Moments",
+  "Warehouse",
+  "Events",
+  "Other",
+];
+
 export default function EditGalleryModal({
   isOpen,
   onClose,
@@ -20,6 +32,7 @@ export default function EditGalleryModal({
   const [url, setUrl] = useState("");
   const [thumbnail, setThumbnail] = useState("");
   const [caption, setCaption] = useState("");
+  const [category, setCategory] = useState("");
 
   useEffect(() => {
     if (item) {
@@ -27,11 +40,13 @@ export default function EditGalleryModal({
       setUrl(item.url);
       setThumbnail(item.thumbnail || "");
       setCaption(item.caption || "");
+      setCategory(item.category || "");
     } else {
       setType("image");
       setUrl("");
       setThumbnail("");
       setCaption("");
+      setCategory("");
     }
   }, [item, isOpen]);
 
@@ -43,6 +58,7 @@ export default function EditGalleryModal({
       url,
       thumbnail: type === "video" ? thumbnail : undefined,
       caption: caption || undefined,
+      category: category || undefined,
       createdAt: item?.createdAt || new Date().toISOString(),
     };
     onSave(payload);
@@ -74,6 +90,20 @@ export default function EditGalleryModal({
           </div>
 
           <div>
+            <label className="block text-sm font-medium mb-1">Category</label>
+            <select
+              value={category}
+              onChange={(e) => setCategory(e.target.value)}
+              className="w-full rounded border border-border bg-background px-3 py-2 text-sm"
+            >
+              <option value="">Select category</option>
+              {CATEGORIES.map((cat) => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
             <label className="block text-sm font-medium mb-1">URL</label>
             <input
               type="url"
@@ -87,9 +117,7 @@ export default function EditGalleryModal({
 
           {type === "video" && (
             <div>
-              <label className="block text-sm font-medium mb-1">
-                Thumbnail URL (optional)
-              </label>
+              <label className="block text-sm font-medium mb-1">Thumbnail URL (optional)</label>
               <input
                 type="url"
                 value={thumbnail}

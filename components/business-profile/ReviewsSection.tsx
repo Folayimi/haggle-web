@@ -7,19 +7,13 @@ import {
   Star,
   StarHalf,
   MessageSquare,
-  Image,
   ThumbsUp,
   Clock,
-  TrendingUp,
   Send,
-  ChevronDown,
   Award,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ============================================
-// TYPES
-// ============================================
 interface Review {
   id: string;
   buyerName: string;
@@ -39,6 +33,7 @@ interface Review {
 interface ReviewsSectionProps {
   reviews: Review[];
   isOwner: boolean;
+  isPreviewMode?: boolean;
   onRespond: (reviewId: string, response: string) => void;
   sellerName?: string;
   className?: string;
@@ -47,9 +42,6 @@ interface ReviewsSectionProps {
 type SortOption = "recent" | "helpful" | "highest" | "lowest";
 type FilterOption = "all" | "with-photos" | "verified" | "with-response";
 
-// ============================================
-// STAR RATING COMPONENT
-// ============================================
 function StarRating({ rating }: { rating: number }) {
   return (
     <div className="flex items-center gap-0.5">
@@ -58,13 +50,9 @@ function StarRating({ rating }: { rating: number }) {
         const half = rating >= star - 0.5 && rating < star;
         return (
           <span key={star} className="text-yellow-400">
-            {filled ? (
-              <Star className="h-3.5 w-3.5 fill-yellow-400" />
-            ) : half ? (
-              <StarHalf className="h-3.5 w-3.5 fill-yellow-400" />
-            ) : (
-              <Star className="h-3.5 w-3.5 text-yellow-400/20" />
-            )}
+            {filled ? <Star className="h-3.5 w-3.5 fill-yellow-400" /> :
+             half ? <StarHalf className="h-3.5 w-3.5 fill-yellow-400" /> :
+             <Star className="h-3.5 w-3.5 text-yellow-400/20" />}
           </span>
         );
       })}
@@ -72,24 +60,19 @@ function StarRating({ rating }: { rating: number }) {
   );
 }
 
-// ============================================
-// SINGLE REVIEW CARD
-// ============================================
 function ReviewCard({
   review,
   isOwner,
+  isPreviewMode,
   onRespond,
 }: {
   review: Review;
   isOwner: boolean;
+  isPreviewMode?: boolean;
   onRespond: (reviewId: string) => void;
 }) {
   const date = new Date(review.createdAt);
-  const formattedDate = date.toLocaleDateString("en-US", {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
+  const formattedDate = date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 
   return (
     <motion.div
@@ -98,12 +81,10 @@ function ReviewCard({
       className="border-b border-border/30 last:border-0 pb-4 last:pb-0"
     >
       <div className="flex items-start gap-3">
-        {/* Avatar */}
         <div className="flex-shrink-0 w-10 h-10 rounded-full bg-secondary/10 flex items-center justify-center text-sm font-semibold text-secondary">
           {review.buyerAvatar}
         </div>
 
-        {/* Content */}
         <div className="flex-1 min-w-0 space-y-1">
           <div className="flex items-start justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2">
@@ -118,30 +99,21 @@ function ReviewCard({
             <span className="text-[10px] text-muted/40">{formattedDate}</span>
           </div>
 
-          {/* Rating */}
           <div className="flex items-center gap-1.5">
             <StarRating rating={review.rating} />
             <span className="text-xs text-muted/40">{review.rating}.0</span>
           </div>
 
-          {/* Content */}
           <p className="text-sm text-foreground/80 leading-relaxed">{review.content}</p>
 
-          {/* Images */}
           {review.images && review.images.length > 0 && (
             <div className="flex gap-2 mt-2">
               {review.images.map((img, i) => (
-                <img
-                  key={i}
-                  src={img}
-                  alt={`Review image ${i + 1}`}
-                  className="h-16 w-16 rounded-lg object-cover border border-border/30"
-                />
+                <img key={i} src={img} alt={`Review image ${i + 1}`} className="h-16 w-16 rounded-lg object-cover border border-border/30" />
               ))}
             </div>
           )}
 
-          {/* Helpful count */}
           {review.helpfulCount && review.helpfulCount > 0 && (
             <div className="flex items-center gap-1 text-xs text-muted/50">
               <ThumbsUp className="h-3 w-3" />
@@ -149,7 +121,6 @@ function ReviewCard({
             </div>
           )}
 
-          {/* Seller Response */}
           {review.sellerResponse && (
             <div className="mt-2 pl-3 border-l-2 border-secondary/30 bg-secondary/5 rounded-r-lg p-2">
               <p className="text-xs text-foreground/70">{review.sellerResponse.content}</p>
@@ -159,8 +130,7 @@ function ReviewCard({
             </div>
           )}
 
-          {/* Owner Actions */}
-          {isOwner && !review.sellerResponse && (
+          {isOwner && !review.sellerResponse && !isPreviewMode && (
             <button
               onClick={() => onRespond(review.id)}
               className="text-xs text-secondary hover:text-secondary-strong transition flex items-center gap-1.5 mt-1"
@@ -175,9 +145,6 @@ function ReviewCard({
   );
 }
 
-// ============================================
-// RATING SUMMARY
-// ============================================
 function RatingSummary({ reviews }: { reviews: Review[] }) {
   const total = reviews.length;
   const avg = total > 0 ? reviews.reduce((sum, r) => sum + r.rating, 0) / total : 0;
@@ -191,12 +158,8 @@ function RatingSummary({ reviews }: { reviews: Review[] }) {
   return (
     <div className="flex flex-col items-center p-4 rounded-xl bg-background-elevated/20 border border-border/30">
       <div className="text-4xl font-bold text-foreground">{avg.toFixed(1)}</div>
-      <div className="flex items-center gap-1 mt-1">
-        <StarRating rating={avg} />
-      </div>
-      <div className="text-xs text-muted/60 mt-1">
-        {total} review{total !== 1 ? "s" : ""}
-      </div>
+      <div className="flex items-center gap-1 mt-1"><StarRating rating={avg} /></div>
+      <div className="text-xs text-muted/60 mt-1">{total} review{total !== 1 ? "s" : ""}</div>
       <div className="text-[10px] text-muted/40 mt-0.5 flex items-center gap-1">
         <MessageSquare className="h-3 w-3" />
         {responseRate}% responded
@@ -206,10 +169,7 @@ function RatingSummary({ reviews }: { reviews: Review[] }) {
           <div key={item.stars} className="flex items-center gap-2 text-xs">
             <span className="text-muted/60 w-6 text-right">{item.stars}★</span>
             <div className="flex-1 h-1.5 rounded-full bg-border/40 overflow-hidden">
-              <div
-                className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500"
-                style={{ width: `${total > 0 ? (item.count / total) * 100 : 0}%` }}
-              />
+              <div className="h-full rounded-full bg-gradient-to-r from-yellow-400 to-yellow-500" style={{ width: `${total > 0 ? (item.count / total) * 100 : 0}%` }} />
             </div>
             <span className="text-muted/40 w-8 text-left">{item.count}</span>
           </div>
@@ -219,12 +179,10 @@ function RatingSummary({ reviews }: { reviews: Review[] }) {
   );
 }
 
-// ============================================
-// MAIN COMPONENT
-// ============================================
 export default function ReviewsSection({
   reviews,
   isOwner,
+  isPreviewMode = false,
   onRespond,
   sellerName,
   className,
@@ -234,7 +192,6 @@ export default function ReviewsSection({
   const [respondingTo, setRespondingTo] = useState<string | null>(null);
   const [responseText, setResponseText] = useState("");
 
-  // Compute keywords from reviews
   const keywords = useMemo(() => {
     const wordFreq: Record<string, number> = {};
     const stopWords = new Set([
@@ -255,43 +212,21 @@ export default function ReviewsSection({
       .map(([word, count]) => ({ word, count }));
   }, [reviews]);
 
-  // Filter and sort
   const filteredReviews = useMemo(() => {
     let result = [...reviews];
-
-    // Filter
     switch (filterBy) {
-      case "with-photos":
-        result = result.filter((r) => r.images && r.images.length > 0);
-        break;
-      case "verified":
-        result = result.filter((r) => r.verifiedPurchase);
-        break;
-      case "with-response":
-        result = result.filter((r) => r.sellerResponse);
-        break;
-      default:
-        break;
+      case "with-photos": result = result.filter((r) => r.images && r.images.length > 0); break;
+      case "verified": result = result.filter((r) => r.verifiedPurchase); break;
+      case "with-response": result = result.filter((r) => r.sellerResponse); break;
+      default: break;
     }
-
-    // Sort
     switch (sortBy) {
-      case "recent":
-        result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        break;
-      case "helpful":
-        result.sort((a, b) => (b.helpfulCount || 0) - (a.helpfulCount || 0));
-        break;
-      case "highest":
-        result.sort((a, b) => b.rating - a.rating);
-        break;
-      case "lowest":
-        result.sort((a, b) => a.rating - b.rating);
-        break;
-      default:
-        break;
+      case "recent": result.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()); break;
+      case "helpful": result.sort((a, b) => (b.helpfulCount || 0) - (a.helpfulCount || 0)); break;
+      case "highest": result.sort((a, b) => b.rating - a.rating); break;
+      case "lowest": result.sort((a, b) => a.rating - b.rating); break;
+      default: break;
     }
-
     return result;
   }, [reviews, filterBy, sortBy]);
 
@@ -309,38 +244,29 @@ export default function ReviewsSection({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{ duration: 0.5 }}
       className={cn(
         "rounded-3xl border border-border/40 bg-background-elevated/20 backdrop-blur-sm p-6 shadow-card",
         className
       )}
     >
-      {/* Header */}
       <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
         <div>
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Star className="h-5 w-5 text-yellow-400" />
             Reviews
-            <span className="text-sm font-normal text-muted/60">
-              ({totalReviews})
-            </span>
+            <span className="text-sm font-normal text-muted/60">({totalReviews})</span>
           </h3>
           <p className="text-sm text-muted/70">
-            {isOwner
-              ? "Customer feedback helps you improve and build trust"
-              : "What customers are saying about this business"}
+            {isPreviewMode || !isOwner
+              ? "What customers are saying about this business"
+              : "Customer feedback helps you improve and build trust"}
           </p>
         </div>
       </div>
 
-      {/* Summary + Filters */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-5">
-        {/* Rating Summary */}
-        <div className="md:col-span-1">
-          <RatingSummary reviews={reviews} />
-        </div>
-
-        {/* Filter/Sort Controls */}
+        <div className="md:col-span-1"><RatingSummary reviews={reviews} /></div>
         <div className="md:col-span-3 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <span className="text-xs text-muted/60">Sort by:</span>
@@ -394,14 +320,10 @@ export default function ReviewsSection({
         </div>
       </div>
 
-      {/* Keyword Cloud */}
       {keywords.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-5">
           {keywords.map(({ word, count }) => (
-            <span
-              key={word}
-              className="px-2.5 py-1 rounded-full bg-primary/10 text-xs text-primary/80 border border-primary/20 flex items-center gap-1"
-            >
+            <span key={word} className="px-2.5 py-1 rounded-full bg-primary/10 text-xs text-primary/80 border border-primary/20 flex items-center gap-1">
               {word}
               <span className="text-[8px] text-primary/40">({count})</span>
             </span>
@@ -409,8 +331,7 @@ export default function ReviewsSection({
         </div>
       )}
 
-      {/* Empty State */}
-      {filteredReviews.length === 0 && (
+      {filteredReviews.length === 0 ? (
         <div className="py-8 text-center">
           <div className="mx-auto w-14 h-14 rounded-full bg-yellow-400/10 flex items-center justify-center mb-3">
             <Star className="h-6 w-6 text-yellow-400/40" />
@@ -419,29 +340,26 @@ export default function ReviewsSection({
             {isOwner ? "No reviews yet" : "No reviews available"}
           </h4>
           <p className="text-sm text-muted mt-1">
-            {isOwner
-              ? "Complete sales to start receiving reviews from buyers"
-              : "This business hasn't received any reviews yet"}
+            {isPreviewMode || !isOwner
+              ? "This business hasn't received any reviews yet."
+              : "Complete sales to start receiving reviews from buyers"}
           </p>
         </div>
-      )}
-
-      {/* Review List */}
-      {filteredReviews.length > 0 && (
+      ) : (
         <div className="space-y-4">
           {filteredReviews.map((review) => (
             <ReviewCard
               key={review.id}
               review={review}
               isOwner={isOwner}
+              isPreviewMode={isPreviewMode}
               onRespond={(id) => setRespondingTo(id)}
             />
           ))}
         </div>
       )}
 
-      {/* Response Modal / Inline */}
-      {respondingTo && (
+      {respondingTo && !isPreviewMode && (
         <div className="mt-4 pt-4 border-t border-border/30">
           <div className="flex items-start gap-3">
             <div className="flex-shrink-0 w-8 h-8 rounded-full bg-secondary/10 flex items-center justify-center text-xs font-semibold text-secondary">
@@ -464,10 +382,7 @@ export default function ReviewsSection({
                   Respond
                 </button>
                 <button
-                  onClick={() => {
-                    setRespondingTo(null);
-                    setResponseText("");
-                  }}
+                  onClick={() => { setRespondingTo(null); setResponseText(""); }}
                   className="rounded-full border border-border/60 px-4 py-1.5 text-sm font-medium text-foreground transition hover:bg-surface"
                 >
                   Cancel

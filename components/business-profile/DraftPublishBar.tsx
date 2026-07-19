@@ -2,11 +2,11 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { Save, Check, Eye, EyeOff, X, Sparkles } from "lucide-react";
+import { Save, Check, Eye, EyeOff, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface DraftPublishBarProps {
-  isDirty: boolean; // whether there are unsaved changes
+  isDirty: boolean;
   isSaving: boolean;
   isPublished: boolean;
   isPreviewMode: boolean;
@@ -36,7 +36,6 @@ export default function DraftPublishBar({
           transition={{ duration: 0.3 }}
           className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-background-elevated/90 backdrop-blur-xl border border-border/40 rounded-2xl shadow-2xl px-4 py-3 flex items-center gap-3 flex-wrap justify-center"
         >
-          {/* Preview toggle */}
           <button
             onClick={onTogglePreview}
             className="inline-flex items-center gap-1.5 text-sm font-medium text-muted/70 hover:text-foreground transition px-3 py-1.5 rounded-full border border-border/30"
@@ -47,7 +46,6 @@ export default function DraftPublishBar({
 
           <div className="w-px h-6 bg-border/30" />
 
-          {/* Save Draft */}
           <button
             onClick={onSaveDraft}
             disabled={!isDirty || isSaving}
@@ -71,7 +69,6 @@ export default function DraftPublishBar({
             )}
           </button>
 
-          {/* Publish */}
           {isDirty && (
             <button
               onClick={onPublish}
@@ -82,17 +79,12 @@ export default function DraftPublishBar({
             </button>
           )}
 
-          {/* Discard */}
           {isDirty && (
-            <button
-              onClick={onDiscard}
-              className="text-xs text-muted/40 hover:text-danger transition p-1"
-            >
+            <button onClick={onDiscard} className="text-xs text-muted/40 hover:text-danger transition p-1">
               <X className="h-4 w-4" />
             </button>
           )}
 
-          {/* Status indicator */}
           {!isDirty && !isSaving && (
             <span className="text-xs text-success flex items-center gap-1">
               <Check className="h-3 w-3" />
@@ -101,7 +93,6 @@ export default function DraftPublishBar({
           )}
         </motion.div>
       ) : (
-        // Preview mode bar
         <motion.div
           initial={{ y: 80, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}

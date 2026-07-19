@@ -3,7 +3,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
-import { X, Upload, Sparkles } from "lucide-react";
+import { X, Sparkles } from "lucide-react";
 
 // ============================================
 // TYPES
@@ -15,7 +15,10 @@ interface ProductFormData {
   category: string;
   description: string;
   imageUrl: string;
-  isNegotiable: boolean;
+  features: string; // comma-separated
+  stockStatus: string;
+  negotiationNote: string;
+  negotiationStyle: "fixed" | "negotiable" | "counter";
   isLive: boolean;
   isTrending: boolean;
 }
@@ -28,16 +31,14 @@ interface EditProductModalProps {
 }
 
 const CATEGORIES = [
-  "Fashion",
-  "Electronics",
-  "Food",
-  "Furniture",
-  "Beauty",
-  "Services",
-  "Art",
-  "Automobile",
-  "Home",
-  "Other",
+  "Fashion", "Electronics", "Food", "Furniture", "Beauty",
+  "Services", "Art", "Automobile", "Home", "Other"
+];
+
+const NEGOTIATION_STYLES = [
+  { value: "fixed", label: "Fixed Price" },
+  { value: "negotiable", label: "Negotiable" },
+  { value: "counter", label: "Counter Offer" },
 ];
 
 // ============================================
@@ -57,7 +58,10 @@ export default function EditProductModal({
     category: "",
     description: "",
     imageUrl: "",
-    isNegotiable: true,
+    features: "",
+    stockStatus: "",
+    negotiationNote: "",
+    negotiationStyle: "negotiable",
     isLive: false,
     isTrending: false,
   });
@@ -71,7 +75,10 @@ export default function EditProductModal({
         category: product.category || "",
         description: product.description || "",
         imageUrl: product.imageUrl || "",
-        isNegotiable: product.isNegotiable ?? true,
+        features: product.features || "",
+        stockStatus: product.stockStatus || "",
+        negotiationNote: product.negotiationNote || "",
+        negotiationStyle: product.negotiationStyle || "negotiable",
         isLive: product.isLive ?? false,
         isTrending: product.isTrending ?? false,
       });
@@ -82,7 +89,10 @@ export default function EditProductModal({
         category: "",
         description: "",
         imageUrl: "",
-        isNegotiable: true,
+        features: "",
+        stockStatus: "",
+        negotiationNote: "",
+        negotiationStyle: "negotiable",
         isLive: false,
         isTrending: false,
       });
@@ -103,26 +113,18 @@ export default function EditProductModal({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{
-            background: "rgba(0, 0, 0, 0.6)",
-            backdropFilter: "blur(8px)",
-            WebkitBackdropFilter: "blur(8px)",
-          }}
+          style={{ background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)" }}
           onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 20 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 20 }}
-            transition={{ duration: 0.25, ease: [0.25, 0.1, 0.25, 1] }}
+            transition={{ duration: 0.25 }}
             className="relative w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-3xl border border-border/40 bg-background-elevated/90 backdrop-blur-xl p-6 shadow-2xl"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Close */}
-            <button
-              onClick={onClose}
-              className="absolute top-4 right-4 rounded-full p-2 text-muted hover:bg-surface hover:text-foreground transition"
-            >
+            <button onClick={onClose} className="absolute top-4 right-4 rounded-full p-2 text-muted hover:bg-surface hover:text-foreground transition">
               <X className="h-5 w-5" />
             </button>
 
@@ -130,9 +132,7 @@ export default function EditProductModal({
               {isEditing ? "Edit Product" : "Add Product"}
             </h2>
             <p className="text-sm text-muted mt-1">
-              {isEditing
-                ? "Update your product details"
-                : "List a new product for buyers"}
+              {isEditing ? "Update your product details" : "List a new product for buyers"}
             </p>
 
             <form onSubmit={handleSubmit} className="mt-6 space-y-4">
@@ -190,6 +190,56 @@ export default function EditProductModal({
                 />
               </div>
 
+              {/* Features & Stock */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground/80">Features</label>
+                  <input
+                    type="text"
+                    value={formData.features}
+                    onChange={(e) => setFormData({ ...formData, features: e.target.value })}
+                    placeholder="e.g. Hand-thrown, Signed, Care kit (comma-separated)"
+                    className="mt-1.5 w-full rounded-xl border border-border/60 bg-background-elevated/40 px-4 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all shadow-sm"
+                  />
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground/80">Stock Status</label>
+                  <input
+                    type="text"
+                    value={formData.stockStatus}
+                    onChange={(e) => setFormData({ ...formData, stockStatus: e.target.value })}
+                    placeholder="e.g. 7 left in stock"
+                    className="mt-1.5 w-full rounded-xl border border-border/60 bg-background-elevated/40 px-4 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all shadow-sm"
+                  />
+                </div>
+              </div>
+
+              {/* Negotiation */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-sm font-medium text-foreground/80">Negotiation Style</label>
+                  <select
+                    value={formData.negotiationStyle}
+                    onChange={(e) => setFormData({ ...formData, negotiationStyle: e.target.value as any })}
+                    className="mt-1.5 w-full rounded-xl border border-border/60 bg-background-elevated/40 px-4 py-3 text-sm text-foreground backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all shadow-sm"
+                  >
+                    {NEGOTIATION_STYLES.map((s) => (
+                      <option key={s.value} value={s.value}>{s.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium text-foreground/80">Negotiation Note</label>
+                  <input
+                    type="text"
+                    value={formData.negotiationNote}
+                    onChange={(e) => setFormData({ ...formData, negotiationNote: e.target.value })}
+                    placeholder="e.g. Open to bundle pricing"
+                    className="mt-1.5 w-full rounded-xl border border-border/60 bg-background-elevated/40 px-4 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all shadow-sm"
+                  />
+                </div>
+              </div>
+
               {/* Image */}
               <div>
                 <label className="text-sm font-medium text-foreground/80">Image URL</label>
@@ -205,16 +255,7 @@ export default function EditProductModal({
               {/* Toggles */}
               <div className="space-y-2">
                 <label className="text-sm font-medium text-foreground/80">Product Settings</label>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                  <label className="flex items-center gap-2 rounded-xl border border-border/40 bg-background-elevated/10 px-3 py-2 cursor-pointer hover:bg-background-elevated/20 transition">
-                    <input
-                      type="checkbox"
-                      checked={formData.isNegotiable}
-                      onChange={(e) => setFormData({ ...formData, isNegotiable: e.target.checked })}
-                      className="h-4 w-4 rounded border-border/60 accent-primary"
-                    />
-                    <span className="text-sm text-foreground/70">Negotiable</span>
-                  </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <label className="flex items-center gap-2 rounded-xl border border-border/40 bg-background-elevated/10 px-3 py-2 cursor-pointer hover:bg-background-elevated/20 transition">
                     <input
                       type="checkbox"
@@ -251,17 +292,10 @@ export default function EditProductModal({
 
               {/* Actions */}
               <div className="flex justify-end gap-3 pt-4 border-t border-border/30">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="rounded-full border border-border/60 px-6 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface"
-                >
+                <button type="button" onClick={onClose} className="rounded-full border border-border/60 px-6 py-2.5 text-sm font-medium text-foreground transition hover:bg-surface">
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong shadow-lg shadow-primary/25"
-                >
+                <button type="submit" className="rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong shadow-lg shadow-primary/25">
                   {isEditing ? "Update Product" : "Add Product"}
                 </button>
               </div>

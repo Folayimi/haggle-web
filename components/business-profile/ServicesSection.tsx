@@ -2,25 +2,11 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
-import {
-  Plus,
-  Search,
-  Filter,
-  Briefcase,
-  TrendingUp,
-  Clock,
-  Sparkles,
-  Edit3,
-  Trash2,
-  Eye,
-} from "lucide-react";
+import { motion } from "framer-motion";
+import { Plus, Search, Briefcase, Edit3, Trash2 } from "lucide-react";
 import { ServiceCard } from "@/components/haggle-ui";
 import { cn } from "@/lib/utils";
 
-// ============================================
-// TYPES
-// ============================================
 interface Service {
   id: string;
   name: string;
@@ -39,6 +25,7 @@ interface Service {
 interface ServicesSectionProps {
   services: Service[];
   isOwner: boolean;
+  isPreviewMode?: boolean;
   onAddService: () => void;
   onEditService: (service: Service) => void;
   onDeleteService: (serviceId: string) => void;
@@ -47,9 +34,6 @@ interface ServicesSectionProps {
 
 type FilterType = "all" | "popular" | "recent" | "negotiable" | "fast-delivery";
 
-// ============================================
-// FILTER CONFIG
-// ============================================
 const FILTERS: { value: FilterType; label: string }[] = [
   { value: "all", label: "All" },
   { value: "popular", label: "🔥 Popular" },
@@ -58,12 +42,10 @@ const FILTERS: { value: FilterType; label: string }[] = [
   { value: "fast-delivery", label: "Fast Delivery" },
 ];
 
-// ============================================
-// MAIN COMPONENT
-// ============================================
 export default function ServicesSection({
   services,
   isOwner,
+  isPreviewMode = false,
   onAddService,
   onEditService,
   onDeleteService,
@@ -72,11 +54,8 @@ export default function ServicesSection({
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
 
-  // Filter and search services
   const filteredServices = useMemo(() => {
     let result = [...services];
-
-    // Search
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase().trim();
       result = result.filter(
@@ -86,8 +65,6 @@ export default function ServicesSection({
           s.description.toLowerCase().includes(query)
       );
     }
-
-    // Filters
     switch (activeFilter) {
       case "popular":
         result = result.filter((s) => s.isPopular);
@@ -110,7 +87,6 @@ export default function ServicesSection({
       default:
         break;
     }
-
     return result;
   }, [services, searchQuery, activeFilter]);
 
@@ -121,7 +97,7 @@ export default function ServicesSection({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, ease: [0.25, 0.1, 0.25, 1] }}
+      transition={{ duration: 0.5 }}
       className={cn(
         "rounded-3xl border border-border/40 bg-background-elevated/20 backdrop-blur-sm p-6 shadow-card",
         className
@@ -133,17 +109,14 @@ export default function ServicesSection({
           <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
             <Briefcase className="h-5 w-5 text-secondary" />
             Services
-            <span className="text-sm font-normal text-muted/60">
-              ({serviceCount})
-            </span>
+            <span className="text-sm font-normal text-muted/60">({serviceCount})</span>
           </h3>
           <p className="text-sm text-muted/70">
             {filteredCount} service{filteredCount !== 1 ? "s" : ""} available
           </p>
         </div>
 
-        {/* Owner Actions */}
-        {isOwner && (
+        {isOwner && !isPreviewMode && (
           <button
             onClick={onAddService}
             className="inline-flex items-center gap-2 rounded-full bg-secondary px-4 py-2 text-sm font-medium text-white transition hover:bg-secondary-strong shadow-lg shadow-secondary/25"
@@ -194,11 +167,13 @@ export default function ServicesSection({
           <p className="text-sm text-muted mt-1">
             {searchQuery
               ? "Try adjusting your search or filters"
+              : isPreviewMode
+              ? "This business hasn't listed any services yet."
               : isOwner
               ? "Start by adding your first service"
               : "This business hasn't listed any services yet"}
           </p>
-          {isOwner && (
+          {isOwner && !isPreviewMode && (
             <button
               onClick={onAddService}
               className="mt-4 inline-flex items-center gap-2 rounded-full bg-secondary px-5 py-2 text-sm font-medium text-white transition hover:bg-secondary-strong shadow-lg shadow-secondary/25"
@@ -221,11 +196,9 @@ export default function ServicesSection({
               transition={{ delay: index * 0.05, duration: 0.3 }}
               className="relative group"
             >
-              {/* Service Card */}
               <ServiceCard service={service} />
 
-              {/* Owner Actions Overlay */}
-              {isOwner && (
+              {isOwner && !isPreviewMode && (
                 <div className="absolute top-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
                     onClick={() => onEditService(service)}

@@ -14,28 +14,19 @@ import {
   MessageCircle,
   Share2,
   Edit3,
-  MoreHorizontal,
-  Shield,
   CheckCircle,
   Award,
-  TrendingUp,
-  Eye,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SellerProfile } from "@/lib/types"; // ✅ import the real type
+import { SellerProfile } from "@/lib/types";
 
-// ============================================
-// TYPES
-// ============================================
 interface BusinessHeroProps {
-  user: SellerProfile; // use the full SellerProfile type
+  user: SellerProfile;
   isOwner: boolean;
+  isPreviewMode?: boolean; // ← new
   onEditHero?: () => void;
 }
 
-// ============================================
-// STATUS CONFIG
-// ============================================
 const STATUS_CONFIG = {
   open: { label: "Open", color: "bg-success text-white border-success/30" },
   closed: { label: "Closed", color: "bg-danger text-white border-danger/30" },
@@ -44,11 +35,12 @@ const STATUS_CONFIG = {
   holiday: { label: "Holiday", color: "bg-muted text-white border-muted/30" },
 } as const;
 
-// ============================================
-// MAIN COMPONENT
-// ============================================
-export default function BusinessHero({ user, isOwner, onEditHero }: BusinessHeroProps) {
-  // Safely extract hero data with fallbacks
+export default function BusinessHero({
+  user,
+  isOwner,
+  isPreviewMode = false,
+  onEditHero,
+}: BusinessHeroProps) {
   const hero = user.hero || {};
   const status = hero.status || "open";
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.open;
@@ -58,22 +50,15 @@ export default function BusinessHero({ user, isOwner, onEditHero }: BusinessHero
   const slogan = hero.slogan || "";
   const verifiedBadge = hero.verifiedBadge ?? user.isVerified ?? false;
 
-  // Stats – use values from user or fallback
   const rating = user.rating ? parseFloat(user.rating) : 0;
-  const totalReviews = 0; // Not in SellerProfile, we can compute from reviews array if needed
   const followers = user.followers ? parseInt(user.followers.replace(/,/g, "")) : 0;
-  const totalOrders = 0; // Not in SellerProfile, could add later
   const responseTime = hero.averageResponseTime || user.responseTime || "—";
 
-  // Animation variants
   const heroVariants = {
     hidden: { opacity: 0 },
     visible: {
       opacity: 1,
-      transition: {
-        staggerChildren: 0.12,
-        delayChildren: 0.1,
-      },
+      transition: { staggerChildren: 0.12, delayChildren: 0.1 },
     },
   };
 
@@ -82,7 +67,9 @@ export default function BusinessHero({ user, isOwner, onEditHero }: BusinessHero
     visible: { opacity: 1, y: 0, transition: { duration: 0.5, ease: [0.25, 0.1, 0.25, 1] } },
   };
 
-  const coverImage = user.coverImageUrl || "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=400&fit=crop&q=80";
+  const coverImage =
+    user.coverImageUrl ||
+    "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=400&fit=crop&q=80";
 
   return (
     <motion.div
@@ -91,31 +78,21 @@ export default function BusinessHero({ user, isOwner, onEditHero }: BusinessHero
       animate="visible"
       className="relative overflow-hidden rounded-b-[40px] md:rounded-b-[60px]"
     >
-      {/* ============================================ */}
-      {/* COVER IMAGE */}
-      {/* ============================================ */}
+      {/* Cover */}
       <div className="relative h-64 md:h-80 lg:h-96 bg-gradient-to-br from-primary/20 via-background to-secondary/10">
-        <Image
-          src={coverImage}
-          alt={`${user.businessName} cover`}
-          fill
-          className="object-cover"
-          priority
-        />
+        <Image src={coverImage} alt={`${user.businessName} cover`} fill className="object-cover" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
 
-        {/* Cover Edit Overlay (Owner only) */}
-        {isOwner && (
+        {/* Cover Edit Overlay – hidden in preview */}
+        {isOwner && !isPreviewMode && (
           <button className="absolute top-4 right-4 z-10 rounded-full bg-black/40 backdrop-blur-sm p-2.5 text-white hover:bg-black/60 transition border border-white/10">
             <Edit3 className="h-4 w-4" />
           </button>
         )}
       </div>
 
-      {/* ============================================ */}
-      {/* PROFILE INFO - Overlay on cover */}
-      {/* ============================================ */}
+      {/* Profile Info */}
       <div className="relative -mt-16 px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col md:flex-row md:items-end gap-4 md:gap-6">
           {/* Avatar */}
@@ -130,7 +107,7 @@ export default function BusinessHero({ user, isOwner, onEditHero }: BusinessHero
                   className="object-cover w-full h-full"
                 />
               </div>
-              {isOwner && (
+              {isOwner && !isPreviewMode && (
                 <button className="absolute -bottom-1 -right-1 rounded-full bg-primary p-1.5 text-white shadow-lg hover:bg-primary-strong transition">
                   <Edit3 className="h-4 w-4" />
                 </button>
@@ -147,9 +124,7 @@ export default function BusinessHero({ user, isOwner, onEditHero }: BusinessHero
               {verifiedBadge && (
                 <CheckCircle className="h-5 w-5 text-primary fill-primary/10 flex-shrink-0" />
               )}
-              <span
-                className={`text-xs font-medium px-2.5 py-0.5 rounded-full border ${statusConfig.color}`}
-              >
+              <span className={`text-xs font-medium px-2.5 py-0.5 rounded-full border ${statusConfig.color}`}>
                 {statusConfig.label}
               </span>
             </div>
@@ -196,9 +171,9 @@ export default function BusinessHero({ user, isOwner, onEditHero }: BusinessHero
             </div>
           </motion.div>
 
-          {/* Actions */}
+          {/* Actions – Edit button hidden in preview */}
           <motion.div variants={childVariants} className="flex flex-wrap items-center gap-2 flex-shrink-0">
-            {isOwner ? (
+            {isOwner && !isPreviewMode ? (
               <button
                 onClick={onEditHero}
                 className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong shadow-lg shadow-primary/25"
@@ -207,6 +182,7 @@ export default function BusinessHero({ user, isOwner, onEditHero }: BusinessHero
                 Edit Hero
               </button>
             ) : (
+              // Visitor actions (visible to everyone)
               <>
                 <button className="inline-flex items-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong shadow-lg shadow-primary/25">
                   <Zap className="h-4 w-4" />
@@ -228,9 +204,7 @@ export default function BusinessHero({ user, isOwner, onEditHero }: BusinessHero
         </div>
       </div>
 
-      {/* ============================================ */}
-      {/* STATS ROW */}
-      {/* ============================================ */}
+      {/* Stats Row */}
       <motion.div
         variants={childVariants}
         className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4"
@@ -241,7 +215,7 @@ export default function BusinessHero({ user, isOwner, onEditHero }: BusinessHero
               icon: <Star className="h-4 w-4 text-yellow-400 fill-yellow-400" />,
               label: "Rating",
               value: rating.toFixed(1),
-              detail: `${totalReviews} reviews`,
+              detail: "reviews",
             },
             {
               icon: <Users className="h-4 w-4 text-blue-400" />,
@@ -252,7 +226,7 @@ export default function BusinessHero({ user, isOwner, onEditHero }: BusinessHero
             {
               icon: <ShoppingBag className="h-4 w-4 text-emerald-400" />,
               label: "Orders",
-              value: totalOrders.toLocaleString(),
+              value: "0",
               detail: "completed",
             },
             {

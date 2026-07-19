@@ -7,7 +7,6 @@ import { useState, useEffect, useRef } from "react";
 import {
   Package,
   Sparkles,
-  Store,
   Video,
   MessageSquare,
   Star,
@@ -17,7 +16,6 @@ import {
   BarChart3,
   Bot,
   Clock,
-  ChevronRight,
 } from "lucide-react";
 import { useHaggleStore } from "@/lib/app-store";
 import {
@@ -29,7 +27,15 @@ import {
   userBroadcastActivities,
   userReviews,
 } from "@/lib/mock-data";
-import type { LiveSession, BroadcastActivity, Review, GalleryItem, SectionId, CompletionStatus } from "@/lib/types";
+import type {
+  LiveSession,
+  BroadcastActivity,
+  Review,
+  GalleryItem,
+  SectionId,
+  CompletionStatus,
+  SellerProfile,
+} from "@/lib/types";
 import BusinessHero from "@/components/business-profile/BusinessHero";
 import SectionPlaceholder from "@/components/business-profile/SectionPlaceholder";
 import BusinessStory from "@/components/business-profile/BusinessStory";
@@ -45,12 +51,14 @@ import AchievementsSection from "@/components/business-profile/AchievementsSecti
 import AIAssistantWidget from "@/components/business-profile/AIAssistantWidget";
 import ProfileCompletionCard from "@/components/business-profile/ProfileCompletionCard";
 import SectionToolbar from "@/components/business-profile/SectionToolbar";
+import DraftPublishBar from "@/components/business-profile/DraftPublishBar";
 import EditHeroModal from "@/components/business-profile/EditHeroModal";
 import EditStoryModal from "@/components/business-profile/EditStoryModal";
 import EditProductModal from "@/components/business-profile/EditProductModal";
 import EditServiceModal from "@/components/business-profile/EditServiceModal";
 import EditLiveModal from "@/components/business-profile/EditLiveModal";
 import EditGalleryModal from "@/components/business-profile/EditGalleryModal";
+import EditBusinessInfoModal from "@/components/business-profile/EditBusinessInfoModal";
 
 // ============================================
 // TYPES
@@ -86,13 +94,13 @@ const NAV_SECTIONS: NavSection[] = [
   { id: "reviews", label: "Reviews", icon: <Star className="h-3.5 w-3.5" /> },
   { id: "gallery", label: "Gallery", icon: <Camera className="h-3.5 w-3.5" /> },
   { id: "information", label: "Info", icon: <Clock className="h-3.5 w-3.5" /> },
-  { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-3.5 w-3.5" /> },
   { id: "achievements", label: "Achievements", icon: <Award className="h-3.5 w-3.5" /> },
+  { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-3.5 w-3.5" /> },
   { id: "ai-assistant", label: "AI Assistant", icon: <Bot className="h-3.5 w-3.5" /> },
 ];
 
 // ============================================
-// SECTION NAVIGATION COMPONENT
+// SECTION NAVIGATION
 // ============================================
 function SectionNavigation({
   sections,
@@ -153,22 +161,6 @@ function SectionNavigation({
 }
 
 // ============================================
-// CONSTANTS - Available Sections (for placeholders)
-// ============================================
-// This list is used to generate placeholders for sections not yet implemented.
-// We exclude the ones we've already built.
-const PLACEHOLDER_SECTIONS = [
-  {
-    id: "ai-assistant" as SectionId,
-    title: "AI Business Assistant",
-    description: "Smart suggestions to grow your business.",
-    icon: <Bot className="h-5 w-5" />,
-    isOwnerOnly: true,
-  },
-  // If you have more placeholder sections, add them here.
-];
-
-// ============================================
 // MAIN PAGE
 // ============================================
 export default function BusinessProfilePage() {
@@ -178,9 +170,10 @@ export default function BusinessProfilePage() {
 
   const viewParam = searchParams.get("view");
 
-  const profileUser = sellerProfiles.find((p) => p.username === username) || currentUser;
+  // Published user (loaded from mock data)
+  const publishedUser = sellerProfiles.find((p) => p.username === username) || currentUser;
 
-  const isOwnerDefault = profileUser.id === currentUser.id;
+  const isOwnerDefault = publishedUser.id === currentUser.id;
   const isOwner =
     viewParam === "owner"
       ? true
@@ -188,42 +181,73 @@ export default function BusinessProfilePage() {
         ? false
         : isOwnerDefault;
 
+  // ============================================
+  // DRAFT & PREVIEW STATE
+  // ============================================
+  const [draftUser, setDraftUser] = useState<SellerProfile>(publishedUser);
+  const [isPreviewMode, setIsPreviewMode] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDirty, setIsDirty] = useState(false);
+
+  useEffect(() => {
+    if (!isDirty) {
+      setDraftUser(publishedUser);
+    }
+  }, [publishedUser, isDirty]);
+
+  const displayUser = isPreviewMode ? publishedUser : draftUser;
+
+  // ============================================
+  // DATA FROM PUBLISHED USER (for sub-lists)
+  // ============================================
   const userProducts = sellerProducts.filter(
-    (product) => product.sellerId === profileUser.id,
+    (product) => product.sellerId === publishedUser.id
   );
   const userServices = marketServices.filter(
-    (service) => service.seller?.id === profileUser.id,
+    (service) => service.seller?.id === publishedUser.id
   );
   const userLiveSessionsFiltered = userLiveSessions.filter(
-    (session) => session.sellerId === profileUser.id,
+    (session) => session.sellerId === publishedUser.id
   );
   const userBroadcasts = userBroadcastActivities.filter(
-    (activity) => activity.sellerId === profileUser.id,
+    (activity) => activity.sellerId === publishedUser.id
   );
   const userReviewsFiltered = userReviews.filter(
-    (review) => review.sellerId === profileUser.id,
+    (review) => review.sellerId === publishedUser.id
   );
 
-  // State
-  const [user, setUser] = useState(profileUser);
+  // ============================================
+  // COMPONENT STATE
+  // ============================================
   const [products, setProducts] = useState(userProducts);
   const [services, setServices] = useState(userServices);
   const [liveSessions, setLiveSessions] = useState(userLiveSessionsFiltered);
   const [broadcastActivities, setBroadcastActivities] = useState(userBroadcasts);
   const [reviews, setReviews] = useState(userReviewsFiltered);
-  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(profileUser.gallery || []);
+  const [galleryItems, setGalleryItems] = useState<GalleryItem[]>(
+    publishedUser.gallery || []
+  );
   const [activeSection, setActiveSection] = useState<SectionId | null>(null);
 
-  // Completion & Hidden Sections
   const [completion, setCompletion] = useState<CompletionStatus>(
-    profileUser.completion || { logo: false, cover: false, story: false, contact: false, hours: false, delivery: false, gallery: false, social: false, team: false }
+    publishedUser.completion || {
+      logo: false,
+      cover: false,
+      story: false,
+      contact: false,
+      hours: false,
+      delivery: false,
+      gallery: false,
+      social: false,
+      team: false,
+    }
   );
   const [hiddenSections, setHiddenSections] = useState<string[]>(
-    profileUser.preferences?.hiddenSections || []
+    publishedUser.preferences?.hiddenSections || []
   );
 
   const sectionRefs = useRef<Record<SectionId, HTMLDivElement | null>>(
-    {} as Record<SectionId, HTMLDivElement | null>,
+    {} as Record<SectionId, HTMLDivElement | null>
   );
 
   // Modal states
@@ -234,11 +258,16 @@ export default function BusinessProfilePage() {
   const [isEditLiveOpen, setIsEditLiveOpen] = useState(false);
   const [isGoLiveOpen, setIsGoLiveOpen] = useState(false);
   const [isEditGalleryOpen, setIsEditGalleryOpen] = useState(false);
+  const [isEditBusinessInfoOpen, setIsEditBusinessInfoOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<any>(null);
   const [editingService, setEditingService] = useState<any>(null);
   const [editingLive, setEditingLive] = useState<any>(null);
-  const [editingGalleryItem, setEditingGalleryItem] = useState<GalleryItem | null>(null);
-  const [liveModalMode, setLiveModalMode] = useState<"schedule" | "edit" | "go-live">("schedule");
+  const [editingGalleryItem, setEditingGalleryItem] = useState<GalleryItem | null>(
+    null
+  );
+  const [liveModalMode, setLiveModalMode] = useState<
+    "schedule" | "edit" | "go-live"
+  >("schedule");
 
   // ============================================
   // SCROLL TRACKING
@@ -256,7 +285,7 @@ export default function BusinessProfilePage() {
       {
         rootMargin: "-20% 0px -60% 0px",
         threshold: 0,
-      },
+      }
     );
 
     const sectionIds = NAV_SECTIONS.map((s) => s.id);
@@ -285,18 +314,21 @@ export default function BusinessProfilePage() {
   // COMPLETION HANDLER
   // ============================================
   const handleCompletionAction = (field: keyof CompletionStatus) => {
-    // Toggle completion for demo; in production, open edit modal or navigate to section
     setCompletion((prev) => ({
       ...prev,
       [field]: !prev[field],
     }));
-    // Scroll to the relevant section
+    setIsDirty(true);
     if (field === "story") scrollToSection("story");
     else if (field === "gallery") scrollToSection("gallery");
-    else if (field === "hours" || field === "delivery" || field === "contact" || field === "social") {
+    else if (
+      field === "hours" ||
+      field === "delivery" ||
+      field === "contact" ||
+      field === "social"
+    ) {
       scrollToSection("information");
     }
-    // For logo/cover, we could scroll to hero or open edit modal
   };
 
   // ============================================
@@ -308,10 +340,87 @@ export default function BusinessProfilePage() {
         ? prev.filter((id) => id !== sectionId)
         : [...prev, sectionId]
     );
+    setIsDirty(true);
   };
 
   // ============================================
-  // PRODUCT HANDLERS
+  // DRAFT & PUBLISH HANDLERS
+  // ============================================
+  const handleSaveDraft = async () => {
+    if (!isDirty) return;
+    setIsSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 500));
+    const updatedUser: SellerProfile = {
+      ...draftUser,
+      products,
+      services,
+      ongoingLives: liveSessions.filter((s) => s.status === "live"),
+      upcomingLives: liveSessions.filter((s) => s.status === "upcoming"),
+      gallery: galleryItems,
+      completion,
+      preferences: {
+        ...draftUser.preferences,
+        hiddenSections,
+      },
+    };
+    setDraftUser(updatedUser);
+    setIsSaving(false);
+    setIsDirty(false);
+  };
+
+  const handlePublish = async () => {
+    if (!isDirty) return;
+    setIsSaving(true);
+    await new Promise((resolve) => setTimeout(resolve, 800));
+    const updatedUser: SellerProfile = {
+      ...publishedUser,
+      products,
+      services,
+      ongoingLives: liveSessions.filter((s) => s.status === "live"),
+      upcomingLives: liveSessions.filter((s) => s.status === "upcoming"),
+      gallery: galleryItems,
+      completion,
+      preferences: {
+        ...publishedUser.preferences,
+        hiddenSections,
+      },
+    };
+    setDraftUser(updatedUser);
+    setIsSaving(false);
+    setIsDirty(false);
+  };
+
+  const handleDiscard = () => {
+    setProducts(userProducts);
+    setServices(userServices);
+    setLiveSessions(userLiveSessionsFiltered);
+    setBroadcastActivities(userBroadcasts);
+    setReviews(userReviewsFiltered);
+    setGalleryItems(publishedUser.gallery || []);
+    setCompletion(
+      publishedUser.completion || {
+        logo: false,
+        cover: false,
+        story: false,
+        contact: false,
+        hours: false,
+        delivery: false,
+        gallery: false,
+        social: false,
+        team: false,
+      }
+    );
+    setHiddenSections(publishedUser.preferences?.hiddenSections || []);
+    setDraftUser(publishedUser);
+    setIsDirty(false);
+  };
+
+  const handleTogglePreview = () => {
+    setIsPreviewMode(!isPreviewMode);
+  };
+
+  // ============================================
+  // EXISTING HANDLERS (modified to mark dirty)
   // ============================================
   const handleAddProduct = () => {
     setEditingProduct(null);
@@ -325,18 +434,21 @@ export default function BusinessProfilePage() {
 
   const handleDeleteProduct = (productId: string) => {
     setProducts((prev) => prev.filter((p) => p.id !== productId));
+    setIsDirty(true);
   };
 
   const handleSaveProduct = (productData: any) => {
     if (productData.id) {
       setProducts((prev) =>
-        prev.map((p) => (p.id === productData.id ? { ...p, ...productData } : p)),
+        prev.map((p) =>
+          p.id === productData.id ? { ...p, ...productData } : p
+        )
       );
     } else {
       const newProduct = {
         ...productData,
         id: `product-${Date.now()}`,
-        sellerId: user.id,
+        sellerId: publishedUser.id,
         createdAt: new Date().toISOString(),
         views: 0,
         isLive: false,
@@ -345,11 +457,9 @@ export default function BusinessProfilePage() {
       setProducts((prev) => [...prev, newProduct]);
     }
     setIsEditProductOpen(false);
+    setIsDirty(true);
   };
 
-  // ============================================
-  // SERVICE HANDLERS
-  // ============================================
   const handleAddService = () => {
     setEditingService(null);
     setIsEditServiceOpen(true);
@@ -362,18 +472,21 @@ export default function BusinessProfilePage() {
 
   const handleDeleteService = (serviceId: string) => {
     setServices((prev) => prev.filter((s) => s.id !== serviceId));
+    setIsDirty(true);
   };
 
   const handleSaveService = (serviceData: any) => {
     if (serviceData.id) {
       setServices((prev) =>
-        prev.map((s) => (s.id === serviceData.id ? { ...s, ...serviceData } : s)),
+        prev.map((s) =>
+          s.id === serviceData.id ? { ...s, ...serviceData } : s
+        )
       );
     } else {
       const newService = {
         ...serviceData,
         id: `service-${Date.now()}`,
-        seller: { id: user.id },
+        seller: { id: publishedUser.id },
         createdAt: new Date().toISOString(),
         views: 0,
         isPopular: false,
@@ -381,11 +494,9 @@ export default function BusinessProfilePage() {
       setServices((prev) => [...prev, newService]);
     }
     setIsEditServiceOpen(false);
+    setIsDirty(true);
   };
 
-  // ============================================
-  // LIVE SESSION HANDLERS
-  // ============================================
   const handleScheduleLive = () => {
     setEditingLive(null);
     setLiveModalMode("schedule");
@@ -400,6 +511,7 @@ export default function BusinessProfilePage() {
 
   const handleDeleteLive = (sessionId: string) => {
     setLiveSessions((prev) => prev.filter((s) => s.id !== sessionId));
+    setIsDirty(true);
   };
 
   const handleStartLive = (session: any) => {
@@ -411,13 +523,15 @@ export default function BusinessProfilePage() {
   const handleSaveLive = (sessionData: any) => {
     if (sessionData.id) {
       setLiveSessions((prev) =>
-        prev.map((s) => (s.id === sessionData.id ? { ...s, ...sessionData } : s)),
+        prev.map((s) =>
+          s.id === sessionData.id ? { ...s, ...sessionData } : s
+        )
       );
     } else {
       const newSession = {
         ...sessionData,
         id: `live-${Date.now()}`,
-        sellerId: user.id,
+        sellerId: publishedUser.id,
         status: sessionData.status || "upcoming",
         viewers: 0,
         orders: 0,
@@ -426,11 +540,9 @@ export default function BusinessProfilePage() {
     }
     setIsEditLiveOpen(false);
     setIsGoLiveOpen(false);
+    setIsDirty(true);
   };
 
-  // ============================================
-  // GALLERY HANDLERS
-  // ============================================
   const handleAddGallery = () => {
     setEditingGalleryItem(null);
     setIsEditGalleryOpen(true);
@@ -443,12 +555,13 @@ export default function BusinessProfilePage() {
 
   const handleDeleteGallery = (id: string) => {
     setGalleryItems((prev) => prev.filter((item) => item.id !== id));
+    setIsDirty(true);
   };
 
   const handleSaveGallery = (itemData: GalleryItem) => {
     if (itemData.id) {
       setGalleryItems((prev) =>
-        prev.map((item) => (item.id === itemData.id ? itemData : item)),
+        prev.map((item) => (item.id === itemData.id ? itemData : item))
       );
     } else {
       const newItem = {
@@ -459,18 +572,13 @@ export default function BusinessProfilePage() {
       setGalleryItems((prev) => [...prev, newItem]);
     }
     setIsEditGalleryOpen(false);
+    setIsDirty(true);
   };
 
-  // ============================================
-  // BROADCAST HANDLERS
-  // ============================================
   const handleViewAllBroadcasts = () => {
     console.log("View all broadcasts");
   };
 
-  // ============================================
-  // REVIEW HANDLERS
-  // ============================================
   const handleRespondToReview = (reviewId: string, response: string) => {
     setReviews((prev) =>
       prev.map((review) =>
@@ -482,31 +590,37 @@ export default function BusinessProfilePage() {
                 createdAt: new Date().toISOString(),
               },
             }
-          : review,
-      ),
+          : review
+      )
     );
+    setIsDirty(true);
   };
 
-  // ============================================
-  // HERO & STORY HANDLERS
-  // ============================================
   const handleSaveHero = (updatedUser: any) => {
-    setUser(updatedUser);
+    setDraftUser((prev) => ({ ...prev, ...updatedUser }));
+    setIsDirty(true);
   };
 
   const handleSaveStory = (updatedStory: string) => {
-    setUser({ ...user, businessStory: updatedStory });
+    setDraftUser((prev) => ({ ...prev, businessStory: updatedStory }));
+    setIsDirty(true);
   };
 
-  // ============================================
-  // BUSINESS INFORMATION SAVE
-  // ============================================
   const handleSaveBusinessInfo = (data: any) => {
+    // In real app, update the backend and mark dirty
     console.log("Save business info:", data);
-    // In production, send to backend
+    // Merge into draftUser
+    setDraftUser((prev) => ({
+      ...prev,
+      // We don't have a dedicated businessInfo field, so we'd update hero or other fields.
+      // For now, we just log and mark dirty.
+    }));
+    setIsDirty(true);
   };
 
-  // Animation variants
+  // ============================================
+  // ANIMATION VARIANTS
+  // ============================================
   const containerVariants = {
     hidden: { opacity: 0 },
     visible: {
@@ -526,17 +640,13 @@ export default function BusinessProfilePage() {
     },
   };
 
-  const navSections = NAV_SECTIONS.filter((s) => {
-    if (s.id === "analytics" && !isOwner) return false;
-    if (s.id === "ai-assistant" && !isOwner) return false;
-    return true;
-  });
-
-  // Prepare business info data
+  // ============================================
+  // BUSINESS INFO DATA
+  // ============================================
   const businessInfoData = {
-    businessName: user.businessName,
-    hours: user.hero?.businessHours || [],
-    location: user.hero?.location || "",
+    businessName: displayUser.businessName,
+    hours: displayUser.hero?.businessHours || [],
+    location: displayUser.hero?.location || "",
     phone: "",
     email: "",
     website: "",
@@ -548,32 +658,41 @@ export default function BusinessProfilePage() {
     languages: [],
   };
 
-  // AI Assistant suggestions (static for demo)
+  // ============================================
+  // AI SUGGESTIONS
+  // ============================================
   const aiSuggestions = [
     {
-      id: '1',
-      message: 'Your profile is missing business hours. Profiles with hours receive 31% more customer messages.',
-      action: () => scrollToSection('information'),
+      id: "1",
+      message:
+        "Your profile is missing business hours. Profiles with hours receive 31% more customer messages.",
+      action: () => scrollToSection("information"),
     },
     {
-      id: '2',
-      message: 'You have 3 products with no images. Add images to increase engagement.',
-      action: () => scrollToSection('products'),
+      id: "2",
+      message: "You have 3 products with no images. Add images to increase engagement.",
+      action: () => scrollToSection("products"),
     },
     {
-      id: '3',
-      message: '3 buyers nearby are searching for Home Decor. Post a live session?',
+      id: "3",
+      message: "3 buyers nearby are searching for Home Decor. Post a live session?",
       action: handleScheduleLive,
     },
   ];
 
+  // ============================================
+  // RENDER
+  // ============================================
   return (
     <>
       <div className="min-h-screen bg-background pb-12">
         <BusinessHero
-          user={user}
+          user={displayUser}
           isOwner={isOwner}
-          onEditHero={() => setIsEditModalOpen(true)}
+          isPreviewMode={isPreviewMode}
+          onEditHero={() => {
+            if (!isPreviewMode) setIsEditModalOpen(true);
+          }}
         />
 
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
@@ -584,8 +703,8 @@ export default function BusinessProfilePage() {
                 initial="hidden"
                 animate="visible"
               >
-                {/* 0. PROFILE COMPLETION CARD (OWNER ONLY) */}
-                {isOwner && (
+                {/* 0. Profile Completion Card (edit mode only) */}
+                {isOwner && !isPreviewMode && (
                   <motion.div variants={itemVariants} className="mb-6">
                     <ProfileCompletionCard
                       completion={completion}
@@ -596,12 +715,14 @@ export default function BusinessProfilePage() {
 
                 {/* 1. Story */}
                 <motion.div
-                  ref={(el) => { sectionRefs.current["story"] = el; }}
+                  ref={(el) => {
+                    sectionRefs.current["story"] = el;
+                  }}
                   id="story"
                   variants={itemVariants}
                   className="scroll-mt-20"
                 >
-                  {isOwner && (
+                  {isOwner && !isPreviewMode && (
                     <SectionToolbar
                       title="Story"
                       isOwner={isOwner}
@@ -612,21 +733,24 @@ export default function BusinessProfilePage() {
                   )}
                   {!hiddenSections.includes("story") && (
                     <BusinessStory
-                      story={user.businessStory || ""}
+                      story={displayUser.businessStory || ""}
                       isOwner={isOwner}
-                      onEdit={() => setIsEditStoryOpen(true)}
+                      isPreviewMode={isPreviewMode}
+                      onEdit={() => !isPreviewMode && setIsEditStoryOpen(true)}
                     />
                   )}
                 </motion.div>
 
                 {/* 2. Products */}
                 <motion.div
-                  ref={(el) => { sectionRefs.current["products"] = el; }}
+                  ref={(el) => {
+                    sectionRefs.current["products"] = el;
+                  }}
                   id="products"
                   variants={itemVariants}
                   className="scroll-mt-20 mt-8"
                 >
-                  {isOwner && (
+                  {isOwner && !isPreviewMode && (
                     <SectionToolbar
                       title="Products"
                       isOwner={isOwner}
@@ -640,6 +764,7 @@ export default function BusinessProfilePage() {
                     <ProductsSection
                       products={products}
                       isOwner={isOwner}
+                      isPreviewMode={isPreviewMode}
                       onAddProduct={handleAddProduct}
                       onEditProduct={handleEditProduct}
                       onDeleteProduct={handleDeleteProduct}
@@ -649,12 +774,14 @@ export default function BusinessProfilePage() {
 
                 {/* 3. Services */}
                 <motion.div
-                  ref={(el) => { sectionRefs.current["services"] = el; }}
+                  ref={(el) => {
+                    sectionRefs.current["services"] = el;
+                  }}
                   id="services"
                   variants={itemVariants}
                   className="scroll-mt-20 mt-8"
                 >
-                  {isOwner && (
+                  {isOwner && !isPreviewMode && (
                     <SectionToolbar
                       title="Services"
                       isOwner={isOwner}
@@ -668,6 +795,7 @@ export default function BusinessProfilePage() {
                     <ServicesSection
                       services={services}
                       isOwner={isOwner}
+                      isPreviewMode={isPreviewMode}
                       onAddService={handleAddService}
                       onEditService={handleEditService}
                       onDeleteService={handleDeleteService}
@@ -677,12 +805,14 @@ export default function BusinessProfilePage() {
 
                 {/* 4. Live Shopping */}
                 <motion.div
-                  ref={(el) => { sectionRefs.current["live"] = el; }}
+                  ref={(el) => {
+                    sectionRefs.current["live"] = el;
+                  }}
                   id="live"
                   variants={itemVariants}
                   className="scroll-mt-20 mt-8"
                 >
-                  {isOwner && (
+                  {isOwner && !isPreviewMode && (
                     <SectionToolbar
                       title="Live Shopping"
                       isOwner={isOwner}
@@ -696,6 +826,7 @@ export default function BusinessProfilePage() {
                     <LiveShoppingSection
                       sessions={liveSessions}
                       isOwner={isOwner}
+                      isPreviewMode={isPreviewMode}
                       onScheduleLive={handleScheduleLive}
                       onEditLive={handleEditLive}
                       onDeleteLive={handleDeleteLive}
@@ -706,12 +837,14 @@ export default function BusinessProfilePage() {
 
                 {/* 5. Broadcast Activity */}
                 <motion.div
-                  ref={(el) => { sectionRefs.current["broadcast"] = el; }}
+                  ref={(el) => {
+                    sectionRefs.current["broadcast"] = el;
+                  }}
                   id="broadcast"
                   variants={itemVariants}
                   className="scroll-mt-20 mt-8"
                 >
-                  {isOwner && (
+                  {isOwner && !isPreviewMode && (
                     <SectionToolbar
                       title="Broadcast Activity"
                       isOwner={isOwner}
@@ -723,6 +856,7 @@ export default function BusinessProfilePage() {
                     <BroadcastActivitySection
                       activities={broadcastActivities}
                       isOwner={isOwner}
+                      isPreviewMode={isPreviewMode}
                       onViewAll={handleViewAllBroadcasts}
                     />
                   )}
@@ -730,12 +864,14 @@ export default function BusinessProfilePage() {
 
                 {/* 6. Reviews */}
                 <motion.div
-                  ref={(el) => { sectionRefs.current["reviews"] = el; }}
+                  ref={(el) => {
+                    sectionRefs.current["reviews"] = el;
+                  }}
                   id="reviews"
                   variants={itemVariants}
                   className="scroll-mt-20 mt-8"
                 >
-                  {isOwner && (
+                  {isOwner && !isPreviewMode && (
                     <SectionToolbar
                       title="Reviews"
                       isOwner={isOwner}
@@ -747,20 +883,23 @@ export default function BusinessProfilePage() {
                     <ReviewsSection
                       reviews={reviews}
                       isOwner={isOwner}
+                      isPreviewMode={isPreviewMode}
                       onRespond={handleRespondToReview}
-                      sellerName={user.businessName}
+                      sellerName={displayUser.businessName}
                     />
                   )}
                 </motion.div>
 
                 {/* 7. Gallery */}
                 <motion.div
-                  ref={(el) => { sectionRefs.current["gallery"] = el; }}
+                  ref={(el) => {
+                    sectionRefs.current["gallery"] = el;
+                  }}
                   id="gallery"
                   variants={itemVariants}
                   className="scroll-mt-20 mt-8"
                 >
-                  {isOwner && (
+                  {isOwner && !isPreviewMode && (
                     <SectionToolbar
                       title="Gallery"
                       isOwner={isOwner}
@@ -774,6 +913,7 @@ export default function BusinessProfilePage() {
                     <GallerySection
                       items={galleryItems}
                       isOwner={isOwner}
+                      isPreviewMode={isPreviewMode}
                       onAddItem={handleAddGallery}
                       onEditItem={handleEditGallery}
                       onDeleteItem={handleDeleteGallery}
@@ -783,32 +923,44 @@ export default function BusinessProfilePage() {
 
                 {/* 8. Business Information */}
                 <motion.div
-                  ref={(el) => { sectionRefs.current["information"] = el; }}
+                  ref={(el) => {
+                    sectionRefs.current["information"] = el;
+                  }}
                   id="information"
                   variants={itemVariants}
                   className="scroll-mt-20 mt-8"
                 >
-                  {isOwner && (
+                  {isOwner && !isPreviewMode && (
                     <SectionToolbar
                       title="Business Information"
                       isOwner={isOwner}
                       isHidden={hiddenSections.includes("information")}
                       onHide={() => handleToggleHide("information")}
-                    />
+                    >
+                      <button
+                        onClick={() => setIsEditBusinessInfoOpen(true)}
+                        className="text-xs text-primary hover:text-primary-strong px-2 py-1 rounded-full border border-primary/20 hover:bg-primary/10 transition"
+                      >
+                        Edit All
+                      </button>
+                    </SectionToolbar>
                   )}
                   {!hiddenSections.includes("information") && (
                     <BusinessInformation
                       {...businessInfoData}
                       isOwner={isOwner}
+                      isPreviewMode={isPreviewMode}
                       onSave={handleSaveBusinessInfo}
                     />
                   )}
                 </motion.div>
 
-                {/* 9. Analytics (Owner only) */}
-                {isOwner && (
+                {/* 9. Analytics (owner only, hidden in preview) */}
+                {isOwner && !isPreviewMode && (
                   <motion.div
-                    ref={(el) => { sectionRefs.current["analytics"] = el; }}
+                    ref={(el) => {
+                      sectionRefs.current["analytics"] = el;
+                    }}
                     id="analytics"
                     variants={itemVariants}
                     className="scroll-mt-20 mt-8"
@@ -821,20 +973,22 @@ export default function BusinessProfilePage() {
                     />
                     {!hiddenSections.includes("analytics") && (
                       <AnalyticsDashboard
-                        data={user.analytics || {
-                          visitors: 0,
-                          profileViews: 0,
-                          clicks: 0,
-                          followers: 0,
-                          productViews: 0,
-                          messages: 0,
-                          broadcastResponses: 0,
-                          conversionRate: 0,
-                          revenue: 0,
-                          topProducts: [],
-                          returningCustomers: 0,
-                          nearbyAudience: 0,
-                        }}
+                        data={
+                          displayUser.analytics || {
+                            visitors: 0,
+                            profileViews: 0,
+                            clicks: 0,
+                            followers: 0,
+                            productViews: 0,
+                            messages: 0,
+                            broadcastResponses: 0,
+                            conversionRate: 0,
+                            revenue: 0,
+                            topProducts: [],
+                            returningCustomers: 0,
+                            nearbyAudience: 0,
+                          }
+                        }
                         isOwner={isOwner}
                       />
                     )}
@@ -843,12 +997,14 @@ export default function BusinessProfilePage() {
 
                 {/* 10. Achievements */}
                 <motion.div
-                  ref={(el) => { sectionRefs.current["achievements"] = el; }}
+                  ref={(el) => {
+                    sectionRefs.current["achievements"] = el;
+                  }}
                   id="achievements"
                   variants={itemVariants}
                   className="scroll-mt-20 mt-8"
                 >
-                  {isOwner && (
+                  {isOwner && !isPreviewMode && (
                     <SectionToolbar
                       title="Achievements"
                       isOwner={isOwner}
@@ -858,16 +1014,18 @@ export default function BusinessProfilePage() {
                   )}
                   {!hiddenSections.includes("achievements") && (
                     <AchievementsSection
-                      achievements={user.achievements || []}
+                      achievements={displayUser.achievements || []}
                       isOwner={isOwner}
                     />
                   )}
                 </motion.div>
 
-                {/* 11. AI Assistant (Owner only, as a section placeholder) */}
-                {isOwner && (
+                {/* 11. AI Assistant (section placeholder, hidden in preview) */}
+                {isOwner && !isPreviewMode && (
                   <motion.div
-                    ref={(el) => { sectionRefs.current["ai-assistant"] = el; }}
+                    ref={(el) => {
+                      sectionRefs.current["ai-assistant"] = el;
+                    }}
                     id="ai-assistant"
                     variants={itemVariants}
                     className="scroll-mt-20 mt-8"
@@ -891,50 +1049,12 @@ export default function BusinessProfilePage() {
                     )}
                   </motion.div>
                 )}
-
-                {/* 12. Other Placeholder Sections (if any) */}
-                {PLACEHOLDER_SECTIONS.filter(
-                  (s) => !["story", "products", "services", "live", "broadcast", "reviews", "gallery", "information", "achievements", "analytics", "ai-assistant"].includes(s.id)
-                ).map((section) => {
-                  if (section.isOwnerOnly && !isOwner) return null;
-                  const sectionId = section.id;
-                  return (
-                    <motion.div
-                      key={section.id}
-                      ref={(el) => { sectionRefs.current[sectionId] = el; }}
-                      id={sectionId}
-                      variants={itemVariants}
-                      className="scroll-mt-20 mt-8"
-                    >
-                      {isOwner && (
-                        <SectionToolbar
-                          title={section.title}
-                          isOwner={isOwner}
-                          isHidden={hiddenSections.includes(sectionId)}
-                          onHide={() => handleToggleHide(sectionId)}
-                        />
-                      )}
-                      {!hiddenSections.includes(sectionId) && (
-                        <SectionPlaceholder
-                          title={section.title}
-                          description={section.description}
-                          icon={section.icon}
-                          onAction={() => console.log(`Edit ${section.id}`)}
-                          actionLabel={isOwner ? "Setup" : undefined}
-                          isOwner={isOwner}
-                          hasContent={false}
-                        />
-                      )}
-                    </motion.div>
-                  );
-                })}
-
               </motion.div>
             </div>
 
             {/* Sidebar Navigation */}
             <SectionNavigation
-              sections={navSections}
+              sections={NAV_SECTIONS}
               activeSection={activeSection}
               onSectionClick={scrollToSection}
               isOwner={isOwner}
@@ -951,14 +1071,14 @@ export default function BusinessProfilePage() {
       <EditHeroModal
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
-        user={user}
+        user={displayUser}
         onSave={handleSaveHero}
       />
 
       <EditStoryModal
         isOpen={isEditStoryOpen}
         onClose={() => setIsEditStoryOpen(false)}
-        story={user.businessStory || ""}
+        story={displayUser.businessStory || ""}
         onSave={handleSaveStory}
       />
 
@@ -994,13 +1114,45 @@ export default function BusinessProfilePage() {
         onSave={handleSaveGallery}
       />
 
-      {/* ============================================ */}
-      {/* AI ASSISTANT FLOATING WIDGET */}
-      {/* ============================================ */}
-      <AIAssistantWidget
-        suggestions={aiSuggestions}
-        isOwner={isOwner}
+      <EditBusinessInfoModal
+        isOpen={isEditBusinessInfoOpen}
+        onClose={() => setIsEditBusinessInfoOpen(false)}
+        data={{
+          phone: businessInfoData.phone,
+          email: businessInfoData.email,
+          website: businessInfoData.website,
+          deliveryOptions: businessInfoData.deliveryOptions,
+          paymentMethods: businessInfoData.paymentMethods,
+          languages: businessInfoData.languages,
+          returnPolicy: businessInfoData.returnPolicy,
+          socialLinks: businessInfoData.socialLinks,
+          faqs: businessInfoData.faqs,
+        }}
+        onSave={handleSaveBusinessInfo}
       />
+
+      {/* ============================================ */}
+      {/* DRAFT/PUBLISH BAR */}
+      {/* ============================================ */}
+      {isOwner && (
+        <DraftPublishBar
+          isDirty={isDirty}
+          isSaving={isSaving}
+          isPublished={!isDirty}
+          isPreviewMode={isPreviewMode}
+          onSaveDraft={handleSaveDraft}
+          onPublish={handlePublish}
+          onTogglePreview={handleTogglePreview}
+          onDiscard={handleDiscard}
+        />
+      )}
+
+      {/* ============================================ */}
+      {/* AI ASSISTANT WIDGET (hidden in preview) */}
+      {/* ============================================ */}
+      {!isPreviewMode && (
+        <AIAssistantWidget suggestions={aiSuggestions} isOwner={isOwner} />
+      )}
     </>
   );
 }

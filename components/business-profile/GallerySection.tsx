@@ -3,13 +3,14 @@
 
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Image, Video, Plus, X, Trash2, Edit, Play, Grid, LayoutGrid } from "lucide-react";
+import { Image, Video, Plus, X, Trash2, Edit, Play } from "lucide-react";
 import type { GalleryItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
 interface GallerySectionProps {
   items: GalleryItem[];
   isOwner: boolean;
+  isPreviewMode?: boolean;
   onAddItem: () => void;
   onEditItem: (item: GalleryItem) => void;
   onDeleteItem: (id: string) => void;
@@ -18,6 +19,7 @@ interface GallerySectionProps {
 export default function GallerySection({
   items,
   isOwner,
+  isPreviewMode = false,
   onAddItem,
   onEditItem,
   onDeleteItem,
@@ -25,7 +27,6 @@ export default function GallerySection({
   const [selectedItem, setSelectedItem] = useState<GalleryItem | null>(null);
   const [activeCategory, setActiveCategory] = useState<string>("all");
 
-  // Extract categories
   const categories = useMemo(() => {
     const cats = new Set(items.map(i => i.category || "uncategorized"));
     return ["all", ...Array.from(cats)];
@@ -41,15 +42,12 @@ export default function GallerySection({
 
   return (
     <div className="space-y-4">
-      {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
         <div>
           <h2 className="text-xl font-semibold text-foreground">Gallery</h2>
-          <p className="text-sm text-muted-foreground">
-            Photos and videos from your business
-          </p>
+          <p className="text-sm text-muted-foreground">Photos and videos from your business</p>
         </div>
-        {isOwner && (
+        {isOwner && !isPreviewMode && (
           <button
             onClick={onAddItem}
             className="inline-flex items-center gap-1 px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition"
@@ -60,7 +58,6 @@ export default function GallerySection({
         )}
       </div>
 
-      {/* Category Tabs */}
       {categories.length > 1 && (
         <div className="flex gap-2 overflow-x-auto pb-2">
           {categories.map(cat => (
@@ -80,15 +77,16 @@ export default function GallerySection({
         </div>
       )}
 
-      {/* Grid */}
       {filteredItems.length === 0 ? (
         <div className="rounded-lg border border-dashed border-border bg-background-elevated/20 p-8 text-center">
           <Image className="mx-auto h-12 w-12 text-muted-foreground" />
           <p className="mt-2 text-sm text-muted-foreground">
             {activeCategory !== "all"
               ? `No items in "${activeCategory}" category.`
+              : isPreviewMode
+              ? "No gallery items yet."
               : "No gallery items yet."}
-            {isOwner ? " Click 'Add Media' to get started." : ""}
+            {isOwner && !isPreviewMode ? " Click 'Add Media' to get started." : ""}
           </p>
         </div>
       ) : (
@@ -101,40 +99,26 @@ export default function GallerySection({
               onClick={() => openLightbox(item)}
             >
               {item.type === "image" ? (
-                <img
-                  src={item.url}
-                  alt={item.caption || "Gallery image"}
-                  className="w-full h-full object-cover"
-                />
+                <img src={item.url} alt={item.caption || "Gallery image"} className="w-full h-full object-cover" />
               ) : (
                 <div className="relative w-full h-full">
-                  <img
-                    src={item.thumbnail || item.url}
-                    alt={item.caption || "Video"}
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={item.thumbnail || item.url} alt={item.caption || "Video"} className="w-full h-full object-cover" />
                   <div className="absolute inset-0 flex items-center justify-center bg-black/30">
                     <Play className="h-10 w-10 text-white fill-white" />
                   </div>
                 </div>
               )}
 
-              {isOwner && (
+              {isOwner && !isPreviewMode && (
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onEditItem(item);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); onEditItem(item); }}
                     className="p-1 rounded-full bg-background/80 text-foreground hover:bg-background"
                   >
                     <Edit className="h-4 w-4" />
                   </button>
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      onDeleteItem(item.id);
-                    }}
+                    onClick={(e) => { e.stopPropagation(); onDeleteItem(item.id); }}
                     className="p-1 rounded-full bg-background/80 text-destructive hover:bg-background"
                   >
                     <Trash2 className="h-4 w-4" />
@@ -159,40 +143,19 @@ export default function GallerySection({
         </div>
       )}
 
-      {/* Lightbox */}
       {selectedItem && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4"
-          onClick={closeLightbox}
-        >
-          <div
-            className="relative max-w-4xl w-full bg-transparent"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <button
-              onClick={closeLightbox}
-              className="absolute top-2 right-2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70"
-            >
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" onClick={closeLightbox}>
+          <div className="relative max-w-4xl w-full bg-transparent" onClick={(e) => e.stopPropagation()}>
+            <button onClick={closeLightbox} className="absolute top-2 right-2 z-10 p-2 rounded-full bg-black/50 text-white hover:bg-black/70">
               <X className="h-6 w-6" />
             </button>
             {selectedItem.type === "image" ? (
-              <img
-                src={selectedItem.url}
-                alt={selectedItem.caption || ""}
-                className="w-full h-auto max-h-[80vh] object-contain rounded-lg"
-              />
+              <img src={selectedItem.url} alt={selectedItem.caption || ""} className="w-full h-auto max-h-[80vh] object-contain rounded-lg" />
             ) : (
-              <video
-                src={selectedItem.url}
-                controls
-                autoPlay
-                className="w-full h-auto max-h-[80vh] rounded-lg"
-              />
+              <video src={selectedItem.url} controls autoPlay className="w-full h-auto max-h-[80vh] rounded-lg" />
             )}
             {selectedItem.caption && (
-              <p className="mt-2 text-center text-sm text-white bg-black/50 p-2 rounded">
-                {selectedItem.caption}
-              </p>
+              <p className="mt-2 text-center text-sm text-white bg-black/50 p-2 rounded">{selectedItem.caption}</p>
             )}
           </div>
         </div>
