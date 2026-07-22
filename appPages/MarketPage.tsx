@@ -1,33 +1,31 @@
+// app/market/page.tsx
 "use client";
 
 import Link from "next/link";
+import { useRef, useState, useEffect, useMemo } from "react";
 import {
-  Calendar,
+  ArrowRight,
   ChevronRight,
+  Eye,
   Flame,
+  Heart,
   MapPin,
+  Play,
   Search,
-  SlidersHorizontal,
+  ShoppingBag,
   Sparkles,
+  Star,
   Ticket,
   TrendingUp,
   Users,
-  Clock,
-  ArrowRight,
-  Eye,
-  ShoppingBag,
-  Star,
+  X,
 } from "lucide-react";
-import { useDeferredValue, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 
 import { AppShell } from "@/components/app-shell";
 import {
-  GhostButton,
   LiveSessionCard,
-  PageIntro,
-  PrimaryButton,
   ProductCard,
-  SectionTitle,
   ServiceCard,
 } from "@/components/haggle-ui";
 import { useHaggleStore } from "@/lib/app-store";
@@ -46,105 +44,205 @@ type Category = (typeof marketCategories)[number];
 type FilterType = "all" | "products" | "services" | "lives";
 
 // ============================================
-// MARKET MOOD TICKER
+// HERO COMPONENT (Immersive)
 // ============================================
-function MarketMoodTicker() {
-  const [currentIndex, setCurrentIndex] = useState(0);
-  const moods = [
-    { icon: "🔥", text: "127 live negotiations happening right now", color: "text-orange-400" },
-    { icon: "📦", text: "48 products sold in the last hour", color: "text-emerald-400" },
-    { icon: "📍", text: "34 sellers active within 5km of you", color: "text-blue-400" },
-    { icon: "💬", text: "23 offers were accepted today", color: "text-purple-400" },
-    { icon: "🛒", text: "12 new sellers joined this hour", color: "text-amber-400" },
-  ];
-
-  useState(() => {
-    const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % moods.length);
-    }, 5000);
-    return () => clearInterval(interval);
-  });
-
-  const mood = moods[currentIndex];
-
+function MarketHero() {
   return (
-    <div className="flex items-center gap-2 bg-black/20 backdrop-blur-sm px-4 py-2 rounded-full border border-white/5">
-      <span className="text-sm">{mood.icon}</span>
-      <span className={`text-sm font-medium ${mood.color}`}>{mood.text}</span>
+    <div className="relative overflow-hidden rounded-b-3xl bg-gradient-to-br from-primary/20 via-background to-secondary/10 border-b border-border/40">
+      <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:radial-gradient(ellipse_at_center,white,transparent)] opacity-10" />
+      <div className="absolute -top-24 -right-24 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
+      <div className="absolute -bottom-32 -left-32 h-80 w-80 rounded-full bg-secondary/10 blur-3xl" />
+
+      <div className="relative max-w-7xl mx-auto px-4 py-12 lg:px-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6 }}
+          className="flex flex-col items-center text-center"
+        >
+          <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary border border-primary/20 mb-4">
+            <Flame className="h-3 w-3" />
+            Live Now · 127 negotiations happening
+          </span>
+          <h1 className="text-4xl md:text-6xl font-bold text-foreground tracking-tight max-w-3xl">
+            Discover what’s <span className="text-gradient">negotiable</span>.
+          </h1>
+          <p className="mt-3 text-muted max-w-xl text-sm md:text-base">
+            Browse products, services, and live sessions from sellers near you.
+            Every listing is open to negotiation.
+          </p>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href="/post-product"
+              className="inline-flex items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 transition"
+            >
+              <Sparkles className="h-4 w-4" />
+              List an Item
+            </Link>
+            <Link
+              href="/market-search"
+              className="inline-flex items-center gap-2 rounded-full border border-border/60 px-6 py-2.5 text-sm font-medium text-foreground hover:bg-surface transition"
+            >
+              Browse All
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }
 
 // ============================================
-// CATEGORY PILL
+// SEARCH BAR (Sticky)
 // ============================================
-function CategoryPill({
-  category,
-  isActive,
-  onClick,
-  count,
+function SearchBar({
+  searchQuery,
+  setSearchQuery,
+  activeCategory,
+  setActiveCategory,
 }: {
-  category: string;
-  isActive: boolean;
-  onClick: () => void;
-  count?: number;
+  searchQuery: string;
+  setSearchQuery: (q: string) => void;
+  activeCategory: Category;
+  setActiveCategory: (cat: Category) => void;
 }) {
+  const [isFocused, setIsFocused] = useState(false);
+
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 whitespace-nowrap",
-        isActive
-          ? "bg-primary text-white shadow-lg shadow-primary/25"
-          : "bg-background-elevated/40 backdrop-blur-sm text-muted hover:text-foreground hover:bg-background-elevated/60 border border-border/40",
-      )}
-    >
-      {category}
-      {count !== undefined && (
-        <span
-          className={cn(
-            "ml-1.5 text-xs",
-            isActive ? "text-white/60" : "text-muted/50",
-          )}
-        >
-          ({count})
-        </span>
-      )}
-    </button>
+    <div className="sticky top-0 z-30 bg-background/80 backdrop-blur-xl border-b border-border/40">
+      <div className="max-w-7xl mx-auto px-4 py-3 lg:px-6">
+        <div className="flex items-center gap-4">
+          <div
+            className={cn(
+              "relative flex-1 transition-all duration-200",
+              isFocused && "scale-[1.02]",
+            )}
+          >
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/40" />
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Search for anything..."
+              className="w-full rounded-full border border-border/60 bg-background-elevated/30 pl-11 pr-4 py-2.5 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
+            />
+          </div>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 flex-shrink-0">
+            {marketCategories.slice(0, 6).map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={cn(
+                  "px-3 py-1.5 rounded-full text-xs font-medium whitespace-nowrap transition",
+                  activeCategory === cat
+                    ? "bg-primary text-white"
+                    : "bg-background-elevated/20 text-muted hover:text-foreground hover:bg-background-elevated/40 border border-border/30",
+                )}
+              >
+                {cat}
+              </button>
+            ))}
+            <button className="px-3 py-1.5 rounded-full text-xs font-medium text-muted/50 hover:text-foreground transition border border-border/30">
+              More
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   );
 }
 
 // ============================================
-// STAT CARD (for marketplace metrics)
+// SECTION ROW (Like Netflix)
 // ============================================
-function StatCard({
-  icon,
-  label,
-  value,
-  trend,
+function SectionRow({
+  title,
+  items,
+  renderItem,
+  viewAllHref,
+  seeAllLabel = "See all",
 }: {
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  trend?: { value: string; direction: "up" | "down" };
+  title: string;
+  items: any[];
+  renderItem: (item: any, index: number) => React.ReactNode;
+  viewAllHref?: string;
+  seeAllLabel?: string;
 }) {
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const [showLeftArrow, setShowLeftArrow] = useState(false);
+  const [showRightArrow, setShowRightArrow] = useState(true);
+
+  const scroll = (direction: "left" | "right") => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, clientWidth } = scrollRef.current;
+    const scrollAmount = clientWidth * 0.8;
+    const target = direction === "left" ? scrollLeft - scrollAmount : scrollLeft + scrollAmount;
+    scrollRef.current.scrollTo({ left: target, behavior: "smooth" });
+  };
+
+  const updateArrows = () => {
+    if (!scrollRef.current) return;
+    const { scrollLeft, scrollWidth, clientWidth } = scrollRef.current;
+    setShowLeftArrow(scrollLeft > 0);
+    setShowRightArrow(scrollLeft < scrollWidth - clientWidth - 10);
+  };
+
+  useEffect(() => {
+    const el = scrollRef.current;
+    if (el) {
+      el.addEventListener("scroll", updateArrows);
+      updateArrows();
+      return () => el.removeEventListener("scroll", updateArrows);
+    }
+  }, []);
+
+  if (items.length === 0) return null;
+
   return (
-    <div className="bg-background-elevated/20 backdrop-blur-sm rounded-2xl border border-border/40 p-4 shadow-card">
-      <div className="flex items-center gap-3">
-        <div className="rounded-full bg-primary/10 p-2.5 text-primary">{icon}</div>
-        <div>
-          <p className="text-2xl font-bold text-foreground">{value}</p>
-          <p className="text-xs text-muted">{label}</p>
-        </div>
-        {trend && (
-          <span
-            className={cn(
-              "ml-auto text-xs font-medium",
-              trend.direction === "up" ? "text-success" : "text-danger",
-            )}
+    <div className="relative">
+      <div className="flex items-center justify-between mb-3">
+        <h2 className="text-xl font-semibold text-foreground">{title}</h2>
+        {viewAllHref && (
+          <Link
+            href={viewAllHref}
+            className="text-sm font-medium text-primary hover:text-primary-strong flex items-center gap-1 transition"
           >
-            {trend.direction === "up" ? "↑" : "↓"} {trend.value}
-          </span>
+            {seeAllLabel}
+            <ArrowRight className="h-4 w-4" />
+          </Link>
+        )}
+      </div>
+
+      <div className="relative group">
+        {showLeftArrow && (
+          <button
+            onClick={() => scroll("left")}
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-black/50 backdrop-blur-sm text-white p-2 rounded-full shadow-lg hover:bg-black/70 transition opacity-0 group-hover:opacity-100"
+          >
+            <ChevronRight className="h-5 w-5 rotate-180" />
+          </button>
+        )}
+        <div
+          ref={scrollRef}
+          className="flex gap-4 overflow-x-auto scroll-smooth pb-4 no-scrollbar"
+          style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
+        >
+          {items.map((item, idx) => (
+            <div key={idx} className="flex-shrink-0 w-64">
+              {renderItem(item, idx)}
+            </div>
+          ))}
+        </div>
+        {showRightArrow && (
+          <button
+            onClick={() => scroll("right")}
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-black/50 backdrop-blur-sm text-white p-2 rounded-full shadow-lg hover:bg-black/70 transition opacity-0 group-hover:opacity-100"
+          >
+            <ChevronRight className="h-5 w-5" />
+          </button>
         )}
       </div>
     </div>
@@ -152,26 +250,70 @@ function StatCard({
 }
 
 // ============================================
-// MAIN MARKET PAGE
+// CATEGORY HERO (Pinterest-Style Mood Board)
+// ============================================
+function CategoryMoodBoard({ activeCategory }: { activeCategory: Category }) {
+  const categories = marketCategories.slice(1, 9); // exclude "All"
+  const colors = [
+    "bg-amber-500/10",
+    "bg-blue-500/10",
+    "bg-emerald-500/10",
+    "bg-rose-500/10",
+    "bg-purple-500/10",
+    "bg-cyan-500/10",
+    "bg-lime-500/10",
+    "bg-orange-500/10",
+  ];
+  const icons = [
+    <ShoppingBag className="h-5 w-5" />,
+    <Sparkles className="h-5 w-5" />,
+    <Star className="h-5 w-5" />,
+    <Heart className="h-5 w-5" />,
+    <Ticket className="h-5 w-5" />,
+    <TrendingUp className="h-5 w-5" />,
+    <MapPin className="h-5 w-5" />,
+    <Eye className="h-5 w-5" />,
+  ];
+
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+      {categories.map((cat, idx) => (
+        <motion.div
+          key={cat}
+          whileHover={{ scale: 1.02 }}
+          className={cn(
+            "rounded-2xl p-4 border border-border/40 transition cursor-pointer",
+            activeCategory === cat ? "border-primary/60 bg-primary/5" : "hover:bg-background-elevated/20",
+            colors[idx % colors.length],
+          )}
+          onClick={() => setActiveCategory(cat)}
+        >
+          <div className="flex items-center gap-3">
+            <div className="rounded-full bg-primary/10 p-2 text-primary">
+              {icons[idx % icons.length]}
+            </div>
+            <div>
+              <p className="text-sm font-medium text-foreground">{cat}</p>
+              <p className="text-xs text-muted/60">
+                {sellerProducts.filter((p) => p.category === cat).length +
+                  marketServices.filter((s) => s.category === cat).length}{" "}
+                listings
+              </p>
+            </div>
+          </div>
+        </motion.div>
+      ))}
+    </div>
+  );
+}
+
+// ============================================
+// MAIN PAGE
 // ============================================
 const MarketPage = () => {
-  const [activeCategory, setActiveCategory] = useState("All");
+  const [activeCategory, setActiveCategory] = useState<Category>("All");
   const [activeFilter, setActiveFilter] = useState<FilterType>("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const deferredSearch = useDeferredValue(searchQuery);
-
-  // Category counts
-  const categoryCounts = useMemo(() => {
-    const counts: Record<string, number> = {};
-    marketCategories.forEach((cat) => {
-      const products = sellerProducts.filter((p) => p.category === cat);
-      const services = marketServices.filter((s) => s.category === cat);
-      const lives = allLiveSessions.filter((l) => l.category === cat);
-      counts[cat] = products.length + services.length + lives.length;
-    });
-    counts["All"] = sellerProducts.length + marketServices.length + allLiveSessions.length;
-    return counts;
-  }, []);
 
   // Filtered data
   const filteredProducts = useMemo(() => {
@@ -179,338 +321,153 @@ const MarketPage = () => {
     if (activeCategory !== "All") {
       products = products.filter((p) => p.category === activeCategory);
     }
-    if (deferredSearch) {
+    if (searchQuery) {
       products = products.filter((p) =>
         `${p.name} ${p.description}`
           .toLowerCase()
-          .includes(deferredSearch.toLowerCase()),
+          .includes(searchQuery.toLowerCase()),
       );
     }
     return products;
-  }, [activeCategory, deferredSearch]);
+  }, [activeCategory, searchQuery]);
 
   const filteredServices = useMemo(() => {
     let services = marketServices;
     if (activeCategory !== "All") {
       services = services.filter((s) => s.category === activeCategory);
     }
-    if (deferredSearch) {
+    if (searchQuery) {
       services = services.filter((s) =>
         `${s.name} ${s.description}`
           .toLowerCase()
-          .includes(deferredSearch.toLowerCase()),
+          .includes(searchQuery.toLowerCase()),
       );
     }
     return services;
-  }, [activeCategory, deferredSearch]);
+  }, [activeCategory, searchQuery]);
 
   const filteredLives = useMemo(() => {
     let lives = allLiveSessions;
     if (activeCategory !== "All") {
       lives = lives.filter((l) => l.category === activeCategory);
     }
-    if (deferredSearch) {
+    if (searchQuery) {
       lives = lives.filter((l) =>
         `${l.title} ${l.description}`
           .toLowerCase()
-          .includes(deferredSearch.toLowerCase()),
+          .includes(searchQuery.toLowerCase()),
       );
     }
     return lives;
-  }, [activeCategory, deferredSearch]);
+  }, [activeCategory, searchQuery]);
 
+  // Compute total results for empty state
+  const totalResults =
+    (activeFilter === "all" || activeFilter === "products" ? filteredProducts.length : 0) +
+    (activeFilter === "all" || activeFilter === "services" ? filteredServices.length : 0) +
+    (activeFilter === "all" || activeFilter === "lives" ? filteredLives.length : 0);
+
+  // Determine which rows to show
   const showProducts = activeFilter === "all" || activeFilter === "products";
   const showServices = activeFilter === "all" || activeFilter === "services";
   const showLives = activeFilter === "all" || activeFilter === "lives";
 
-  // Compute total results
-  const totalResults =
-    (showProducts ? filteredProducts.length : 0) +
-    (showServices ? filteredServices.length : 0) +
-    (showLives ? filteredLives.length : 0);
-
   return (
     <AppShell>
-      <div className="min-h-screen">
-        {/* ============================================ */}
-        {/* HERO BANNER - Market Square Identity */}
-        {/* ============================================ */}
-        <div className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-background to-secondary/5 border-b border-border/40">
-          <div className="max-w-7xl mx-auto px-4 py-8 lg:px-6">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
-              <div>
-                <div className="flex items-center gap-3 mb-2">
-                  <span className="text-xs font-semibold uppercase tracking-[0.15em] text-primary">
-                    🏪 Market Square
-                  </span>
-                  <span className="h-4 w-px bg-border/60" />
-                  <span className="text-xs text-muted/60 flex items-center gap-1.5">
-                    <Users className="h-3 w-3" />
-                    {sellerProducts.length + marketServices.length} listings
-                  </span>
-                </div>
-                <h1 className="text-3xl md:text-4xl font-bold text-foreground tracking-tight">
-                  Discover, negotiate, and buy live.
-                </h1>
-                <p className="mt-2 text-muted max-w-2xl">
-                  Browse products, services, and live sessions from sellers
-                  near you. Every listing is negotiable.
-                </p>
-              </div>
+      <div className="min-h-screen bg-background">
+        {/* Hero */}
+        <MarketHero />
 
-              {/* Market Mood Ticker */}
-              <div className="flex-shrink-0">
-                <MarketMoodTicker />
-              </div>
-            </div>
+        {/* Search Bar */}
+        <SearchBar
+          searchQuery={searchQuery}
+          setSearchQuery={setSearchQuery}
+          activeCategory={activeCategory}
+          setActiveCategory={setActiveCategory}
+        />
 
-            {/* Quick Stats */}
-            <div className="mt-6 grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <StatCard
-                icon={<ShoppingBag className="h-4 w-4" />}
-                label="Products"
-                value={String(sellerProducts.length)}
-                trend={{ value: "12%", direction: "up" }}
-              />
-              <StatCard
-                icon={<Sparkles className="h-4 w-4" />}
-                label="Services"
-                value={String(marketServices.length)}
-                trend={{ value: "8%", direction: "up" }}
-              />
-              <StatCard
-                icon={<Flame className="h-4 w-4" />}
-                label="Live Now"
-                value={String(allLiveSessions.filter((l) => l.status === "live").length)}
-                trend={{ value: "5%", direction: "up" }}
-              />
-              <StatCard
-                icon={<Users className="h-4 w-4" />}
-                label="Active Sellers"
-                value="234"
-              />
-            </div>
-          </div>
+        {/* Category Mood Board */}
+        <div className="max-w-7xl mx-auto px-4 py-6 lg:px-6">
+          <CategoryMoodBoard activeCategory={activeCategory} />
         </div>
 
-        {/* ============================================ */}
-        {/* SEARCH & FILTERS */}
-        {/* ============================================ */}
-        <div className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/40">
-          <div className="max-w-7xl mx-auto px-4 py-4 lg:px-6">
-            <div className="flex flex-col lg:flex-row lg:items-center gap-4">
-              {/* Search */}
-              <div className="flex-1 relative">
-                <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-muted/40" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    placeholder="Search products, services, or live sessions..."
-                    className="w-full rounded-xl border border-border/60 bg-background-elevated/30 px-11 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all"
-                  />
-                </div>
-                {searchQuery && (
-                  <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs text-muted/40">
-                    {totalResults} results
-                  </span>
-                )}
-              </div>
+        {/* Content Rows */}
+        <div className="max-w-7xl mx-auto px-4 pb-12 lg:px-6 space-y-10">
+          {/* Live Sessions (Top Priority) */}
+          {showLives && filteredLives.length > 0 && (
+            <SectionRow
+              title="🔴 Live Now"
+              items={filteredLives.filter((l) => l.status === "live").slice(0, 10)}
+              renderItem={(session) => (
+                <LiveSessionCard session={session} compact />
+              )}
+              viewAllHref="/market-search?type=lives"
+              seeAllLabel="All live sessions"
+            />
+          )}
 
-              {/* Filter tabs */}
-              <div className="flex items-center gap-2 overflow-x-auto pb-1">
-                {(["all", "products", "services", "lives"] as FilterType[]).map(
-                  (filter) => (
-                    <button
-                      key={filter}
-                      onClick={() => setActiveFilter(filter)}
-                      className={cn(
-                        "px-4 py-1.5 rounded-full text-sm font-medium transition-all whitespace-nowrap",
-                        activeFilter === filter
-                          ? "bg-primary text-white shadow-sm"
-                          : "text-muted hover:text-foreground bg-background-elevated/30 border border-border/30 hover:border-border/60",
-                      )}
-                    >
-                      {filter === "all"
-                        ? "All"
-                        : filter.charAt(0).toUpperCase() + filter.slice(1)}
-                    </button>
-                  ),
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* ============================================ */}
-        {/* CATEGORY PILLS */}
-        {/* ============================================ */}
-        <div className="max-w-7xl mx-auto px-4 py-4 lg:px-6">
-          <div className="flex flex-wrap items-center gap-2">
-            {marketCategories.map((category) => (
-              <CategoryPill
-                key={category}
-                category={category}
-                isActive={activeCategory === category}
-                onClick={() => setActiveCategory(category)}
-                count={categoryCounts[category]}
-              />
-            ))}
-          </div>
-          <div className="mt-2 flex items-center gap-2 text-xs text-muted/50">
-            <span>Showing {totalResults} results</span>
-            <span className="h-3 w-px bg-border/40" />
-            <span>Filtered by {activeCategory}</span>
-          </div>
-        </div>
-
-        {/* ============================================ */}
-        {/* CONTENT GRID */}
-        {/* ============================================ */}
-        <div className="max-w-7xl mx-auto px-4 py-6 lg:px-6 space-y-8 pb-12">
-          {totalResults === 0 && (
-            <div className="text-center py-16">
-              <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-                <Search className="h-8 w-8 text-primary/40" />
-              </div>
-              <h3 className="text-lg font-semibold text-foreground">No results found</h3>
-              <p className="text-sm text-muted mt-1">
-                Try adjusting your search or filter criteria
-              </p>
-            </div>
+          {/* Upcoming Lives */}
+          {showLives && filteredLives.filter((l) => l.status === "upcoming").length > 0 && (
+            <SectionRow
+              title="📅 Upcoming"
+              items={filteredLives.filter((l) => l.status === "upcoming").slice(0, 10)}
+              renderItem={(session) => (
+                <LiveSessionCard session={session} compact />
+              )}
+              viewAllHref="/market-search?type=lives"
+              seeAllLabel="All upcoming"
+            />
           )}
 
           {/* Products */}
           {showProducts && filteredProducts.length > 0 && (
-            <div>
-              <SectionTitle
-                title="Products"
-                description={`${filteredProducts.length} item${filteredProducts.length !== 1 ? "s" : ""} available`}
-                action={
-                  <Link
-                    href="/market-search"
-                    className="text-sm font-medium text-primary hover:text-primary-strong flex items-center gap-1 transition"
-                  >
-                    View all
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                }
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {filteredProducts.slice(0, 8).map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
-              </div>
-              {filteredProducts.length > 8 && (
-                <div className="mt-4 text-center">
-                  <Link
-                    href="/market-search"
-                    className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition"
-                  >
-                    See all {filteredProducts.length} products
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
-                </div>
+            <SectionRow
+              title="🛍️ Products"
+              items={filteredProducts.slice(0, 10)}
+              renderItem={(product) => (
+                <ProductCard product={product} />
               )}
-            </div>
+              viewAllHref="/market-search?type=products"
+              seeAllLabel="All products"
+            />
           )}
 
           {/* Services */}
           {showServices && filteredServices.length > 0 && (
-            <div>
-              <SectionTitle
-                title="Services"
-                description={`${filteredServices.length} service${filteredServices.length !== 1 ? "s" : ""} available`}
-                action={
-                  <Link
-                    href="/market-search?type=services"
-                    className="text-sm font-medium text-primary hover:text-primary-strong flex items-center gap-1 transition"
-                  >
-                    View all
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                }
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {filteredServices.slice(0, 8).map((service) => (
-                  <ServiceCard key={service.id} service={service} />
-                ))}
-              </div>
-              {filteredServices.length > 8 && (
-                <div className="mt-4 text-center">
-                  <Link
-                    href="/market-search?type=services"
-                    className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition"
-                  >
-                    See all {filteredServices.length} services
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
-                </div>
+            <SectionRow
+              title="✨ Services"
+              items={filteredServices.slice(0, 10)}
+              renderItem={(service) => (
+                <ServiceCard service={service} />
               )}
-            </div>
+              viewAllHref="/market-search?type=services"
+              seeAllLabel="All services"
+            />
           )}
 
-          {/* Live Sessions */}
-          {showLives && filteredLives.length > 0 && (
-            <div>
-              <SectionTitle
-                title="Live Sessions"
-                description={`${filteredLives.length} session${filteredLives.length !== 1 ? "s" : ""} ongoing or scheduled`}
-                action={
-                  <Link
-                    href="/market-search?type=lives"
-                    className="text-sm font-medium text-primary hover:text-primary-strong flex items-center gap-1 transition"
-                  >
-                    View all
-                    <ArrowRight className="h-4 w-4" />
-                  </Link>
-                }
-              />
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5">
-                {filteredLives.slice(0, 8).map((session) => (
-                  <LiveSessionCard key={session.id} session={session} compact />
-                ))}
-              </div>
-              {filteredLives.length > 8 && (
-                <div className="mt-4 text-center">
-                  <Link
-                    href="/market-search?type=lives"
-                    className="inline-flex items-center gap-2 text-sm text-muted hover:text-foreground transition"
-                  >
-                    See all {filteredLives.length} sessions
-                    <ChevronRight className="h-4 w-4" />
-                  </Link>
-                </div>
+          {/* Past Lives (if any) */}
+          {showLives && filteredLives.filter((l) => l.status === "past").length > 0 && (
+            <SectionRow
+              title="📼 Past Sessions"
+              items={filteredLives.filter((l) => l.status === "past").slice(0, 10)}
+              renderItem={(session) => (
+                <LiveSessionCard session={session} compact />
               )}
-            </div>
+              viewAllHref="/market-search?type=lives"
+              seeAllLabel="All past sessions"
+            />
           )}
 
-          {/* Quick view of all results when filtered */}
-          {activeCategory === "All" && activeFilter === "all" && !searchQuery && (
-            <div className="rounded-2xl border border-border/40 bg-background-elevated/10 p-6 backdrop-blur-sm">
-              <div className="flex items-center justify-between mb-4">
-                <div>
-                  <h3 className="text-sm font-semibold text-foreground">
-                    🏪 Explore the Market Square
-                  </h3>
-                  <p className="text-xs text-muted">Browse all listings or use filters to narrow down</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Link
-                    href="/post-product"
-                    className="rounded-full bg-primary px-4 py-1.5 text-xs font-medium text-white transition hover:bg-primary-strong"
-                  >
-                    List an item
-                  </Link>
-                  <Link
-                    href="/market-search"
-                    className="rounded-full border border-border/40 px-4 py-1.5 text-xs font-medium text-muted transition hover:bg-background-elevated/20"
-                  >
-                    Advanced search
-                  </Link>
-                </div>
+          {/* Empty State */}
+          {totalResults === 0 && (
+            <div className="text-center py-20">
+              <div className="mx-auto w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-4">
+                <Search className="h-10 w-10 text-primary/40" />
               </div>
+              <h3 className="text-xl font-semibold text-foreground">Nothing found</h3>
+              <p className="text-sm text-muted mt-2">
+                Try adjusting your search or filter criteria
+              </p>
             </div>
           )}
         </div>
