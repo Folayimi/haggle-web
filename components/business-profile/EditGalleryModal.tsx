@@ -2,7 +2,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import type { GalleryItem } from "@/lib/types";
+import type { GalleryItem } from "@/types";
 
 interface EditGalleryModalProps {
   isOpen: boolean;

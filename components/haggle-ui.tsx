@@ -19,7 +19,7 @@ import type {
   SellerLiveSession,
   SellerProduct,
   SellerProfile,
-} from "@/lib/types";
+} from "@/types";
 import { getSellerById } from "@/lib/mock-data";
 import { useHaggleStore } from "@/lib/app-store";
 import { cn } from "@/lib/utils";

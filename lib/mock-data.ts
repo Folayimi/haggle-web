@@ -21,7 +21,7 @@ import type {
   Achievement,
   Preferences,
   BroadcastActivity,
-} from "@/lib/types";
+} from "@/types";
 
 // ============================================
 // EXISTING DATA (YOURS, UNCHANGED)

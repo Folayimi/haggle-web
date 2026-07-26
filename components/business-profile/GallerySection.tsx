@@ -4,7 +4,7 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Image, Video, Plus, X, Trash2, Edit, Play } from "lucide-react";
-import type { GalleryItem } from "@/lib/types";
+import type { GalleryItem } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface GallerySectionProps {

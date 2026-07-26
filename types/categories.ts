@@ -6,21 +6,28 @@ export interface Category {
   description?: string;
   icon?: string;
   subcategories: Subcategory[];
-  requiredTags: Tag[];
-  recommendedTags?: Tag[];
+  requiredTags: CategoryTag[];
+  recommendedTags?: CategoryTag[];
 }
 
 export interface Subcategory {
   id: string;
   name: string;
   description?: string;
-  requiredTags?: Tag[];
+  requiredTags?: CategoryTag[];
 }
 
-export interface Tag {
+export interface CategoryTag {
   id: string;
   name: string;
-  type: "text" | "number" | "select" | "boolean" | "range" | "multi-select" | "date";
+  type:
+    | "text"
+    | "number"
+    | "select"
+    | "boolean"
+    | "range"
+    | "multi-select"
+    | "date";
   options?: string[];
   placeholder?: string;
   required: boolean;
@@ -72,7 +79,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         type: "select",
         required: true,
         options: ["New", "Like New", "Excellent", "Good", "Fair", "For Parts"],
-      },      
+      },
       {
         id: "warranty",
         name: "Warranty Status",
@@ -162,7 +169,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
           "Other",
         ],
       },
-      
+
       {
         id: "color",
         name: "Color",
@@ -225,7 +232,6 @@ export const PRODUCT_CATEGORIES: Category[] = [
         placeholder: "e.g. Wood, Metal, Glass",
       },
 
-      
       {
         id: "brand",
         name: "Brand",
@@ -300,7 +306,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["New", "Like New", "Good", "Fair"],
       },
-      
+
       {
         id: "expiry",
         name: "Expiry Date",
@@ -366,7 +372,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["New", "Used", "Refurbished"],
       },
-      
+
       {
         id: "mileage",
         name: "Mileage",
@@ -427,7 +433,6 @@ export const PRODUCT_CATEGORIES: Category[] = [
         options: ["Original", "Reproduction", "Unsure"],
       },
 
-      
       {
         id: "year",
         name: "Year",
@@ -486,7 +491,6 @@ export const PRODUCT_CATEGORIES: Category[] = [
         options: ["New", "Like New", "Excellent", "Good", "Fair"],
       },
 
-      
       {
         id: "size",
         name: "Size",
@@ -560,7 +564,6 @@ export const PRODUCT_CATEGORIES: Category[] = [
         ],
       },
 
-      
       {
         id: "edition",
         name: "Edition",
@@ -618,7 +621,7 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: true,
         options: ["Sealed", "Open", "Vacuum Packed", "Other"],
       },
-      
+
       {
         id: "quantity",
         name: "Quantity",
@@ -678,7 +681,6 @@ export const PRODUCT_CATEGORIES: Category[] = [
         options: ["New", "Like New", "Excellent", "Good", "Fair", "For Parts"],
       },
 
-      
       {
         id: "specs",
         name: "Specifications",
@@ -750,7 +752,6 @@ export const PRODUCT_CATEGORIES: Category[] = [
         required: false,
         placeholder: "e.g. Chicken, Beef",
       },
-      
     ],
   },
 ];

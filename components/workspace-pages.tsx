@@ -61,7 +61,7 @@ import {
   sellerProducts,
   sellerProfiles,
 } from "@/lib/mock-data";
-import type { ChatMessage, NegotiationParticipant } from "@/lib/types";
+import type { ChatMessage, NegotiationParticipant } from "@/types";
 import { cn } from "@/lib/utils";
 
 let mockIdSequence = 0;

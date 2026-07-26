@@ -4,7 +4,7 @@
 import { motion } from "framer-motion";
 import { Award, Trophy, ShieldCheck, Clock, Star, Briefcase, Heart, Rocket, ShoppingBag } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Achievement } from "@/lib/types";
+import type { Achievement } from "@/types";
 
 interface AchievementsSectionProps {
   achievements: Achievement[];

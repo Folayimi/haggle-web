@@ -3,7 +3,7 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ThemeMode, SellerProfile } from "@/lib/types";
+import type { ThemeMode, SellerProfile } from "@/types";
 
 type HaggleStore = {
   // ====== EXISTING ======

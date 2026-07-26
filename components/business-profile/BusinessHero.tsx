@@ -18,7 +18,7 @@ import {
   Award,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SellerProfile } from "@/lib/types";
+import { SellerProfile } from "@/types";
 
 interface BusinessHeroProps {
   user: SellerProfile;

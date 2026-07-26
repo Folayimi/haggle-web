@@ -11,7 +11,7 @@ import {
   AlertCircle,
   Clock,
 } from "lucide-react";
-import type { CompletionStatus } from "@/lib/types";
+import type { CompletionStatus } from "@/types";
 import { cn } from "@/lib/utils";
 
 interface ProfileCompletionCardProps {

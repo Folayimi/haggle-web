@@ -348,8 +348,8 @@ const CreatePage = () => {
     return [
       {
         id: "setup-profile",
-        title: "Set Up Your Business Website",
-        description: "Complete your business profile and build your website.",
+        title: "Set Up Your Business Profile",
+        description: "Complete and Manage your business profile.",
         icon: <Globe className="h-6 w-6" />,
         href: `/profile/${username}`,
         color: "primary" as const,

@@ -35,7 +35,7 @@ import type {
   SectionId,
   CompletionStatus,
   SellerProfile,
-} from "@/lib/types";
+} from "@/types";
 import BusinessHero from "@/components/business-profile/BusinessHero";
 import SectionPlaceholder from "@/components/business-profile/SectionPlaceholder";
 import BusinessStory from "@/components/business-profile/BusinessStory";

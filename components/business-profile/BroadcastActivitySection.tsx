@@ -4,7 +4,7 @@
 import { motion } from "framer-motion";
 import { MessageSquare, CheckCircle, Clock, XCircle, ArrowRight, TrendingUp, MapPin, DollarSign } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { BroadcastActivity } from "@/lib/types";
+import type { BroadcastActivity } from "@/types";
 
 interface BroadcastActivitySectionProps {
   activities: BroadcastActivity[];
