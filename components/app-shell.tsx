@@ -94,7 +94,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   }, []);
 
   return (
-    <div className="flex h-screen text-foreground w-full">
+    <div className="flex h-screen text-foreground w-full z-50">
       {activateAuth && <AuthPopUp setActivateAuth={setActivateAuth} />}
       <SideNav userData={userData} />
       <div className="flex h-full overflow-y-auto flex-1 flex-col">

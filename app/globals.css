@@ -235,6 +235,7 @@
    TAILWIND THEME EXTENSION
    ============================================ */
 @theme inline {
+  /* --spacing: 0.25rem; */
   --color-primary: var(--primary);
   --color-primary-strong: var(--primary-strong);
   --color-secondary: var(--secondary);

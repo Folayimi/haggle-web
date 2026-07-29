@@ -1,5 +1,6 @@
 "use client";
 
+import { Input } from "@/components/ui/input";
 import { Search, X } from "lucide-react";
 
 interface MarketSearchProps {
@@ -7,47 +8,30 @@ interface MarketSearchProps {
   onChange: (value: string) => void;
 }
 
-export function MarketSearch({
-  value,
-  onChange,
-}: MarketSearchProps) {
+export function MarketSearch({ value, onChange }: MarketSearchProps) {
   return (
-    <div className="relative flex-1">
-
+    <div className="relative flex-1 shrink">
       <Search
         className="
           absolute
           left-4
           top-1/2
-          h-4
-          w-4
+          h-5
+          w-5
           -translate-y-1/2
-          text-muted
+          text-muted/40
+          transition-colors
+          group-hover:text-muted/60
+          peer-focus:text-primary/60
         "
       />
-
-      <input
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        placeholder="Search products, businesses or services..."
-        className="
-          h-11
-          w-full
-          rounded-full
-          border
-          border-border
-          bg-background
-          pl-11
-          pr-11
-          text-sm
-          outline-none
-          transition-all
-          focus:border-primary
-          focus:ring-2
-          focus:ring-primary/15
-        "
+      <Input
+        onChange={(e) => {
+          onChange(e.target.value);
+        }}
+        placeholder="I am in need of ..."
+        className="pl-12 pr-12 py-5 rounded-full"
       />
-
       {value && (
         <button
           onClick={() => onChange("")}
@@ -58,8 +42,11 @@ export function MarketSearch({
             -translate-y-1/2
             rounded-full
             p-1
-            text-muted
-            hover:bg-muted/20
+            text-muted/30
+            transition-all
+            hover:text-muted/60
+            hover:bg-background-elevated/10
+            active:scale-95
           "
         >
           <X className="h-4 w-4" />

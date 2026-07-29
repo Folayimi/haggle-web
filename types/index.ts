@@ -6,3 +6,5 @@ export * from "./live";
 export * from "./negotiation";
 export * from "./collection";
 export * from "./categories";
+export * from "./marketHero";
+export * from "./liveIndicator";

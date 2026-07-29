@@ -76,8 +76,7 @@ const SideNav = ({ userData }: { userData: any }) => {
 
   return (
     <aside
-      className={`
-        hidden xl:flex relative h-screen bg-background-elevated/10 backdrop-blur-sm
+      className={`z-50 hidden xl:flex relative h-screen bg-background-elevated/10 backdrop-blur-sm
         border-r border-border/40 shadow-sm
         transition-all duration-300 ease-in-out
         ${collapsed ? "w-[80px]" : "w-[220px]"}
