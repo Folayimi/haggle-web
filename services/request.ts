@@ -64,9 +64,11 @@ apiClient.interceptors.request.use(
       config.headers.Authorization = `Bearer ${token}`;
     }
 
-    // 2. 👇 Add conditional headers
+    // 2. 👇 Attach the current user's id on every request — offers,
+    // conversations, and other authenticated routes rely on this header
+    // via getRequestUserId() on the backend, not just /users/me.
     const userData = useHaggleStore.getState().userData; // 👈 Get userData from store
-    if (config.url?.includes("/users/me") && userData?.id) {
+    if (userData?.id) {
       config.headers["x-user-id"] = userData.id;
     }
 

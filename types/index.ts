@@ -1,4 +1,5 @@
 export * from "./common";
+export * from "./conversation";
 export * from "./seller";
 export * from "./product";
 export * from "./service";
