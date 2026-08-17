@@ -385,7 +385,7 @@ type SellerLiveSession = {
   buyerBenefits: string[];
 };
 
-type SellerProfile = {
+type Seller = {
   id: string;
   name: string;
   username: string;
@@ -409,7 +409,7 @@ type MarketService = {
   category: string;
   description: string;
   price: string;
-  seller: SellerProfile;
+  seller: Seller;
 };
 
 type NegotiationParticipant = {

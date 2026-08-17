@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { ArrowRight, Radio } from "lucide-react";
 
-import { LiveSessionCard } from "@/components/haggle-ui";
+import { LiveSessionCard } from "@/components/market/cards/LiveSessionCard";
 import { Carousel } from "../common/Carousel";
 import { SectionHeader } from "../common/SectionHeader";
 
@@ -17,7 +17,7 @@ interface LiveNowProps {
 export function LiveNow({ sessions }: LiveNowProps) {
   if (!sessions.length) return null;
 
-  const liveSessions = sessions.filter((session) => session.status === "live");
+  const liveSessions = sessions.filter((session) => session.status === "Live now");
 
   if (!liveSessions.length) return null;
 
@@ -99,7 +99,7 @@ export function LiveNow({ sessions }: LiveNowProps) {
           items={liveSessions}
           itemWidth={320}
           renderItem={(session) => (
-            <LiveSessionCard session={session} compact />
+            <LiveSessionCard session={session} variant="compact"/>
           )}
         />
       </motion.div>

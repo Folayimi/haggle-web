@@ -11,7 +11,7 @@ import {
 interface Params {
   products: SellerProduct[];
   services: MarketService[];
-  businesses: Seller[];
+  sellers: Seller[];
   liveSessions: SellerLiveSession[];
   negotiations?: Negotiation[];
 }
@@ -21,7 +21,7 @@ export function useMarketDiscovery({
 
   services,
 
-  businesses,
+  sellers,
 
   liveSessions,
 
@@ -39,9 +39,9 @@ export function useMarketDiscovery({
         new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
     );
 
-    const liveNow = liveSessions.filter((x) => x.status === "live");
+    const liveNow = liveSessions.filter((x) => x.status === "Live now");
 
-    const upcoming = liveSessions.filter((x) => x.status !== "live");
+    const upcoming = liveSessions.filter((x) => x.status !== "Live now");
 
     return {
       recommended,
@@ -56,9 +56,9 @@ export function useMarketDiscovery({
 
       services,
 
-      businesses,
+      sellers,
 
       negotiations,
     };
-  }, [products, services, businesses, liveSessions, negotiations]);
+  }, [products, services, sellers, liveSessions, negotiations]);
 }

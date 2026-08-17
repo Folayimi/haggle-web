@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
 
-import { ProductCard } from "@/components/haggle-ui";
+import ProductCard from "@/components/market/cards/ProductCard";
 
 import { Carousel } from "../common/Carousel";
 import { SectionHeader } from "../common/SectionHeader";

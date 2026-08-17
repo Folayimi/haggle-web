@@ -1,5 +1,5 @@
-import { MarketSearchPage } from "@/components/workspace-pages";
+// import { MarketSearchPage } from "@/components/workspace-pages";
 
 export default function Page() {
-  return <MarketSearchPage />;
+  // return <MarketSearchPage />;
 }

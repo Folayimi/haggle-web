@@ -20,7 +20,7 @@ import {
 import { useHaggleStore } from "@/lib/app-store";
 import {
   currentUser,
-  sellerProfiles,
+  Sellers,
   sellerProducts,
   marketServices,
   userLiveSessions,
@@ -34,7 +34,7 @@ import type {
   GalleryItem,
   SectionId,
   CompletionStatus,
-  SellerProfile,
+  Seller,
 } from "@/types";
 import BusinessHero from "@/components/business-profile/BusinessHero";
 import SectionPlaceholder from "@/components/business-profile/SectionPlaceholder";
@@ -181,7 +181,7 @@ export default function BusinessProfilePage() {
   const viewParam = searchParams.get("view");
 
   // Published user (loaded from mock data)
-  const publishedUser = sellerProfiles.find((p) => p.username === username) || currentUser;
+  const publishedUser = Sellers.find((p) => p.username === username) || currentUser;
 
   const isOwnerDefault = publishedUser.id === currentUser.id;
   const isOwner =
@@ -194,7 +194,7 @@ export default function BusinessProfilePage() {
   // ============================================
   // DRAFT & PREVIEW STATE
   // ============================================
-  const [draftUser, setDraftUser] = useState<SellerProfile>(publishedUser);
+  const [draftUser, setDraftUser] = useState<Seller>(publishedUser);
   const [isPreviewMode, setIsPreviewMode] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [isDirty, setIsDirty] = useState(false);
@@ -410,7 +410,7 @@ export default function BusinessProfilePage() {
     if (!isDirty) return;
     setIsSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 500));
-    const updatedUser: SellerProfile = {
+    const updatedUser: Seller = {
       ...draftUser,
       products,
       services,
@@ -433,7 +433,7 @@ export default function BusinessProfilePage() {
     if (!isDirty) return;
     setIsSaving(true);
     await new Promise((resolve) => setTimeout(resolve, 800));
-    const updatedUser: SellerProfile = {
+    const updatedUser: Seller = {
       ...publishedUser,
       products,
       services,

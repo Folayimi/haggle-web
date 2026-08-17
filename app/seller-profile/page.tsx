@@ -1,5 +1,5 @@
-import { SellerProfilePage } from "@/components/workspace-pages";
+import { SellerPage } from "@/components/workspace-pages";
 
 export default function Page() {
-  return <SellerProfilePage />;
+  return <SellerPage />;
 }

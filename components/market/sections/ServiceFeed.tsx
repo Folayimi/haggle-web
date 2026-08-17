@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 
-import { ServiceCard } from "@/components/haggle-ui";
+import ServiceCard from "@/components/market/cards/ServiceCard";
 import { MarketSection } from "../common/MarketSection";
 
 import { MarketService } from "@/types";

@@ -18,10 +18,10 @@ import {
   Award,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { SellerProfile } from "@/types";
+import { Seller } from "@/types";
 
 interface BusinessHeroProps {
-  user: SellerProfile;
+  user: Seller;
   isOwner: boolean;
   isPreviewMode?: boolean; // ← new
   onEditHero?: () => void;
@@ -42,7 +42,7 @@ export default function BusinessHero({
   onEditHero,
 }: BusinessHeroProps) {
   const hero = user.hero || {};
-  const status = hero.status || "open";
+  const status = user.status || "open";
   const statusConfig = STATUS_CONFIG[status] || STATUS_CONFIG.open;
   const category = hero.category || "";
   const location = hero.location || "";
@@ -50,8 +50,8 @@ export default function BusinessHero({
   const slogan = hero.slogan || "";
   const verifiedBadge = hero.verifiedBadge ?? user.isVerified ?? false;
 
-  const rating = user.rating ? parseFloat(user.rating) : 0;
-  const followers = user.followers ? parseInt(user.followers.replace(/,/g, "")) : 0;
+  const rating = hero.rating ? parseFloat(hero.rating) : 0;
+  const followers = hero.followers ?? 0;
   const responseTime = hero.averageResponseTime || user.responseTime || "—";
 
   const heroVariants = {
@@ -68,7 +68,7 @@ export default function BusinessHero({
   };
 
   const coverImage =
-    user.coverImageUrl ||
+    user.bannerUrl ||
     "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=400&fit=crop&q=80";
 
   return (
@@ -80,7 +80,7 @@ export default function BusinessHero({
     >
       {/* Cover */}
       <div className="relative h-64 md:h-80 lg:h-96 bg-gradient-to-br from-primary/20 via-background to-secondary/10">
-        <Image src={coverImage} alt={`${user.businessName} cover`} fill className="object-cover" priority />
+        <Image src={coverImage} alt={`${user.name} cover`} fill className="object-cover" priority />
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
         <div className="absolute inset-0 bg-gradient-to-r from-black/20 to-transparent" />
 
@@ -119,7 +119,7 @@ export default function BusinessHero({
           <motion.div variants={childVariants} className="flex-1 min-w-0">
             <div className="flex flex-wrap items-center gap-2 mb-1">
               <h1 className="text-2xl md:text-3xl lg:text-4xl font-bold text-foreground truncate">
-                {user.businessName}
+                {user.name}
               </h1>
               {verifiedBadge && (
                 <CheckCircle className="h-5 w-5 text-primary fill-primary/10 flex-shrink-0" />

@@ -18,7 +18,6 @@ import type {
   MarketService,
   SellerLiveSession,
   SellerProduct,
-  SellerProfile,
 } from "@/types";
 import { getSellerById } from "@/lib/mock-data";
 import { useHaggleStore } from "@/lib/app-store";
@@ -224,7 +223,7 @@ export function ProductCard({ product }: { product: SellerProduct }) {
       className="panel overflow-hidden rounded-[30px]"
     >
       <div className="relative h-56">
-        <Image src={product.imageUrl} alt={product.name} fill className="object-cover" />
+        <Image src={product.images[0].toString()} alt={product.name} fill className="object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
         <button
           onClick={() => toggleSavedItem(product.id)}
@@ -348,7 +347,7 @@ export function SellerIdentity({
   seller,
   compact = false,
 }: {
-  seller: SellerProfile;
+  seller: any;
   compact?: boolean;
 }) {
   return (
@@ -376,7 +375,7 @@ export function SellerIdentity({
         </div>
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
-        {seller.trustPills.map((pill) => (
+        {seller.trustPills.map((pill:any) => (
           <span
             key={pill}
             className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted"
@@ -430,17 +429,25 @@ export function SectionTitle({
 export function GhostButton({
   href,
   label,
+  onClick,
 }: {
-  href: string;
+  href?: string;
   label: string;
+  onClick?: () => void;
 }) {
+  const className =
+    "rounded-full border border-border bg-background-elevated px-4 py-3 text-sm font-semibold";
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {label}
+      </Link>
+    );
+  }
   return (
-    <Link
-      href={href}
-      className="rounded-full border border-border bg-background-elevated px-4 py-3 text-sm font-semibold"
-    >
+    <button type="button" onClick={onClick} className={className}>
       {label}
-    </Link>
+    </button>
   );
 }
 
@@ -448,19 +455,30 @@ export function PrimaryButton({
   href,
   label,
   icon,
+  onClick,
+  disabled = false,
 }: {
-  href: string;
+  href?: string;
   label: string;
   icon?: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
 }) {
+  const className =
+    "flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary-strong disabled:opacity-50";
+  if (href) {
+    return (
+      <Link href={href} className={className}>
+        {icon}
+        {label}
+      </Link>
+    );
+  }
   return (
-    <Link
-      href={href}
-      className="flex items-center gap-2 rounded-full bg-primary px-4 py-3 text-sm font-semibold text-white hover:bg-primary-strong"
-    >
+    <button type="button" onClick={onClick} disabled={disabled} className={className}>
       {icon}
       {label}
-    </Link>
+    </button>
   );
 }
 

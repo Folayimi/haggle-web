@@ -72,7 +72,7 @@ function NegotiationCard({ negotiation }: { negotiation: Negotiation }) {
           </p>
 
           <p className="text-sm text-muted">
-            Sold by {seller?.displayName ?? "Unknown Seller"}
+            Sold by {seller?.name ?? "Unknown Seller"}
           </p>
         </div>
 

@@ -110,3 +110,31 @@ export function mapThreadToNegotiation(thread: BackendNegotiationThread): Negoti
     updatedAt: thread.last_offer_at,
   };
 }
+
+// --- Seller / user mapper ----------------------------------------------
+
+interface BackendUser {
+  id: string;
+  full_name?: string;
+  username?: string;
+  business_name?: string;
+  avatar_url?: string;
+  is_verified?: boolean;
+}
+
+export function mapUserToSeller(user: BackendUser) {
+  // NOTE: followers, rating, response_time, and trust pills aren't modeled
+  // on the backend yet (Section 22/23 territory, deferred post-MVP).
+  // Honest placeholders here -- never invent numbers.
+  return {
+    id: user.id,
+    name: user.full_name ?? user.username ?? "Seller",
+    businessName: user.business_name ?? "",
+    avatarUrl: user.avatar_url ?? "/placeholder-avatar.jpg",
+    badge: user.is_verified ? "Verified seller" : "New seller",
+    trustPills: user.is_verified ? ["Phone verified"] : [],
+    followers: "—",
+    rating: "—",
+    responseTime: "—",
+  };
+}

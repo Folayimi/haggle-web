@@ -3,16 +3,16 @@
 
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import type { ThemeMode, SellerProfile } from "@/types";
+import type { Seller } from "@/types";
 
 type HaggleStore = {
   // ====== EXISTING ======
-  theme: ThemeMode;
+  theme: any;
   reservedLiveIds: string[];
   savedItemIds: string[];
   recentSearches: string[];
   activeConversationId: string;
-  setTheme: (theme: ThemeMode) => void;
+  setTheme: (theme: any) => void;
   toggleTheme: () => void;
   toggleReservation: (liveId: string) => void;
   toggleSavedItem: (itemId: string) => void;
@@ -30,10 +30,10 @@ type HaggleStore = {
   clearUserData: () => void;
 
   // ====== DRAFT & PUBLISH ======
-  draftProfile: SellerProfile | null;
+  draftProfile: Seller | null;
   isDraftMode: boolean;
   isPreviewMode: boolean;
-  setDraftProfile: (profile: SellerProfile) => void;
+  setDraftProfile: (profile: Seller) => void;
   setDraftMode: (mode: boolean) => void;
   setPreviewMode: (mode: boolean) => void;
   publishDraft: () => void;
@@ -73,7 +73,7 @@ export const useHaggleStore = create<HaggleStore>()(
           const trimmed = query.trim();
           if (!trimmed) return state;
           const deduped = state.recentSearches.filter(
-            (entry) => entry.toLowerCase() !== trimmed.toLowerCase()
+            (entry) => entry.toLowerCase() !== trimmed.toLowerCase(),
           );
           return {
             recentSearches: [trimmed, ...deduped].slice(0, 6),
@@ -100,7 +100,8 @@ export const useHaggleStore = create<HaggleStore>()(
       isDraftMode: false,
       isPreviewMode: false,
 
-      setDraftProfile: (profile) => set({ draftProfile: profile, isDraftMode: true }),
+      setDraftProfile: (profile) =>
+        set({ draftProfile: profile, isDraftMode: true }),
       setDraftMode: (mode) => set({ isDraftMode: mode }),
       setPreviewMode: (mode) => set({ isPreviewMode: mode }),
 
@@ -121,9 +122,10 @@ export const useHaggleStore = create<HaggleStore>()(
       name: "haggle-web-store",
       partialize: (state) => {
         // Exclude auth and draft from persistence (optional)
-        const { userData, activateAuth, draftProfile, isDraftMode, ...rest } = state;
+        const { userData, activateAuth, draftProfile, isDraftMode, ...rest } =
+          state;
         return rest;
       },
-    }
-  )
+    },
+  ),
 );

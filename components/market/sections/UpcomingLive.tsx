@@ -4,7 +4,7 @@ import { CalendarClock } from "lucide-react";
 
 import { Carousel } from "../common/Carousel";
 import { MarketSection } from "../common/MarketSection";
-import { LiveSessionCard } from "@/components/haggle-ui";
+import { LiveSessionCard } from "@/components/market/cards/LiveSessionCard";
 
 import { SellerLiveSession } from "@/types";
 
@@ -13,7 +13,7 @@ interface UpcomingLiveProps {
 }
 
 export function UpcomingLive({ sessions }: UpcomingLiveProps) {
-  const upcoming = sessions.filter((item) => item.status !== "live");
+  const upcoming = sessions.filter((item) => item.status !== "Live now");
 
   if (!upcoming.length) return null;
 
@@ -37,7 +37,9 @@ export function UpcomingLive({ sessions }: UpcomingLiveProps) {
       <Carousel
         items={upcoming}
         itemWidth={320}
-        renderItem={(session) => <LiveSessionCard session={session} compact />}
+        renderItem={(session) => (
+          <LiveSessionCard session={session} variant="compact" />
+        )}
       />
     </MarketSection>
   );

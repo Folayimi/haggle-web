@@ -4,7 +4,8 @@ import { TrendingUp } from "lucide-react";
 
 import { SellerProduct } from "@/types";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/formatters";
+import { formatPrice } from "@/lib/formatters";
+// import { formatCurrency } from "@/lib/formatters";
 
 interface ProductMetaProps {
   product: SellerProduct;
@@ -36,7 +37,7 @@ export function ProductMeta({
               expanded && "text-3xl"
             )}
           >
-            {formatCurrency(product.price)}
+            {formatPrice(product.price)}
           </p>
 
           {product.negotiable && (

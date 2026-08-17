@@ -10,12 +10,10 @@ import { ProductImage } from "./ProductImage";
 import { ProductMeta } from "./ProductMeta";
 import { ProductSeller } from "./ProductSeller";
 import { useHaggleStore } from "@/lib/app-store";
-import { getSellerById } from "@/components/market/data/market";
+import { getProductCover, getSellerById } from "@/components/market/data/market";
 import { Bookmark } from "lucide-react";
 
 import { CardImage } from "@/components/market/common/CardImage";
-
-import { getProductCover } from "@/components/data/market";
 
 export interface ProductCardProps {
   product: SellerProduct;

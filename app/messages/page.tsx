@@ -1,5 +1,5 @@
-import { MessagesPage } from "@/components/workspace-pages";
+// import { MessagesPage } from "@/components/workspace-pages";
 
 export default function Page() {
-  return <MessagesPage />;
+  // return <MessagesPage />;
 }

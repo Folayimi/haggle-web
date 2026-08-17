@@ -11,7 +11,7 @@ import type {
   SearchResult,
   SellerLiveSession,
   SellerProduct,
-  SellerProfile,
+  Seller,
   UserProfile,
   StoryBlock,
   BusinessHours,
@@ -462,7 +462,7 @@ const defaultGallery: GalleryItem[] = [
 // ============================================
 // SELLER PROFILES (EXTENDED)
 // ============================================
-export const sellerProfiles: SellerProfile[] = [
+export const Sellers: Seller[] = [
   {
     id: "seller-maria",
     name: "Maria Santos",
@@ -690,10 +690,10 @@ export const sellerProfiles: SellerProfile[] = [
 // ============================================
 export const featuredProduct = products[0];
 export const featuredService = services[0];
-export const featuredSeller = sellerProfiles[0];
+export const featuredSeller = Sellers[0];
 
-// currentUser is now a SellerProfile, not UserProfile
-export const currentUser: SellerProfile = sellerProfiles[0];
+// currentUser is now a Seller, not UserProfile
+export const currentUser: Seller = Sellers[0];
 
 // Keep UserProfile for compatibility with existing code
 export const currentUserProfile: UserProfile = {
@@ -718,7 +718,7 @@ export const conversations: Conversation[] = [
     id: "conversation-maria",
     sellerId: "seller-maria",
     sellerName: "Maria Santos",
-    sellerAvatar: sellerProfiles[0].avatarUrl,
+    sellerAvatar: Sellers[0].avatarUrl,
     sellerTagline: "Collector drops and boutique bundles",
     isOnline: true,
     unreadCount: 2,
@@ -758,7 +758,7 @@ export const conversations: Conversation[] = [
     id: "conversation-james",
     sellerId: "seller-james",
     sellerName: "James Chen",
-    sellerAvatar: sellerProfiles[1].avatarUrl,
+    sellerAvatar: Sellers[1].avatarUrl,
     sellerTagline: "Creator stacks, audio, and smart home",
     isOnline: false,
     unreadCount: 0,
@@ -784,7 +784,7 @@ export const conversations: Conversation[] = [
     id: "conversation-ife",
     sellerId: "seller-ife",
     sellerName: "Ife Adebayo",
-    sellerAvatar: sellerProfiles[3].avatarUrl,
+    sellerAvatar: Sellers[3].avatarUrl,
     sellerTagline: "Soft glam sets and beauty sessions",
     isOnline: true,
     unreadCount: 1,
@@ -905,11 +905,11 @@ export const searchResults: SearchResult[] = [
   {
     id: "sr-3",
     type: "seller",
-    title: sellerProfiles[3].name,
-    subtitle: sellerProfiles[3].businessName,
-    imageUrl: sellerProfiles[3].avatarUrl,
+    title: Sellers[3].name,
+    subtitle: Sellers[3].businessName,
+    imageUrl: Sellers[3].avatarUrl,
     href: "/seller-profile",
-    pill: sellerProfiles[3].badge,
+    pill: Sellers[3].badge,
   },
   {
     id: "sr-4",
@@ -1105,7 +1105,7 @@ export const marketServices = services;
 export const allLiveSessions = liveSessions;
 
 export function getSellerById(id: string) {
-  return sellerProfiles.find((seller) => seller.id === id) ?? sellerProfiles[0];
+  return Sellers.find((seller) => seller.id === id) ?? Sellers[0];
 }
 
 export function getProductById(id: string) {

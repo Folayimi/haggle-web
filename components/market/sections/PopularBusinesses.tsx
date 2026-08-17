@@ -44,9 +44,9 @@ function BusinessCard({ business }: { business: Seller }) {
 
         <div className="pt-10">
           <div className="flex items-center gap-2">
-            <h3 className="font-semibold">{business.businessName}</h3>
+            <h3 className="font-semibold">{business.name}</h3>
 
-            {business.verified && (
+            {business.isVerified && (
               <BadgeCheck className="h-4 w-4 text-primary" />
             )}
           </div>
@@ -63,7 +63,7 @@ function BusinessCard({ business }: { business: Seller }) {
             <div className="rounded-xl bg-muted/10 p-3">
               <p className="text-xs text-muted">Followers</p>
 
-              <p className="font-semibold">{business.followers}</p>
+              {/* <p className="font-semibold">{business.hero.followers}</p> */}
             </div>
 
             <div className="rounded-xl bg-muted/10 p-3">
@@ -97,6 +97,10 @@ function BusinessCard({ business }: { business: Seller }) {
   );
 }
 
+interface PopularBusinessesProps {
+  businesses: Seller[];
+}
+
 export function PopularBusinesses({ businesses }: PopularBusinessesProps) {
   if (!businesses.length) return null;
 
@@ -110,7 +114,7 @@ export function PopularBusinesses({ businesses }: PopularBusinessesProps) {
       <Carousel
         items={businesses}
         itemWidth={320}
-        renderItem={(business) => <BusinessCard business={business} />}
+        renderItem={(seller) => <BusinessCard business={seller} />}
       />
     </section>
   );

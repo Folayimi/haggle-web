@@ -35,9 +35,8 @@ export function CardImage({
       <Image
         src={image}
         alt={alt}
-        width={500}
         height={500}
-        fill
+        width={500}
         className={cn(
           "object-cover transition-transform duration-500",
           zoomOnHover && "group-hover:scale-105"

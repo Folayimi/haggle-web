@@ -15,7 +15,7 @@ export function BusinessBanner({ seller }: BusinessBannerProps) {
   return (
     <CardImage
       image={seller.bannerUrl}
-      alt={seller.businessName}
+      alt={seller.name}
       aspectRatio="banner"
       bottomOverlay={
         <BottomOverlay justify="between">
@@ -23,22 +23,21 @@ export function BusinessBanner({ seller }: BusinessBannerProps) {
             <Image
               width={500}
               height={500}
-              fill
               sizes="(max-width:768px) 100vw,
            (max-width:1200px) 50vw,
            33vw"
               src={seller.avatarUrl}
-              alt={seller.businessName}
+              alt={seller.name}
               className="h-16 w-16 rounded-full border-2 border-white object-cover"
             />
 
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-2xl font-bold text-white">
-                  {seller.businessName}
+                  {seller.name}
                 </h2>
 
-                {seller.verified && (
+                {seller.isVerified && (
                   <BadgeCheck className="h-5 w-5 text-sky-400" />
                 )}
               </div>
@@ -49,7 +48,7 @@ export function BusinessBanner({ seller }: BusinessBannerProps) {
                 <MapPin className="h-4 w-4" />
 
                 <span>
-                  {seller.location.city}, {seller.location.country}
+                  {seller.hero.location.city}, {seller.hero.location.country}
                 </span>
               </div>
             </div>

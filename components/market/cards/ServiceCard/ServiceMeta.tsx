@@ -4,7 +4,8 @@ import { Clock3, Users } from "lucide-react";
 
 import { MarketService } from "@/types";
 import { cn } from "@/lib/utils";
-import { formatCurrency } from "@/lib/formatters";
+import { formatPrice } from "@/lib/formatters";
+// import { formatCurrency } from "@/lib/formatters";
 
 interface ServiceMetaProps {
   service: MarketService;
@@ -32,7 +33,7 @@ export function ServiceMeta({
               expanded && "text-3xl"
             )}
           >
-            {formatCurrency(service.price)}
+            {formatPrice(service.price)}
           </p>
 
           <p className="mt-1 text-xs text-muted">
