@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  Key,
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-} from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import {
   ChevronLeft,
@@ -129,10 +123,10 @@ export function Carousel<T>({
       <div
         ref={ref}
         className={cn(
-          "flex snap-x snap-mandatory overflow-x-auto scroll-smooth no-scrollbar",
+          "flex min-w-0 snap-x snap-mandatory overflow-x-auto scroll-smooth no-scrollbar",
           className
         )}
-        style={{ gap }}
+        style={{ gap: `clamp(0px, 2vw, ${gap}px)` }}
       >
         {items.map((item, index) => (
           <div
@@ -141,10 +135,8 @@ export function Carousel<T>({
                 ? getKey(item, index)
                 : index
             }
-            style={{
-              minWidth: itemWidth,
-            }}
-            className="flex-shrink-0 snap-start"
+            style={{ flex: `0 0 min(${itemWidth}px, 90%)` }}
+            className="min-w-0 snap-start"
           >
             {renderItem(item, index)}
           </div>

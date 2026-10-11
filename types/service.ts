@@ -12,14 +12,12 @@ export interface MarketService {
 
   imageUrl: string;
 
-  price: number;
+  price: string;
 
   deliveryTime: string;
 
   audience: string;
 
   includes: string[];
-
-  bookingCount: number;
 
 }

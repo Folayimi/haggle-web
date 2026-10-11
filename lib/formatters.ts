@@ -1,10 +1,10 @@
 /**
  * Formats Nigerian Naira.
  */
-export function formatPrice(price: number): string {
+export function formatPrice(price: number, currency = "NGN"): string {
   return new Intl.NumberFormat("en-NG", {
     style: "currency",
-    currency: "NGN",
+    currency: currency.toUpperCase(),
     maximumFractionDigits: 0,
   }).format(price);
 }

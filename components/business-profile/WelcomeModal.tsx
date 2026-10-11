@@ -95,14 +95,14 @@ export default function WelcomeModal({
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 onClick={handleContinue}
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:bg-primary-strong transition-all"
+                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:bg-primary-strong transition-all"
               >
                 <Rocket className="h-5 w-5" />
-                Go to My Profile
+                Become a seller
               </button>
               <button
                 onClick={handleExplore}
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-border/60 px-8 py-3.5 text-base font-medium text-foreground hover:bg-surface transition-all"
+                className="inline-flex items-center cursor-pointer justify-center gap-2 rounded-full border border-border/60 px-8 py-3.5 text-base font-medium text-foreground hover:bg-surface transition-all"
               >
                 Explore on My Own
               </button>

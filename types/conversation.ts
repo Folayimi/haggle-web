@@ -4,6 +4,7 @@
 export interface Conversation {
   id: string;
   conversationType: "direct" | "support" | "session_sidechat";
+  sellerName: string;
   sellerId?: string;
   listingId?: string;
   sessionId?: string;

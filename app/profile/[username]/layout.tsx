@@ -7,8 +7,8 @@ export async function generateMetadata({
   params: { username: string };
 }): Promise<Metadata> {
   return {
-    title: `${params.username} | Haggle Business Profile`,
-    description: `View ${params.username}'s business profile on Haggle`,
+    title: `${params?.username} | Haggle Business Profile`,
+    description: `View ${params?.username}'s business profile on Haggle`,
   };
 }
 

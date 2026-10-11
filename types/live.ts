@@ -15,10 +15,14 @@ export interface SellerLiveSession {
 
   schedule: string;
 
+  category: string;
+  
   participantCount: number;
 
   offerCount: number;
 
+  featuredItem: string; 
+  
   saveCount: number;
 
   buyerBenefits: string[];

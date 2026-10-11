@@ -5,16 +5,18 @@ import { motion } from "framer-motion";
 
 import ServiceCard from "@/components/market/cards/ServiceCard";
 import { MarketSection } from "../common/MarketSection";
+import { SectionActionButton } from "../common/SectionHeader";
 
 import { MarketService } from "@/types";
 
 interface ServiceFeedProps {
   services: MarketService[];
+  onViewAll?: () => void;
 }
 
 const INITIAL = 8;
 
-export function ServiceFeed({ services }: ServiceFeedProps) {
+export function ServiceFeed({ services, onViewAll }: ServiceFeedProps) {
   const [visible, setVisible] = useState(INITIAL);
 
   const visibleServices = services.slice(0, visible);
@@ -25,6 +27,11 @@ export function ServiceFeed({ services }: ServiceFeedProps) {
     <MarketSection
       title="Professional Services"
       subtitle="Book trusted professionals around you."
+      action={
+        onViewAll ? (
+          <SectionActionButton label="View all" onClick={onViewAll} />
+        ) : undefined
+      }
     >
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         {visibleServices.map((service, index) => (

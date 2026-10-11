@@ -4,6 +4,7 @@ import { notify, notifyError } from "./toastify";
 import { PassThrough } from "stream";
 import { Dispatch, SetStateAction } from "react";
 import { useHaggleStore } from "@/lib/app-store";
+import type { BackendCategory, BackendListing } from "./mappers";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -487,6 +488,120 @@ export const createCategory = async (data: any) => {
   return result;
 };
 
+// PRODUCT/SERVICES LISTINGS API CALLS
+export const getAllCategories = async () => {
+  console.log("Fetching categories from API...");
+  try {
+    const response = await apiClient.get<{
+      success: boolean;
+      message: string;
+      data: BackendCategory[];
+    }>("/catalog/categories");
+
+    if (response.data.success === true) {
+      return response.data.data;
+    } else {
+      throw new Error(response.data.message || "Invalid categories response");
+    }
+  } catch (error) {
+    const apiMessage = axios.isAxiosError(error)
+      ? (error.response?.data?.message ?? error.response?.data?.error)
+      : undefined;
+    const message =
+      typeof apiMessage === "string"
+        ? apiMessage
+        : error instanceof Error
+          ? error.message
+          : "Failed to load categories";
+    notifyError(message);
+    throw error;
+  }
+};
+
+export const getAllListings = async () => {
+  try {
+    const response = await apiClient.get<{
+      success: boolean;
+      message: string;
+      data: BackendListing[];
+    }>("/catalog/listings");
+
+    if (response.data.success !== true || !Array.isArray(response.data.data)) {
+      throw new Error(response.data.message || "Invalid listings response");
+    }
+
+    return response.data.data;
+  } catch (error) {
+    const apiMessage = axios.isAxiosError(error)
+      ? (error.response?.data?.message ?? error.response?.data?.error)
+      : undefined;
+    const message =
+      typeof apiMessage === "string"
+        ? apiMessage
+        : error instanceof Error
+          ? error.message
+          : "Failed to load listings";
+    notifyError(message);
+    throw error;
+  }
+};
+
+export const getListing = async (id: string): Promise<BackendListing> => {
+  try {
+    const response = await apiClient.get<
+      | BackendListing
+      | { success: boolean; message: string; data: BackendListing }
+    >(`/catalog/listings/${encodeURIComponent(id)}`);
+    const payload = response.data;
+    const listing = "data" in payload ? payload.data : payload;
+
+    if (
+      ("data" in payload && payload.success !== true) ||
+      !listing ||
+      typeof listing.id !== "string" ||
+      typeof listing.seller_id !== "string"
+    ) {
+      throw new Error(
+        "data" in payload
+          ? payload.message || "Invalid listing response"
+          : "Invalid listing response",
+      );
+    }
+
+    return listing;
+  } catch (error) {
+    const apiMessage = axios.isAxiosError(error)
+      ? (error.response?.data?.message ?? error.response?.data?.error)
+      : undefined;
+    const message =
+      typeof apiMessage === "string"
+        ? apiMessage
+        : error instanceof Error
+          ? error.message
+          : "Failed to load product";
+    notifyError(message);
+    throw error;
+  }
+};
+
+export const getSellerListings = async (sellerId: string) => {
+  let result: any = "";
+  await apiClient
+    .get(`/catalog/listings/seller/${sellerId}`) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
+    .then((response: any) => {
+      if (response?.data?.success === true) {
+        result = response?.data;
+        console.log(result);
+      }
+    })
+    .catch((err) => {
+      // notifyError(err?.response?.data?.error);
+      // throw err;
+    });
+
+  return result;
+};
+
 export const createListing = async (data: any) => {
   let result: any = "";
   await apiClient
@@ -524,7 +639,7 @@ export const updateListing = async (id: any, data: any) => {
 };
 
 export const createListingMedia = async (data: any, id: string) => {
-  let result:any = "";
+  let result: any = "";
   await apiClient
     .post(`/catalog/listings/${id}/media`, data) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
     .then((response: any) => {

@@ -223,7 +223,16 @@ export function ProductCard({ product }: { product: SellerProduct }) {
       className="panel overflow-hidden rounded-[30px]"
     >
       <div className="relative h-56">
-        <Image src={product.images[0].toString()} alt={product.name} fill className="object-cover" />
+        <Image
+          src={
+            product.images?.[0]?.url ??
+            product.imageUrl ??
+            "/placeholder-product.jpg"
+          }
+          alt={product.name}
+          fill
+          className="object-cover"
+        />
         <div className="absolute inset-0 bg-gradient-to-t from-black/45 to-transparent" />
         <button
           onClick={() => toggleSavedItem(product.id)}
@@ -249,7 +258,7 @@ export function ProductCard({ product }: { product: SellerProduct }) {
         </div>
         <p className="text-sm leading-6 text-muted">{product.description}</p>
         <div className="flex flex-wrap gap-2">
-          {product.features.map((feature) => (
+          {(product.features ?? []).map((feature) => (
             <span
               key={feature}
               className="rounded-full bg-surface px-3 py-1 text-xs font-medium text-muted"
@@ -259,7 +268,7 @@ export function ProductCard({ product }: { product: SellerProduct }) {
           ))}
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span className="text-muted">{seller.businessName}</span>
+          <span className="text-muted">{seller.name}</span>
           <span className="font-medium text-primary">{product.stockStatus}</span>
         </div>
         <div className="flex gap-3">
@@ -321,7 +330,7 @@ export function ServiceCard({ service }: { service: MarketService }) {
           <p className="mt-1">{service.audience}</p>
         </div>
         <div className="flex items-center justify-between text-sm">
-          <span>{seller.businessName}</span>
+          <span>{seller.name}</span>
           <span className="text-muted">{service.deliveryTime}</span>
         </div>
         <div className="flex gap-3">

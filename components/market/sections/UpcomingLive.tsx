@@ -36,9 +36,10 @@ export function UpcomingLive({ sessions }: UpcomingLiveProps) {
 
       <Carousel
         items={upcoming}
-        itemWidth={320}
+        itemWidth={280}
+        gap={12}
         renderItem={(session) => (
-          <LiveSessionCard session={session} variant="compact" />
+          <LiveSessionCard session={session} />
         )}
       />
     </MarketSection>

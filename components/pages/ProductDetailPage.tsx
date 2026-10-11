@@ -113,7 +113,11 @@ export function ProductDetailPage({ productId }: { productId?: string }) {
           <div className="panel overflow-hidden rounded-[36px]">
             <div className="relative h-[420px]">
               <img
-                src={product.images[0]?.url ?? "/placeholder-product.jpg"}
+                src={
+                  product.images?.[0]?.url ??
+                  product.imageUrl ??
+                  "/placeholder-product.jpg"
+                }
                 alt={product.name}
                 className="h-full w-full object-cover"
               />

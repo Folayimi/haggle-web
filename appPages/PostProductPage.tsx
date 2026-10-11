@@ -935,6 +935,21 @@ const PostProductPage = () => {
           setPublishing(false);
           return;
         }
+
+        // ============================================
+        // UPLOAD IMAGES
+        // ============================================
+        if (!productMediaRef.current) {
+          console.error("❌ ProductMedia ref is null – cannot upload images");
+          setDraftStatus("idle");
+          setPublishing(false);
+          return;
+        }
+
+        const uploadResults =
+          await productMediaRef.current.uploadGalleryImages(listingId);
+        console.log("📸 Upload results:", uploadResults);
+        
         await updateListing(listingId, {
           ...payload,
           category_id: subCategoryId, // ✅ categoryId is now defined
@@ -949,31 +964,31 @@ const PostProductPage = () => {
         console.log("Real Listing ID:", listingResponse);
         listingId = listingResponse?.data?.id;
         localStorage.setItem("productListingId", listingResponse?.data?.id);
-      }
 
-      // If no listingId, fail early (for create)
-      if (!productListingId && !listingId) {
-        console.error("❌ Failed to create listing");
-        setDraftStatus("idle");
-        setPublishing(false);
-        return;
+        // If no listingId, fail early (for create)
+        if (!productListingId && !listingId) {
+          console.error("❌ Failed to create listing");
+          setDraftStatus("idle");
+          setPublishing(false);
+          return;
+        }
+
+        // ============================================
+        // UPLOAD IMAGES
+        // ============================================
+        if (!productMediaRef.current) {
+          console.error("❌ ProductMedia ref is null – cannot upload images");
+          setDraftStatus("idle");
+          setPublishing(false);
+          return;
+        }
+
+        const uploadResults =
+          await productMediaRef.current.uploadGalleryImages(listingId);
+        console.log("📸 Upload results:", uploadResults);
       }
 
       setSaveType("update");
-
-      // ============================================
-      // UPLOAD IMAGES
-      // ============================================
-      if (!productMediaRef.current) {
-        console.error("❌ ProductMedia ref is null – cannot upload images");
-        setDraftStatus("idle");
-        setPublishing(false);
-        return;
-      }
-
-      const uploadResults =
-        await productMediaRef.current.uploadGalleryImages(listingId);
-      console.log("📸 Upload results:", uploadResults);
 
       // ============================================
       // UPDATE PROFILE
@@ -1023,6 +1038,10 @@ const PostProductPage = () => {
   };
 
   const handleSubmit = async () => {
+    if (imageGallery.length === 0) {
+      alert("Please upload at least one image before publishing.");
+      return;
+    }
     setPublishing(true);
     await saveDraft("published");
     setPublishing(false);

@@ -5,7 +5,23 @@ import { ArrowRight } from "lucide-react";
 import { motion } from "framer-motion";
 import { SectionHeaderProps } from "./types";
 
-
+export function SectionActionButton({
+  label,
+  onClick,
+}: {
+  label: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="shrink-0 rounded-full border border-border bg-background-elevated px-4 py-2 text-sm font-medium transition hover:border-primary/40 hover:bg-primary/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+    >
+      {label}
+    </button>
+  );
+}
 
 export function SectionHeader({
   title,
@@ -15,7 +31,7 @@ export function SectionHeader({
   action,
 }: SectionHeaderProps) {
   return (
-    <div className="mb-6 flex items-end justify-between gap-4">
+    <div className="mb-6 flex items-center justify-between gap-4">
 
       <div className="min-w-0">
 
@@ -24,7 +40,7 @@ export function SectionHeader({
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
           transition={{ duration: .25 }}
-          className="text-2xl font-bold tracking-tight"
+          className="text-[20px] font-bold tracking-tight"
         >
           {title}
         </motion.h2>

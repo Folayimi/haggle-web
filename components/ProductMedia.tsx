@@ -1,7 +1,13 @@
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useEffect, forwardRef, useImperativeHandle, useRef } from "react";
+import {
+  useState,
+  useEffect,
+  forwardRef,
+  useImperativeHandle,
+  useRef,
+} from "react";
 import {
   Camera,
   Check,
@@ -35,7 +41,13 @@ import {
 // ============================================
 // TYPES
 // ============================================
-type FixedSlotId = "front" | "back" | "left" | "right" | "accessories" | "packaging";
+type FixedSlotId =
+  | "front"
+  | "back"
+  | "left"
+  | "right"
+  | "accessories"
+  | "packaging";
 type SlotId = FixedSlotId | string; // allow dynamic "moreX"
 
 type ConnectionStatus = "idle" | "scanning" | "connected" | "uploading";
@@ -109,7 +121,8 @@ export const ProductMedia = forwardRef<
   const [images, setImages] = useState<Record<SlotId, string>>({});
   const [imageGallery, setImageGallery] = useState<GalleryImage[]>([]);
   const [extraSlots, setExtraSlots] = useState<Slot[]>([]);
-  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("idle");
+  const [connectionStatus, setConnectionStatus] =
+    useState<ConnectionStatus>("idle");
   const [deviceName, setDeviceName] = useState<string | null>(null);
   const [guidedStep, setGuidedStep] = useState<number>(0);
   const [mode, setMode] = useState<Mode>("choose");
@@ -143,18 +156,21 @@ export const ProductMedia = forwardRef<
   // ============================================
   // CORE: FILL SLOTS WITH MULTIPLE FILES
   // ============================================
-  const fillSlotsWithFiles = (files: FileList | File[], startSlotId?: SlotId) => {
+  const fillSlotsWithFiles = (
+    files: FileList | File[],
+    startSlotId?: SlotId,
+  ) => {
     const fileArray = Array.from(files);
     if (fileArray.length === 0) return;
 
     // Get current occupied slot IDs
-    const occupiedSlotIds = new Set(imageGallery.map(item => item.slotId));
+    const occupiedSlotIds = new Set(imageGallery.map((item) => item.slotId));
 
     // Determine the order of slots to fill
     let slotsToFill = [...allSlots];
     let startIndex = 0;
     if (startSlotId) {
-      const idx = slotsToFill.findIndex(s => s.id === startSlotId);
+      const idx = slotsToFill.findIndex((s) => s.id === startSlotId);
       if (idx !== -1) startIndex = idx;
     }
     // Reorder slots to start from startIndex
@@ -191,7 +207,11 @@ export const ProductMedia = forwardRef<
     };
 
     // First, iterate over existing slots
-    for (let i = 0; i < slotsToFill.length && fileIndex < fileArray.length; i++) {
+    for (
+      let i = 0;
+      i < slotsToFill.length && fileIndex < fileArray.length;
+      i++
+    ) {
       const slot = slotsToFill[i];
       // If slot already has an image, we skip it (keep existing)
       if (occupiedSlotIds.has(slot.id)) continue;
@@ -220,7 +240,9 @@ export const ProductMedia = forwardRef<
 
     // Update guided step if connected
     if (connectionStatus === "connected") {
-      const firstEmpty = allSlots.findIndex((slot) => !imageGallery.some((g) => g.slotId === slot.id));
+      const firstEmpty = allSlots.findIndex(
+        (slot) => !imageGallery.some((g) => g.slotId === slot.id),
+      );
       setGuidedStep(firstEmpty >= 0 ? firstEmpty : allSlots.length - 1);
     }
   };
@@ -286,7 +308,9 @@ export const ProductMedia = forwardRef<
     }
 
     const results: GalleryImage[] = [];
-    const pendingItems = imageGallery.filter((item) => item.status === "pending");
+    const pendingItems = imageGallery.filter(
+      (item) => item.status === "pending",
+    );
 
     if (pendingItems.length === 0) {
       console.log("✅ No pending images to upload.");
@@ -311,13 +335,17 @@ export const ProductMedia = forwardRef<
           throw new Error(`Upload failed: ${uploadResponse.statusText}`);
         }
         await confirmUpload({ key: presign.key });
+        console.log("uploading image to server: ", presign.key);
         const response = await createListingMedia(
           {
             media_type: "IMAGE",
             url: presign.key,
+            thumbnail_url: results.length > 0 ? results[0].key : presign.key,
           },
           listingId,
         );
+
+        console.log("uploaded");
 
         const updatedItem: GalleryImage = {
           ...item,
@@ -391,7 +419,7 @@ export const ProductMedia = forwardRef<
     // Use the multi-file fill function starting from the clicked slot
     fillSlotsWithFiles(files, slotId);
     // Clear the input value to allow re-selection of same files
-    e.target.value = '';
+    e.target.value = "";
   };
 
   const removeImage = async (slotId: SlotId) => {
@@ -442,8 +470,12 @@ export const ProductMedia = forwardRef<
 
     if (!sourceSlotId || sourceSlotId === targetSlotId) return;
 
-    const sourceItem = imageGallery.find((item) => item.slotId === sourceSlotId);
-    const targetItem = imageGallery.find((item) => item.slotId === targetSlotId);
+    const sourceItem = imageGallery.find(
+      (item) => item.slotId === sourceSlotId,
+    );
+    const targetItem = imageGallery.find(
+      (item) => item.slotId === targetSlotId,
+    );
 
     if (!sourceItem) return;
 
@@ -539,7 +571,9 @@ export const ProductMedia = forwardRef<
   // ============================================
   const currentTip = ROTATING_TIPS[tipIndex];
   const uploadedCount = imageGallery.length;
-  const isAllUploaded = imageGallery.every((item) => item.status === "uploaded");
+  const isAllUploaded = imageGallery.every(
+    (item) => item.status === "uploaded",
+  );
 
   return (
     <div className="space-y-4">
@@ -550,7 +584,9 @@ export const ProductMedia = forwardRef<
             <Sparkles className="h-4 w-4" />
           </div>
           <div>
-            <p className="text-sm font-medium text-foreground">Pro Seller Tip</p>
+            <p className="text-sm font-medium text-foreground">
+              Pro Seller Tip
+            </p>
             <motion.div
               key={tipIndex}
               initial={{ opacity: 0, y: 8 }}
@@ -572,7 +608,9 @@ export const ProductMedia = forwardRef<
           <div className="rounded-full bg-secondary/10 p-1.5 text-secondary">
             <ImagePlus className="h-4 w-4" />
           </div>
-          <h2 className="text-sm font-semibold text-foreground">Product Media</h2>
+          <h2 className="text-sm font-semibold text-foreground">
+            Product Media
+          </h2>
           <div className="flex flex-wrap items-center justify-between gap-1 ml-auto">
             <div className="flex items-center gap-1.5">
               <span className="text-[9px] text-muted/40">Supported:</span>
@@ -605,7 +643,9 @@ export const ProductMedia = forwardRef<
             {/* Upload grid */}
             <div className="grid grid-cols-4 gap-2">
               {allSlots.map((slot) => {
-                const image = imageGallery.find((item) => item.slotId === slot.id);
+                const image = imageGallery.find(
+                  (item) => item.slotId === slot.id,
+                );
                 const hasImage = !!image;
                 const isUploading = image?.status === "uploading";
                 const hasError = image?.status === "error";
@@ -647,7 +687,9 @@ export const ProductMedia = forwardRef<
                         )}
                         {hasError && (
                           <div className="absolute inset-0 bg-danger/20 flex flex-col items-center justify-center">
-                            <span className="text-xs text-danger font-medium">Failed</span>
+                            <span className="text-xs text-danger font-medium">
+                              Failed
+                            </span>
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
@@ -690,7 +732,9 @@ export const ProductMedia = forwardRef<
                       <>
                         <div className="text-center">
                           <Upload className="mx-auto h-4 w-4 text-muted/30" />
-                          <p className="mt-0.5 text-[9px] text-muted/40">{slot.label}</p>
+                          <p className="mt-0.5 text-[9px] text-muted/40">
+                            {slot.label}
+                          </p>
                           {slot.starred && (
                             <Star className="mx-auto mt-0.5 h-2.5 w-2.5 text-yellow-400/60" />
                           )}
@@ -716,7 +760,9 @@ export const ProductMedia = forwardRef<
               <div
                 onDragOver={handleDragOver}
                 onDrop={handleAddMoreDrop}
-                onClick={() => document.getElementById('file-upload-add-more')?.click()}
+                onClick={() =>
+                  document.getElementById("file-upload-add-more")?.click()
+                }
                 className="
                   relative rounded-lg aspect-square
                   border-2 border-dashed border-border/40
@@ -741,7 +787,7 @@ export const ProductMedia = forwardRef<
                     const files = e.target.files;
                     if (files && files.length > 0) {
                       fillSlotsWithFiles(files);
-                      e.target.value = '';
+                      e.target.value = "";
                     }
                   }}
                 />
@@ -857,7 +903,9 @@ export const ProductMedia = forwardRef<
                     className="mt-2 w-full rounded-full bg-primary/10 px-3 py-1 text-[10px] font-medium text-primary hover:bg-primary/20 transition"
                     disabled={isAllUploaded}
                   >
-                    {isAllUploaded ? "All done! 🎉" : "📱 Simulate Phone Upload"}
+                    {isAllUploaded
+                      ? "All done! 🎉"
+                      : "📱 Simulate Phone Upload"}
                   </button>
                 </div>
               )}
@@ -875,7 +923,9 @@ export const ProductMedia = forwardRef<
                     WEBP
                   </span>
                 </div>
-                <span className="text-[8px] text-muted/40">⭐ = Recommended</span>
+                <span className="text-[8px] text-muted/40">
+                  ⭐ = Recommended
+                </span>
               </div>
             </motion.div>
           )}

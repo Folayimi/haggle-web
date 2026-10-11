@@ -16,7 +16,7 @@ export default function OfferArea({ product }: { product: SellerProduct }) {
   const [submitting, setSubmitting] = useState(false);
   const [confirmation, setConfirmation] = useState<string | null>(null);
 
-  if (!product.negotiable) {
+  if (!product.negotiationNote) {
     return null;
   }
 

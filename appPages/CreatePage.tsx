@@ -31,7 +31,7 @@ import {
   Star,
   Eye,
   ThumbsUp,
-  Globe,        // ← NEW
+  Globe, // ← NEW
   LayoutDashboard, // alternative icon
 } from "lucide-react";
 
@@ -321,21 +321,16 @@ const CreatePage = () => {
   // Check if the user has already seen the welcome modal
   useEffect(() => {
     // Only show if we have user data and the flag isn't set
-    if (userData) {
-      const hasSeen = localStorage.getItem("haggle_welcome_seen");
-      if (!hasSeen) {
-        setShowWelcome(true);
-      }
+    if (userData?.profile?.primary_role === "buyer") {
+      setShowWelcome(true);
     }
   }, [userData]);
 
   const handleWelcomeClose = () => {
-    localStorage.setItem("haggle_welcome_seen", "true");
     setShowWelcome(false);
   };
 
   const handleContinue = () => {
-    localStorage.setItem("haggle_welcome_seen", "true");
     setShowWelcome(false);
     // Navigation is handled inside the modal
   };

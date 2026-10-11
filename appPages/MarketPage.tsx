@@ -1,36 +1,59 @@
 "use client";
+
+import Image from "next/image";
+import { useState, useEffect, useRef } from "react";
+import {
+  Activity,
+  ArrowUp,
+  BriefcaseBusiness,
+  ChevronLeft,
+  Layers3,
+  Megaphone,
+  MapPin,
+  Radio,
+  ShoppingBag,
+  Sparkles,
+  Store,
+  Users,
+} from "lucide-react";
+
 import { AppShell } from "@/components/app-shell";
-import { MarketSearch } from "@/components/market/search/MarketSearch";
-import { useMemo, useState } from "react";
-import { Megaphone } from "lucide-react";
-import { cn } from "@/lib/utils";
-
+import { ActionCard } from "@/components/market/common/ActionCard";
+import {
+  MarketLoadingSkeleton,
+  MarketProductDetailSkeleton,
+  MarketSellerActivitySkeleton,
+  MarketSellerSkeleton,
+  MarketSidebarSkeleton,
+} from "@/components/market/common/MarketSkeletons";
+import ProductCard from "@/components/market/cards/ProductCard";
+import { LiveSessionCard } from "@/components/market/cards/LiveSessionCard";
 import { useMarketDiscovery } from "@/components/market/hooks/useMarketDiscovery";
-import { Categories } from "@/components/market/sections/Categories";
+import { FilterChips } from "@/components/market/search/FilterChips";
+import { MarketSearch } from "@/components/market/search/MarketSearch";
+import { ContinueNegotiating } from "@/components/market/sections/ContinueNegotiating";
+import { FeaturedCollections } from "@/components/market/sections/FeaturedCollections";
+import { LiveNow } from "@/components/market/sections/LiveNow";
+import { ProductFeed } from "@/components/market/sections/ProductFeed";
+import { Recommended } from "@/components/market/sections/Recommended";
+import { ServiceFeed } from "@/components/market/sections/ServiceFeed";
+import { TrendingNearYou } from "@/components/market/sections/TrendingNearYou";
+import { MarketProductDetail } from "@/components/market/sections/MarketProductDetail";
+import { MarketBrowseView } from "@/components/market/sections/MarketBrowseView";
 import {
-  LiveNow,
-  TrendingNearYou,
-  ContinueNegotiating,
-  Recommended,
-  ProductFeed,
-  ServiceFeed,
-  PopularBusinesses,
-  FeaturedCollections,
-  UpcomingLive,
-} from "@/components/market/sections";
-
-import {
-  products,
-  services,
-  sellers,
+  featuredCollections,
   liveSessions,
   negotiations,
-  featuredCollections,
-} from "@/components/market/data/mock";
+  sellers,
+  services,
+} from "@/components/market/data/market";
+import { cn } from "@/lib/utils";
+import { getAllCategories, getAllListings, getListing } from "@/services/request";
+import { mapListingToProduct, mapUserToSeller } from "@/services/mappers";
+import type { BackendCategory } from "@/services/mappers";
+import { getUserById } from "@/services/users";
+import { SellerProduct } from "@/types";
 
-// ============================================================
-// BroadcastButton (unchanged)
-// ============================================================
 interface BroadcastButtonProps {
   onClick?: () => void;
   className?: string;
@@ -52,7 +75,7 @@ export function BroadcastButton({
     <button
       onClick={onClick}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full bg-primary font-semibold text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:bg-primary-strong transition",
+        "inline-flex items-center gap-1.5 rounded-full bg-primary font-semibold text-white shadow-lg shadow-primary/25 transition hover:bg-primary-strong hover:shadow-xl",
         sizeClasses[size],
         className,
       )}
@@ -69,130 +92,679 @@ export function BroadcastButton({
   );
 }
 
-// ============================================================
-// STILL-PLACEHOLDER SIDEBAR WIDGETS
-// No real section component exists for these yet -- kept as
-// placeholders on purpose rather than faked. Build these after
-// the negotiation loop is proven, same freeze logic as before.
-// ============================================================
-
-const MarketplaceActivityWidget = () => (
-  <div className="w-full h-[220px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-    Marketplace Activity
-  </div>
-);
-
-const NearbyBusinessesWidget = () => (
-  <div className="w-full h-[200px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-    Nearby Businesses
-  </div>
-);
-
-const SponsoredWidget = () => (
-  <div className="w-full h-[160px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-    Sponsored
-  </div>
-);
-
-const CommunityHighlightsWidget = () => (
-  <div className="w-full h-[200px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-    Community Highlights
-  </div>
-);
-
-// ============================================================
-// MAIN PAGE
-// ============================================================
-
-const CATEGORIES = ["All", "Electronics", "Fashion", "Home", "Beauty", "Services"];
-
 const MarketPage = () => {
+  const sectionsContainerRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("All");
-
-  const filteredProducts = useMemo(
-    () =>
-      products.filter((p) => {
-        const inCategory = activeCategory === "All" || p.category === activeCategory;
-        const inQuery =
-          !searchQuery.trim() ||
-          `${p.name} ${p.description}`.toLowerCase().includes(searchQuery.toLowerCase());
-        return inCategory && inQuery;
-      }),
-    [activeCategory, searchQuery],
+  const [selectedCategory, setSelectedCategory] = useState("All");
+  const [selectedMarketView, setSelectedMarketView] = useState<
+    | "trending"
+    | "recommended"
+    | "collections"
+    | "latest"
+    | "services"
+    | "live"
+    | null
+  >(null);
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
+    null,
   );
-
+  const [selectedProduct, setSelectedProduct] = useState<SellerProduct | null>(
+    null,
+  );
+  const [selectedSeller, setSelectedSeller] = useState<
+    ReturnType<typeof mapUserToSeller> | null
+  >(null);
+  const [productDetailLoading, setProductDetailLoading] = useState(false);
+  const [productDetailError, setProductDetailError] = useState(false);
+  const [sellerLoading, setSellerLoading] = useState(false);
+  const [sellerError, setSellerError] = useState(false);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  const [products, setProducts] = useState<SellerProduct[]>([]);
+  const [publishedCategories, setPublishedCategories] = useState<
+    BackendCategory[]
+  >([]);
+  const [productsLoading, setProductsLoading] = useState(true);
+  const [productsError, setProductsError] = useState(false);
   const discovery = useMarketDiscovery({
-    products: filteredProducts,
+    products,
     services,
     sellers,
     liveSessions,
     negotiations,
   });
 
+  const categories = [
+    { id: "All", name: "All categories" },
+    ...publishedCategories.map(({ id, name }) => ({ id, name })),
+  ];
+  const categoryNames = new Map(
+    publishedCategories.map((category) => [category.id, category.name]),
+  );
+  const query = searchQuery.trim().toLowerCase();
+  const matchesProduct = (product: (typeof products)[number]) =>
+    (selectedCategory === "All" || product.category === selectedCategory) &&
+    (!query ||
+      `${product.name} ${categoryNames.get(product.category) ?? ""}`
+        .toLowerCase()
+        .includes(query));
+  const filteredProducts = products.filter(matchesProduct);
+  const filteredServices = services.filter(
+    (service) =>
+      !query ||
+      `${service.name} ${service.category}`.toLowerCase().includes(query),
+  );
+  const handleSectionsScroll = () => {
+    const container = sectionsContainerRef.current;
+    if (!container) return;
+
+    const scrollableDistance = container.scrollHeight - container.clientHeight;
+    setShowBackToTop(
+      scrollableDistance > 0 &&
+        container.scrollTop >= scrollableDistance * 0.45,
+    );
+  };
+  const handleProductSelect = (product: SellerProduct) => {
+    setSelectedProductId(product.id);
+    setSelectedProduct(product);
+    setSelectedSeller(null);
+    setProductDetailLoading(true);
+    setProductDetailError(false);
+    setSellerLoading(true);
+    setSellerError(false);
+    sectionsContainerRef.current?.scrollTo({ top: 0 });
+    setShowBackToTop(false);
+  };
+  const handleBackToListings = () => {
+    setSelectedProductId(null);
+    setSelectedProduct(null);
+    setSelectedSeller(null);
+    setProductDetailLoading(false);
+    setProductDetailError(false);
+    setSellerLoading(false);
+    setSellerError(false);
+    sectionsContainerRef.current?.scrollTo({ top: 0 });
+    setShowBackToTop(false);
+  };
+  const openMarketView = (
+    view: NonNullable<typeof selectedMarketView>,
+  ) => {
+    setSelectedMarketView(view);
+    sectionsContainerRef.current?.scrollTo({ top: 0 });
+    setShowBackToTop(false);
+  };
+  const handleBackToMarket = () => {
+    if (selectedProductId) {
+      handleBackToListings();
+      return;
+    }
+
+    setSelectedMarketView(null);
+    sectionsContainerRef.current?.scrollTo({ top: 0 });
+    setShowBackToTop(false);
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    const loadProducts = async () => {
+      setProductsLoading(true);
+      setProductsError(false);
+      try {
+        const listings = await getAllListings();
+        if (cancelled) return;
+        setProducts(
+          listings
+            .filter(
+              (listing) =>
+                listing.listing_type === "product" &&
+                listing.status?.toLowerCase() === "published",
+            )
+            .map(mapListingToProduct),
+        );
+
+        console.log("Loaded products:", listings);
+      } catch {
+        if (!cancelled) setProductsError(true);
+      } finally {
+        if (!cancelled) setProductsLoading(false);
+      }
+    };
+
+    void loadProducts();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!selectedProductId) return;
+    let cancelled = false;
+
+    const loadSelectedProduct = async () => {
+      setProductDetailLoading(true);
+      setProductDetailError(false);
+      try {
+        const listing = await getListing(selectedProductId);
+        if (!cancelled) setSelectedProduct(mapListingToProduct(listing));
+      } catch {
+        if (!cancelled) setProductDetailError(true);
+      } finally {
+        if (!cancelled) setProductDetailLoading(false);
+      }
+    };
+
+    void loadSelectedProduct();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProductId]);
+
+  useEffect(() => {
+    if (!selectedProduct?.sellerId) return;
+    let cancelled = false;
+    const loadSeller = async () => {
+      try {
+        const seller = await getUserById(selectedProduct.sellerId);
+        if (!seller) throw new Error("Seller profile was not found");
+        if (!cancelled) setSelectedSeller(mapUserToSeller(seller));
+      } catch {
+        if (!cancelled) setSellerError(true);
+      } finally {
+        if (!cancelled) setSellerLoading(false);
+      }
+    };
+
+    void loadSeller();
+    return () => {
+      cancelled = true;
+    };
+  }, [selectedProduct?.sellerId]);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      console.log("Fetching categories...");
+      const categoryList = await getAllCategories();
+      console.log("Loaded categories:", categoryList);
+      setPublishedCategories(
+        categoryList.filter(
+          (category) =>
+            (category.status?.toLowerCase() === "published" ||
+              category.status?.toLowerCase() === "draft") &&
+            category.parent_id !== null,
+        ),
+      );
+    };
+
+    fetchCategories();
+  }, []);
+
   return (
     <AppShell>
-      <div className="w-full h-screen flex flex-col px-3">
-        {/* Header -- fixed height 64px, search bar 60% width, left aligned */}
-        <header className="w-full h-16 sticky z-10 top-0 left-0 flex items-center justify-between pl-50 pr-20">
-          <div className="flex-1 max-w-[60%] flex h-full items-center">
-            <MarketSearch
-              value={searchQuery}
-              onChange={(value) => setSearchQuery(value)}
-            />
+      <div className="flex min-h-[calc(100dvh-10rem)] w-full flex-col px-3 sm:px-4 xl:h-screen">
+        <header className="sticky z-30 mt-2 mx-3 flex w-[calc(100%+1.5rem)] items-center justify-between gap-2 border-b border-border/40 bg-background/90 rounded-full px-3 py-3 backdrop-blur-xl sm:mx-3 sm:w-[calc(100%-24px)] sm:gap-3 sm:px-4 xl:top-0">
+          {(selectedProductId || selectedMarketView) && (
+            <button
+              type="button"
+              onClick={handleBackToMarket}
+              aria-label={
+                selectedProductId
+                  ? "Back to marketplace"
+                  : "Back to marketplace sections"
+              }
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-full border border-border bg-background text-foreground transition hover:bg-background-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+            >
+              <ChevronLeft className="h-5 w-5" aria-hidden="true" />
+            </button>
+          )}
+          <FilterChips
+            filters={categories}
+            selected={selectedCategory}
+            onChange={setSelectedCategory}
+          />
+          <div className="flex w-[600px] items-center">
+            <MarketSearch value={searchQuery} onChange={setSearchQuery} />
           </div>
-          <BroadcastButton />
+          <BroadcastButton size="sm" className="shrink-0" />
         </header>
 
-        {/* Main Content Area -- gap-8 (32px) between columns */}
-        <div className="flex flex-1 gap-8 overflow-hidden">
-          {/* Marketplace Feed -- scrollable, sections spaced 40px (space-y-10) */}
-          <div className="flex-1 overflow-y-auto pr-1 space-y-10 pb-20">
-            <Categories
-              categories={CATEGORIES}
-              active={activeCategory}
-              onSelect={setActiveCategory}
-            />
+        <div
+          className={cn(
+            "mt-2 flex min-h-0 flex-1 gap-6 overflow-hidden",
+            selectedProductId && "flex-col xl:flex-row",
+          )}
+        >
+          <div className="relative min-h-0 min-w-0 flex-1">
+            <div
+              ref={sectionsContainerRef}
+              onScroll={handleSectionsScroll}
+              className="h-full min-w-0 space-y-8 overflow-y-auto bg-background-elevated/70 rounded-xl p-5 pb-24 pr-1 xl:pb-20"
+            >
+              {selectedProductId ? (
+                productDetailLoading ? (
+                  <MarketProductDetailSkeleton />
+                ) : productDetailError || !selectedProduct ? (
+                  <div role="alert" className="py-12 text-center">
+                    <p className="text-sm text-danger">
+                    Product details could not be loaded.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={handleBackToListings}
+                    className="mt-4 rounded-full bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong"
+                  >
+                    Back to listings
+                  </button>
+                </div>
+              ) : (
+                <MarketProductDetail
+                  key={selectedProduct.id}
+                  product={selectedProduct}
+                />
+              )
+            ) : productsLoading ? (
+              <MarketLoadingSkeleton
+                view={
+                  selectedMarketView === "collections"
+                    ? "collections"
+                    : selectedMarketView === "services"
+                      ? "services"
+                      : selectedMarketView === "live"
+                        ? "live"
+                        : selectedMarketView
+                          ? "products"
+                          : "overview"
+                }
+              />
+            ) : selectedMarketView === "trending" ? (
+              <MarketBrowseView
+                type="products"
+                title="Trending"
+                description="Products people are viewing, negotiating, and buying."
+                items={discovery.trending.filter(matchesProduct)}
+                onProductSelect={handleProductSelect}
+              />
+            ) : selectedMarketView === "recommended" ? (
+              <MarketBrowseView
+                type="products"
+                title="Recommended for you"
+                description="More products curated for your interests."
+                items={discovery.recommended.filter(matchesProduct)}
+                onProductSelect={handleProductSelect}
+              />
+            ) : selectedMarketView === "collections" ? (
+              <MarketBrowseView
+                type="collections"
+                title="Featured Collections"
+                description="Explore all curated collections."
+                items={featuredCollections}
+              />
+            ) : selectedMarketView === "latest" ? (
+              <MarketBrowseView
+                type="products"
+                title="Latest Listings"
+                description="Browse all recently added products."
+                items={discovery.latest.filter(matchesProduct)}
+                onProductSelect={handleProductSelect}
+              />
+            ) : selectedMarketView === "services" ? (
+              <MarketBrowseView
+                type="services"
+                title="Professional Services"
+                description="Browse trusted professionals and services."
+                items={filteredServices}
+              />
+            ) : selectedMarketView === "live" ? (
+              <MarketBrowseView
+                type="live"
+                title="Happening Live"
+                description="Join live negotiations happening right now."
+                items={discovery.liveNow}
+              />
+            ) : (
+              <>
+              <nav
+                aria-label="Marketplace sections"
+                className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+              >
+                <ActionCard
+                  icon={Activity}
+                  title="Trending"
+                  targetId="market-trending"
+                />
+                <ActionCard
+                  icon={Radio}
+                  title="Happening Live"
+                  targetId="market-live"
+                />
+                <ActionCard
+                  icon={Sparkles}
+                  title="Recommended (For You)"
+                  targetId="market-recommended"
+                />
+                <ActionCard
+                  icon={Layers3}
+                  title="Featured Collections"
+                  targetId="market-collections"
+                />
+                <ActionCard
+                  icon={BriefcaseBusiness}
+                  title="Professional Services"
+                  targetId="market-services"
+                />
+                <ActionCard
+                  icon={ShoppingBag}
+                  title="Latest Listings"
+                  targetId="market-latest"
+                />
+              </nav>
 
-            {discovery.liveNow.length > 0 && (
-              <LiveNow sessions={discovery.liveNow} />
+              {productsError && (
+                <p role="alert" className="text-sm text-danger">
+                  Products could not be loaded. Please try again shortly.
+                </p>
+              )}
+              {!productsLoading && !productsError && products.length === 0 && (
+                <p className="text-sm text-muted">
+                  No published products found.
+                </p>
+              )}
+              <div id="market-trending" className="scroll-mt-4">
+                <TrendingNearYou
+                  products={discovery.trending.filter(matchesProduct)}
+                  location="Lagos"
+                  onProductSelect={handleProductSelect}
+                  onViewAll={() => openMarketView("trending")}
+                />
+              </div>
+              <div id="market-live" className="scroll-mt-4">
+                <LiveNow
+                  sessions={discovery.liveNow}
+                  onViewAll={() => openMarketView("live")}
+                />
+              </div>
+              <div id="market-recommended" className="scroll-mt-4">
+                <Recommended
+                  products={discovery.recommended.filter(matchesProduct)}
+                  onProductSelect={handleProductSelect}
+                  onViewAll={() => openMarketView("recommended")}
+                />
+              </div>
+              <div id="market-collections" className="scroll-mt-4">
+                <FeaturedCollections
+                  collections={featuredCollections}
+                  onViewAll={() => openMarketView("collections")}
+                />
+              </div>
+              <div id="market-services" className="scroll-mt-4">
+                <ServiceFeed
+                  services={filteredServices}
+                  onViewAll={() => openMarketView("services")}
+                />
+              </div>
+              <div id="market-latest" className="scroll-mt-4">
+                <ProductFeed
+                  products={discovery.latest.filter(matchesProduct)}
+                  onProductSelect={handleProductSelect}
+                  onViewAll={() => openMarketView("latest")}
+                />
+              </div>
+              </>
             )}
-
-            <TrendingNearYou products={discovery.trending} />
-
-            {discovery.negotiations.length > 0 && (
-              <ContinueNegotiating negotiations={discovery.negotiations} />
-            )}
-
-            <Recommended products={discovery.recommended} />
-
-            {discovery.services.length > 0 && (
-              <ServiceFeed services={discovery.services} />
-            )}
-
-            <FeaturedCollections collections={featuredCollections} />
-
-            {discovery.latest.length > 0 && (
-              <ProductFeed products={discovery.latest} />
+            </div>
+            {showBackToTop && (
+              <button
+                type="button"
+                aria-label={
+                  selectedProductId
+                    ? "Back to top of product details"
+                    : "Back to top of marketplace sections"
+                }
+                onClick={() =>
+                  sectionsContainerRef.current?.scrollTo({
+                    top: 0,
+                    behavior: "smooth",
+                  })
+                }
+                className="absolute bottom-5 right-5 z-10 inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary text-white shadow-lg shadow-primary/30 transition hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+              >
+                <ArrowUp className="h-5 w-5" aria-hidden="true" />
+              </button>
             )}
           </div>
 
-          {/* Right Workspace -- fixed width, order and heights as specified */}
-          <div className="w-[360px] shrink-0 overflow-y-auto space-y-5 pb-20">
-            <MarketplaceActivityWidget />
+          {selectedProductId ? (
+            <aside className="max-h-[40vh] w-full shrink-0 space-y-5 overflow-y-auto pb-20 xl:max-h-full xl:w-[360px]">
+              <section className="rounded-xl border border-border bg-background-elevated p-5">
+                <h2 className="text-lg font-semibold">Seller information</h2>
+                {sellerLoading && (
+                  <MarketSellerSkeleton />
+                )}
+                {sellerError && (
+                  <p role="alert" className="mt-4 text-sm text-danger">
+                    Seller information could not be loaded.
+                  </p>
+                )}
+                {selectedSeller && (
+                  <>
+                    <div className="mt-5 flex items-center gap-3">
+                      {selectedSeller.avatarUrl !== "/placeholder-avatar.jpg" ? (
+                        <Image
+                          src={selectedSeller.avatarUrl}
+                          alt=""
+                          width={56}
+                          height={56}
+                          unoptimized
+                          className="h-14 w-14 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
+                          {selectedSeller.name.slice(0, 1).toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0">
+                        <p className="truncate font-semibold">
+                          {selectedSeller.businessName || selectedSeller.name}
+                        </p>
+                        {selectedSeller.businessName && (
+                          <p className="truncate text-sm text-muted">
+                            {selectedSeller.name}
+                          </p>
+                        )}
+                        <p className="mt-1 text-xs text-primary">
+                          {selectedSeller.badge}
+                        </p>
+                      </div>
+                    </div>
 
-            {discovery.upcoming.length > 0 && (
-              <UpcomingLive sessions={discovery.upcoming} />
+                    <div className="mt-5 grid grid-cols-3 gap-2">
+                      <div className="rounded-lg bg-background p-3 text-center">
+                        <p className="font-semibold">
+                          {
+                            products.filter(
+                              (product) =>
+                                product.sellerId === selectedSeller.id,
+                            ).length
+                          }
+                        </p>
+                        <p className="mt-1 text-xs text-muted">Listings</p>
+                      </div>
+                      <div className="rounded-lg bg-background p-3 text-center">
+                        <p className="font-semibold">
+                          {products
+                            .filter(
+                              (product) =>
+                                product.sellerId === selectedSeller.id,
+                            )
+                            .reduce(
+                              (total, product) =>
+                                total + (product.saveCount ?? 0),
+                              0,
+                            )}
+                        </p>
+                        <p className="mt-1 text-xs text-muted">Likes</p>
+                      </div>
+                      <div className="rounded-lg bg-background p-3 text-center">
+                        <p className="font-semibold">{selectedSeller.rating}</p>
+                        <p className="mt-1 text-xs text-muted">Rating</p>
+                      </div>
+                    </div>
+
+                    {selectedSeller.rating === "—" && (
+                      <p className="mt-3 text-xs text-muted">
+                        Seller ratings are not available yet.
+                      </p>
+                    )}
+                  </>
+                )}
+              </section>
+
+              {(sellerLoading || selectedSeller) && (
+                <section className="rounded-xl border border-border bg-background-elevated p-5">
+                  <h2 className="text-lg font-semibold">Seller activity</h2>
+                  <p className="mt-1 text-sm text-muted">
+                    Published products from this seller
+                  </p>
+                  {sellerLoading ? (
+                    <MarketSellerActivitySkeleton />
+                  ) : selectedSeller ? (
+                    <div className="mt-4 space-y-3">
+                      {products
+                        .filter(
+                          (product) =>
+                            product.sellerId === selectedSeller.id &&
+                            product.id !== selectedProductId,
+                        )
+                        .slice(0, 3)
+                        .map((product) => (
+                          <button
+                            key={product.id}
+                            type="button"
+                            onClick={() => handleProductSelect(product)}
+                            className="flex w-full items-center gap-3 rounded-lg bg-background p-2 text-left transition hover:bg-background-elevated"
+                          >
+                            {product.imageUrl && (
+                              <Image
+                                src={product.imageUrl}
+                                alt=""
+                                width={56}
+                                height={56}
+                                className="h-14 w-14 rounded-md object-cover"
+                              />
+                            )}
+                            <span className="min-w-0">
+                              <span className="block truncate text-sm font-medium">
+                                {product.name}
+                              </span>
+                              <span className="mt-1 block truncate text-xs text-muted">
+                                {product.description}
+                              </span>
+                            </span>
+                          </button>
+                        ))}
+                      {!products.some(
+                        (product) =>
+                          product.sellerId === selectedSeller.id &&
+                          product.id !== selectedProductId,
+                      ) && (
+                        <p className="text-sm text-muted">
+                          No other product listings yet.
+                        </p>
+                      )}
+                    </div>
+                  ) : null}
+                </section>
+              )}
+            </aside>
+          ) : productsLoading ? (
+            <MarketSidebarSkeleton />
+          ) : (
+          <div className="hidden w-[360px] shrink-0 space-y-5 overflow-y-auto pb-20 pt-5 xl:block">
+            <div className="h-[220px] rounded-xl border border-border bg-background-elevated p-5">
+              <h2 className="text-lg font-semibold">Marketplace Activity</h2>
+              <div className="mt-5 grid grid-cols-2 gap-3">
+                <div className="rounded-2xl bg-primary/10 p-4">
+                  <Store className="h-5 w-5 text-primary" />
+                  <p className="mt-3 text-2xl font-bold">
+                    {filteredProducts.length}
+                  </p>
+                  <p className="text-xs text-muted">Listings</p>
+                </div>
+                <div className="rounded-2xl bg-primary/10 p-4">
+                  <Users className="h-5 w-5 text-primary" />
+                  <p className="mt-3 text-2xl font-bold">{sellers.length}</p>
+                  <p className="text-xs text-muted">Sellers</p>
+                </div>
+              </div>
+              <p className="mt-4 flex items-center gap-2 text-sm text-muted">
+                <MapPin className="h-4 w-4 text-primary" />
+                Live marketplace updates
+              </p>
+            </div>
+
+            <div className="h-[200px] overflow-hidden rounded-xl border border-border bg-background-elevated">
+              <ContinueNegotiating
+                negotiations={discovery.negotiations.slice(0, 1)}
+              />
+            </div>
+
+            <div className="h-[280px] overflow-hidden rounded-xl border border-border bg-background-elevated p-4">
+              <h2 className="mb-4 text-lg font-semibold">Suggested Sellers</h2>
+              <div className="grid gap-3">
+                {sellers.slice(0, 3).map((seller) => (
+                  <div
+                    key={seller.id}
+                    className="flex items-center gap-3 rounded-2xl border border-border p-3"
+                  >
+                    <Image
+                      src={seller.avatarUrl}
+                      alt=""
+                      width={40}
+                      height={40}
+                      className="h-10 w-10 rounded-full object-cover"
+                    />
+                    <div className="min-w-0">
+                      <p className="truncate font-semibold">{seller.name}</p>
+                      <p className="text-xs text-muted">
+                        {seller.categories[0]}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="h-[200px] overflow-hidden rounded-xl border border-border bg-background-elevated p-4">
+              <h2 className="mb-4 text-lg font-semibold">Nearby Businesses</h2>
+              <div className="space-y-3">
+                {sellers.slice(3, 5).map((seller) => (
+                  <div
+                    key={seller.id}
+                    className="flex items-center justify-between rounded-2xl bg-background p-3"
+                  >
+                    <span className="truncate font-medium">{seller.name}</span>
+                    <span className="text-xs text-muted">
+                      {/* {seller.hero.location} */}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {filteredProducts[0] && (
+              <div className="rounded-xl border border-border bg-background-elevated">
+                <ProductCard
+                  product={filteredProducts[0]}
+                  onSelect={handleProductSelect}
+                />
+              </div>
             )}
 
-            {discovery.sellers.length > 0 && (
-              <PopularBusinesses businesses={discovery.sellers} />
+            {discovery.liveNow[0] && (
+              <div className="h-[200px] overflow-hidden rounded-xl border border-border bg-background-elevated">
+                <LiveSessionCard session={discovery.liveNow[0]} />
+              </div>
             )}
-
-            <NearbyBusinessesWidget />
-            <SponsoredWidget />
-            <CommunityHighlightsWidget />
           </div>
+          )}
         </div>
       </div>
     </AppShell>
@@ -200,259 +772,3 @@ const MarketPage = () => {
 };
 
 export default MarketPage;
-
-
-
-
-// "use client";
-// import { AppShell } from "@/components/app-shell";
-// import { MarketSearch } from "@/components/market/search/MarketSearch";
-// import { useState } from "react";
-// import { Megaphone } from "lucide-react";
-// import { cn } from "@/lib/utils";
-
-// // ============================================================
-// // BroadcastButton (unchanged)
-// // ============================================================
-// interface BroadcastButtonProps {
-//   onClick?: () => void;
-//   className?: string;
-//   size?: "default" | "sm" | "lg";
-// }
-
-// export function BroadcastButton({
-//   onClick,
-//   className,
-//   size = "default",
-// }: BroadcastButtonProps) {
-//   const sizeClasses = {
-//     sm: "px-3 py-1.5 text-xs",
-//     default: "px-4 py-2 text-sm",
-//     lg: "px-6 py-3 text-base",
-//   };
-
-//   return (
-//     <button
-//       onClick={onClick}
-//       className={cn(
-//         "inline-flex items-center gap-1.5 rounded-full bg-primary font-semibold text-white shadow-lg shadow-primary/25 hover:shadow-xl hover:bg-primary-strong transition",
-//         sizeClasses[size],
-//         className,
-//       )}
-//     >
-//       <Megaphone
-//         className={cn(
-//           "h-4 w-4",
-//           size === "sm" && "h-3 w-3",
-//           size === "lg" && "h-5 w-5",
-//         )}
-//       />
-//       Broadcast
-//     </button>
-//   );
-// }
-
-// // ============================================================
-// // FEED COMPONENTS (placeholders – refined architecture)
-// // ============================================================
-
-// // Hero – 280px
-// const MarketplaceHero = () => (
-//   <div className="w-full h-[280px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-//     Marketplace Hero
-//   </div>
-// );
-
-// // Quick Categories – 72px, utility strip
-// const QuickCategories = () => (
-//   <div className="w-full h-[72px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-//     Quick Categories
-//   </div>
-// );
-
-// // Trending Near You – horizontal rail, 220x280 cards
-// const TrendingNearYouSection = () => (
-//   <div className="space-y-2">
-//     <div className="text-sm font-medium text-white/70">Trending Near You</div>
-//     <div className="flex gap-4 overflow-x-auto pb-2">
-//       {Array.from({ length: 5 }).map((_, i) => (
-//         <div
-//           key={i}
-//           className="min-w-[220px] h-[280px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3] shrink-0"
-//         >
-//           Product Card
-//         </div>
-//       ))}
-//     </div>
-//   </div>
-// );
-
-// // Negotiations Happening Now – horizontal rail, 280x200 cards
-// const LiveNegotiationsSection = () => (
-//   <div className="space-y-2">
-//     <div className="text-sm font-medium text-white/70">Negotiations Happening Now</div>
-//     <div className="flex gap-4 overflow-x-auto pb-2">
-//       {Array.from({ length: 3 }).map((_, i) => (
-//         <div
-//           key={i}
-//           className="min-w-[280px] h-[200px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3] shrink-0"
-//         >
-//           Negotiation Card
-//         </div>
-//       ))}
-//     </div>
-//   </div>
-// );
-
-// // Based On Your Interests – 2‑column grid, 220px height
-// const InterestBasedProductsSection = () => (
-//   <div className="space-y-2">
-//     <div className="text-sm font-medium text-white/70">Based On Your Interests</div>
-//     <div className="grid grid-cols-2 gap-4">
-//       {Array.from({ length: 4 }).map((_, i) => (
-//         <div
-//           key={i}
-//           className="h-[220px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]"
-//         >
-//           Interest Product Card
-//         </div>
-//       ))}
-//     </div>
-//   </div>
-// );
-
-// // Deals Around You – banner, 220px
-// const DealsAroundYouSection = () => (
-//   <div className="space-y-2">
-//     <div className="text-sm font-medium text-white/70">Deals Around You</div>
-//     <div className="w-full h-[220px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-//       Deals Banner
-//     </div>
-//   </div>
-// );
-
-// // Services Around You – 3‑column grid, 200px height
-// const ServicesAroundYouSection = () => (
-//   <div className="space-y-2">
-//     <div className="text-sm font-medium text-white/70">Services Around You</div>
-//     <div className="grid grid-cols-3 gap-4">
-//       {Array.from({ length: 3 }).map((_, i) => (
-//         <div
-//           key={i}
-//           className="h-[200px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]"
-//         >
-//           Service Card
-//         </div>
-//       ))}
-//     </div>
-//   </div>
-// );
-
-// // Recently Added – horizontal rail, 160x180 cards
-// const RecentlyAddedSection = () => (
-//   <div className="space-y-2">
-//     <div className="text-sm font-medium text-white/70">Recently Added</div>
-//     <div className="flex gap-4 overflow-x-auto pb-2">
-//       {Array.from({ length: 6 }).map((_, i) => (
-//         <div
-//           key={i}
-//           className="min-w-[160px] h-[180px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3] shrink-0"
-//         >
-//           Collection Card
-//         </div>
-//       ))}
-//     </div>
-//   </div>
-// );
-
-// // ============================================================
-// // RIGHT SIDEBAR WIDGETS (order and heights as specified)
-// // ============================================================
-
-// const MarketplaceActivityWidget = () => (
-//   <div className="w-full h-[220px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-//     Marketplace Activity
-//   </div>
-// );
-
-// const NegotiationActivityWidget = () => (
-//   <div className="w-full h-[200px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-//     Negotiations Happening Now
-//   </div>
-// );
-
-// const SuggestedSellersWidget = () => (
-//   <div className="w-full h-[280px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-//     Suggested Sellers
-//   </div>
-// );
-
-// const NearbyBusinessesWidget = () => (
-//   <div className="w-full h-[200px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-//     Nearby Businesses
-//   </div>
-// );
-
-// const SponsoredWidget = () => (
-//   <div className="w-full h-[160px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-//     Sponsored
-//   </div>
-// );
-
-// const CommunityHighlightsWidget = () => (
-//   <div className="w-full h-[200px] rounded-xl border border-[#2a2a2a] bg-[#1a1a1a] flex items-center justify-center text-sm text-[#b3b3b3]">
-//     Community Highlights
-//   </div>
-// );
-
-// // ============================================================
-// // MAIN PAGE
-// // ============================================================
-
-// const MarketPage = () => {
-//   const [searchQuery, setSearchQuery] = useState("");
-
-//   return (
-//     <AppShell>
-//       <div className="w-full h-screen flex flex-col px-3">
-//         {/* Header – fixed height 64px, search bar 60% width, left aligned */}
-//         <header className="w-full h-16 sticky z-10 top-0 left-0 flex items-center justify-between pl-50 pr-20">
-//           <div className="flex-1 max-w-[60%] flex h-full items-center">
-//             <MarketSearch
-//               value={searchQuery}
-//               onChange={(value) => setSearchQuery(value)}
-//             />
-//           </div>
-//           <BroadcastButton />
-//         </header>
-
-//         {/* Main Content Area – gap-8 (32px) between columns */}
-//         <div className="flex flex-1 gap-8 overflow-hidden">
-//           {/* Marketplace Feed – scrollable, sections spaced 40px (space-y-10) */}
-//           <div className="flex-1 overflow-y-auto pr-1 space-y-10 pb-20">
-//             <MarketplaceHero />
-//             <QuickCategories />
-//             <TrendingNearYouSection />
-//             <LiveNegotiationsSection />
-//             <InterestBasedProductsSection />
-//             <DealsAroundYouSection />
-//             <ServicesAroundYouSection />
-//             <RecentlyAddedSection />
-//           </div>
-
-//           {/* Right Workspace – fixed width, order and heights as specified */}
-//           <div className="w-[360px] shrink-0 overflow-y-auto space-y-5 pb-20">
-//             <MarketplaceActivityWidget />
-//             <NegotiationActivityWidget />
-//             <SuggestedSellersWidget />
-//             <NearbyBusinessesWidget />
-//             <SponsoredWidget />
-//             <CommunityHighlightsWidget />
-//           </div>
-//         </div>
-//       </div>
-//     </AppShell>
-//   );
-// };
-
-// export default MarketPage;

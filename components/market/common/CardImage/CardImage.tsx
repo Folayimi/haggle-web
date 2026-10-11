@@ -16,18 +16,14 @@ const aspectClasses = {
 export function CardImage({
   image,
   alt,
-  aspectRatio = "landscape",
   className,
-  overlay,
   topOverlay,
-  bottomOverlay,
   zoomOnHover = true,
 }: CardImageProps) {
   return (
     <div
       className={cn(
-        "group relative overflow-hidden",
-        aspectClasses[aspectRatio],
+        "group relative overflow-hidden h-full",
         className
       )}
     >
@@ -38,28 +34,18 @@ export function CardImage({
         height={500}
         width={500}
         className={cn(
-          "object-cover transition-transform duration-500",
-          zoomOnHover && "group-hover:scale-105"
+          "object-cover transition-transform duration-500 w-full h-full",
+          zoomOnHover && "group-hover:scale-105 object-cover"
         )}
       />
 
       {/* Default Gradient */}
       <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
 
-      {/* Custom Full Overlay */}
-      {overlay}
-
       {/* Top Overlay */}
       {topOverlay && (
         <div className="absolute inset-x-4 top-4 z-10">
           {topOverlay}
-        </div>
-      )}
-
-      {/* Bottom Overlay */}
-      {bottomOverlay && (
-        <div className="absolute inset-x-4 bottom-4 z-10">
-          {bottomOverlay}
         </div>
       )}
     </div>

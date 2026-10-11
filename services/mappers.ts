@@ -9,21 +9,48 @@ import { Media } from "@/types/common";
 
 // --- Backend shapes (only what we read) -----------------------------------
 
-interface BackendListing {
+export interface BackendListing {
   id: string;
   seller_id: string;
   slug: string;
   title: string;
   description: string;
   category_id: string;
+  listing_type?: string;
   starting_amount: string | null;
-  lowest_amount: string | null;
-  status: string;
+  lowest_amount?: string | null;
+  auto_decline_amount?: string | null;
+  price_currency?: string;
+  status?: string;
   negotiation_style: string;
-  tags: string | string[];
+  negotiation_note?: string | null;
+  tags: string | string[] | null;
   save_count?: number;
   created_at: string;
-  media?: { id: string; url: string; media_type: "image" | "video" }[];
+  thumbnail_url?: string | null;
+  cover_media_id?: string | null;
+  medias?: BackendListingMedia[];
+  media?: BackendListingMedia[];
+}
+
+export interface BackendCategory {
+  id: string;
+  parent_id?: string | null;
+  name: string;
+  slug: string;
+  kind: string;
+  status?: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+interface BackendListingMedia {
+  id: string;
+  url: string;
+  thumbnail_url?: string | null;
+  media_type: "IMAGE" | "VIDEO" | "image" | "video";
+  sort_order?: number;
+  is_cover?: boolean;
 }
 
 interface BackendOffer {
@@ -44,19 +71,55 @@ interface BackendNegotiationThread {
   status: "active" | "accepted" | "rejected" | "expired" | "cancelled";
   current_offer_amount: string;
   last_offer_at: string;
-  // Only present if the caller also fetched/joined the listing.
   listing?: BackendListing;
   latest_offer?: BackendOffer;
+}
+
+function resolveListingMediaUrl(path: string): string {
+  if (/^https?:\/\//i.test(path)) return path;
+
+  const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
+  if (!r2PublicUrl) {
+    throw new Error(
+      "NEXT_PUBLIC_R2_PUBLIC_URL is required to display uploaded listing media",
+    );
+  }
+
+  const publicUrl = new URL(r2PublicUrl);
+  if (publicUrl.protocol !== "http:" && publicUrl.protocol !== "https:") {
+    throw new Error("NEXT_PUBLIC_R2_PUBLIC_URL must use HTTP or HTTPS");
+  }
+
+  return new URL(
+    path.replace(/^\/+/, ""),
+    `${publicUrl.toString().replace(/\/+$/, "")}/`,
+  ).toString();
 }
 
 // --- Mappers ----------------------------------------------------------------
 
 export function mapListingToProduct(listing: BackendListing): SellerProduct {
-  const images: Media[] = (listing.media ?? []).map((m) => ({
-    id: m.id,
-    url: m.url,
-    type: m.media_type,
+  const thumbnailUrl = listing.thumbnail_url?.trim();
+  const listingMedia = [...(listing.medias ?? listing.media ?? [])].sort(
+    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
+  );
+  const images: Media[] = listingMedia.map((media, index) => ({
+    id: media.id,
+    url: resolveListingMediaUrl(media.url),
+    type: media.media_type.toLowerCase() === "video" ? "video" : "image",
+    isCover:
+      media.is_cover === true ||
+      (thumbnailUrl ? media.url === thumbnailUrl : index === 0),
   }));
+  const rawTags = Array.isArray(listing.tags)
+    ? listing.tags
+    : (listing.tags ?? "").split("|");
+  const tags = rawTags
+    .map((tag) => {
+      const separator = tag.indexOf(":");
+      return (separator >= 0 ? tag.slice(separator + 1) : tag).trim();
+    })
+    .filter(Boolean);
 
   return {
     id: listing.id,
@@ -65,16 +128,24 @@ export function mapListingToProduct(listing: BackendListing): SellerProduct {
     name: listing.title,
     description: listing.description,
     category: listing.category_id,
+    imageUrl: thumbnailUrl
+      ? resolveListingMediaUrl(thumbnailUrl)
+      : images.find((image) => image.isCover)?.url ?? images[0]?.url,
     images,
     // starting_amount is the seller's asking price; lowest_amount is never
     // sent to the client (it's the seller's private floor).
-    price: listing.starting_amount ? Number(listing.starting_amount) : 0,
+    price:
+      listing.starting_amount === null
+        ? ""
+        : Number(listing.starting_amount),
+    priceCurrency: listing.price_currency ?? "NGN",
     negotiable: listing.negotiation_style !== "fixed",
-    stockStatus: "In Stock", // listing_inventory not wired yet — hardcode until it is
-    features: [],
-    tags: Array.isArray(listing.tags) ? listing.tags : (listing.tags ?? "").split(",").filter(Boolean),
+    stockStatus: "In Stock",
+    features: tags,
+    negotiationNote: listing.negotiation_note ?? "",
+    tags,
     saveCount: listing.save_count ?? 0,
-    negotiationCount: 0, // requires a count query we haven't built yet — see note below
+    negotiationCount: 0,
     createdAt: listing.created_at,
   };
 }

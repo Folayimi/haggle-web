@@ -1,10 +1,8 @@
 import {
   Seller,
   SellerProduct,
-  Negotiation,
   MarketService,
-  FeaturedCollection,
-  SellerLiveSession,
+  Media,
 } from "@/types";
 
 import {
@@ -33,10 +31,13 @@ export function getServiceCover(service: MarketService): string {
   return service.imageUrl;
 }
 
-export function getProductCover(product: SellerProduct): string {
+export function getProductCover(
+  product: SellerProduct & { imageUrl?: string; images?: Media[] },
+): string {
   return (
-    product.images.find((image) => image.isCover)?.url ??
-    product.images[0]?.url ??
+    product.imageUrl ||
+    product.images?.find((image) => image.isCover)?.url ||
+    product.images?.[0]?.url ||
     "/images/placeholders/product.jpg"
   );
 }

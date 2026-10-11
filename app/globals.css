@@ -324,6 +324,27 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
+.market-card-action {
+  transition:
+    opacity 220ms ease,
+    transform 220ms ease;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .market-card-action {
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(0.75rem);
+  }
+
+  .market-card:hover .market-card-action,
+  .market-card:focus-within .market-card-action {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateY(0);
+  }
+}
+
 a,
 button,
 input,

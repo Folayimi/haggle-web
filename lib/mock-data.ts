@@ -28,6 +28,7 @@ import type {
 // ============================================
 
 const products: SellerProduct[] = [
+ 
   {
     id: "product-vase",
     sellerId: "seller-maria",
