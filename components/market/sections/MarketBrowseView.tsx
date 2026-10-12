@@ -30,6 +30,7 @@ type MarketBrowseViewProps =
       title: string;
       description: string;
       items: MarketService[];
+      onServiceSelect?: (service: MarketService) => void;
     }
   | {
       type: "live";
@@ -40,7 +41,10 @@ type MarketBrowseViewProps =
 
 export function MarketBrowseView(props: MarketBrowseViewProps) {
   return (
-    <section aria-labelledby="market-browse-title" className="space-y-6">
+    <section
+      aria-labelledby="market-browse-title"
+      className="market-browse-container space-y-6"
+    >
       <header>
         <h1 id="market-browse-title" className="text-xl font-bold sm:text-2xl">
           {props.title}
@@ -64,11 +68,20 @@ export function MarketBrowseView(props: MarketBrowseViewProps) {
             ))}
           {props.type === "collections" &&
             props.items.map((collection) => (
-              <CollectionCard key={collection.id} collection={collection} />
+              <div
+                key={collection.id}
+                className="market-browse-collection"
+              >
+                <CollectionCard collection={collection} />
+              </div>
             ))}
           {props.type === "services" &&
             props.items.map((service) => (
-              <ServiceCard key={service.id} service={service} />
+              <ServiceCard
+                key={service.id}
+                service={service}
+                onSelect={props.onServiceSelect}
+              />
             ))}
           {props.type === "live" &&
             props.items.map((session) => (

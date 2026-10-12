@@ -12,6 +12,7 @@ export interface SellerProduct {
   price: number | string;
   priceCurrency?: string;
   negotiable?: boolean;
+  inventoryCount?: number;
   stockStatus?: string;
   features?: string[];
   negotiationNote?: string;

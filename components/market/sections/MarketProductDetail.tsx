@@ -158,6 +158,15 @@ export function MarketProductDetail({ product }: { product: SellerProduct }) {
               ? formatPrice(numericPrice, product.priceCurrency)
               : "Price unavailable"}
           </p>
+          <p
+            className={cn(
+              "mt-2 text-sm font-medium",
+              product.inventoryCount === 0 ? "text-danger" : "text-muted",
+            )}
+            role="status"
+          >
+            {product.stockStatus ?? "Stock status unavailable"}
+          </p>
 
           <div className="mt-5 min-h-0 flex-1">
             <h2 className="text-sm font-semibold">Description</h2>

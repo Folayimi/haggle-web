@@ -330,6 +330,16 @@ body {
     transform 220ms ease;
 }
 
+.market-browse-container {
+  container-type: inline-size;
+}
+
+@container (min-width: 576px) {
+  .market-browse-collection {
+    grid-column: span 2;
+  }
+}
+
 @media (hover: hover) and (pointer: fine) {
   .market-card-action {
     opacity: 0;

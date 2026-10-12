@@ -11,12 +11,17 @@ import { MarketService } from "@/types";
 
 interface ServiceFeedProps {
   services: MarketService[];
+  onServiceSelect?: (service: MarketService) => void;
   onViewAll?: () => void;
 }
 
 const INITIAL = 8;
 
-export function ServiceFeed({ services, onViewAll }: ServiceFeedProps) {
+export function ServiceFeed({
+  services,
+  onServiceSelect,
+  onViewAll,
+}: ServiceFeedProps) {
   const [visible, setVisible] = useState(INITIAL);
 
   const visibleServices = services.slice(0, visible);
@@ -33,7 +38,7 @@ export function ServiceFeed({ services, onViewAll }: ServiceFeedProps) {
         ) : undefined
       }
     >
-      <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),280px))] justify-start gap-x-4 gap-y-6">
         {visibleServices.map((service, index) => (
           <motion.div
             key={service.id}
@@ -42,7 +47,7 @@ export function ServiceFeed({ services, onViewAll }: ServiceFeedProps) {
             transition={{ delay: index * 0.03 }}
             viewport={{ once: true }}
           >
-            <ServiceCard service={service} />
+            <ServiceCard service={service} onSelect={onServiceSelect} />
           </motion.div>
         ))}
       </div>

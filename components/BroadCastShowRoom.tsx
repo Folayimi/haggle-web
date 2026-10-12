@@ -510,9 +510,9 @@ export function BroadCastShowRoom() {
       style={{ backgroundImage: "url('./bg2.jpg')" }}
     >
       {/* Two-Column Feed - Clean, no outlines/borders/backgrounds */}
-      <div className="flex-1 grid grid-cols-2 gap-2 p-2 min-h-0">
+      <div className="flex flex-row justify-center items-start gap-10 p-2 h-full">
         {/* Left Column - Products */}
-        <div className="overflow-hidden">
+        <div className="overflow-hidden h-full">
           <BroadcastColumn
             title="Products"
             icon={<Package className="h-3.5 w-3.5 text-green-400" />}
@@ -524,7 +524,7 @@ export function BroadCastShowRoom() {
         </div>
 
         {/* Right Column - Services */}
-        <div className="overflow-hidden">
+        <div className="overflow-hidden h-full">
           <BroadcastColumn
             title="Services"
             icon={<Wrench className="h-3.5 w-3.5 text-purple-400" />}

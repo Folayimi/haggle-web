@@ -4,6 +4,7 @@
 // Keep ALL backend-shape knowledge in this file. Components never see raw API data.
 
 import { SellerProduct } from "@/types/product";
+import { MarketService } from "@/types/service";
 import { Negotiation } from "@/types/negotiation";
 import { Media } from "@/types/common";
 
@@ -18,6 +19,11 @@ export interface BackendListing {
   category_id: string;
   listing_type?: string;
   starting_amount: string | null;
+  inventory_count?: number | null;
+  target_audience?: string | null;
+  delivery_duration?: string | null;
+  work_place?: string | null;
+  work_address?: string | null;
   lowest_amount?: string | null;
   auto_decline_amount?: string | null;
   price_currency?: string;
@@ -99,6 +105,7 @@ function resolveListingMediaUrl(path: string): string {
 // --- Mappers ----------------------------------------------------------------
 
 export function mapListingToProduct(listing: BackendListing): SellerProduct {
+  const inventoryCount = Math.max(0, listing.inventory_count ?? 0);
   const thumbnailUrl = listing.thumbnail_url?.trim();
   const listingMedia = [...(listing.medias ?? listing.media ?? [])].sort(
     (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
@@ -140,13 +147,72 @@ export function mapListingToProduct(listing: BackendListing): SellerProduct {
         : Number(listing.starting_amount),
     priceCurrency: listing.price_currency ?? "NGN",
     negotiable: listing.negotiation_style !== "fixed",
-    stockStatus: "In Stock",
+    inventoryCount,
+    stockStatus:
+      inventoryCount === 0
+        ? "Out of stock"
+        : inventoryCount <= 10
+          ? `Only ${inventoryCount} left in stock`
+          : "In stock",
     features: tags,
     negotiationNote: listing.negotiation_note ?? "",
     tags,
     saveCount: listing.save_count ?? 0,
     negotiationCount: 0,
     createdAt: listing.created_at,
+  };
+}
+
+export function mapListingToService(
+  listing: BackendListing,
+  categoryName = listing.category_id,
+): MarketService {
+  const thumbnailUrl = listing.thumbnail_url?.trim();
+  const listingMedia = [...(listing.medias ?? listing.media ?? [])].sort(
+    (a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0),
+  );
+  const coverMedia =
+    listingMedia.find((media) => media.is_cover) ?? listingMedia[0];
+  const rawTags = Array.isArray(listing.tags)
+    ? listing.tags
+    : (listing.tags ?? "").split("|");
+  const includes = rawTags
+    .map((tag) => {
+      const separator = tag.indexOf(":");
+      return (separator >= 0 ? tag.slice(separator + 1) : tag).trim();
+    })
+    .filter(Boolean);
+  const workPlace = listing.work_place?.toUpperCase();
+  const negotiationStyle = listing.negotiation_style.toUpperCase();
+
+  return {
+    id: listing.id,
+    sellerId: listing.seller_id,
+    name: listing.title,
+    description: listing.description,
+    category: categoryName,
+    imageUrl: thumbnailUrl
+      ? resolveListingMediaUrl(thumbnailUrl)
+      : coverMedia
+        ? resolveListingMediaUrl(coverMedia.url)
+        : "/placeholder-product.jpg",
+    price: listing.starting_amount ?? "",
+    deliveryTime: listing.delivery_duration ?? "",
+    audience: listing.target_audience ?? "",
+    includes,
+    priceCurrency: listing.price_currency ?? "NGN",
+    negotiable: negotiationStyle === "NEGOTIABLE" || negotiationStyle === "COUNTER",
+    workPlace:
+      workPlace === "REMOTE"
+        ? "Remote"
+        : workPlace === "ON_SITE"
+          ? "On-site"
+          : workPlace ?? "",
+    workAddress: listing.work_address ?? "",
+    negotiationNote: listing.negotiation_note ?? "",
+    gallery: listingMedia
+      .map((media) => resolveListingMediaUrl(media.url))
+      .filter((url) => url !== (thumbnailUrl ? resolveListingMediaUrl(thumbnailUrl) : "")),
   };
 }
 

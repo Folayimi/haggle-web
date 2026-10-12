@@ -36,14 +36,7 @@ export function ProductFeed({
       }
     >
       <div
-        className="
-          grid
-          min-w-0
-          grid-cols-1
-          gap-5
-          sm:grid-cols-2
-          2xl:grid-cols-3
-        "
+        className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,260px),280px))] justify-start gap-x-4 gap-y-6"
       >
         {visibleProducts.map((product, index) => (
           <motion.div

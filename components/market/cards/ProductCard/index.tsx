@@ -80,7 +80,7 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
       </div>
 
       <div className="flex justify-end pt-2">
-        <ActionButton asChild size="sm" className="market-card-action shrink-0">
+        <ActionButton asChild size="sm" className="shrink-0">
           <Link
             href={`/product-detail?product=${encodeURIComponent(product.id)}`}
           >

@@ -52,7 +52,7 @@ export function Recommended({
 
         <Carousel
           items={products}
-          itemWidth={300}
+          itemWidth={280}
           renderItem={(product) => (
             <ProductCard product={product} onSelect={onProductSelect} />
           )}

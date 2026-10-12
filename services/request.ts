@@ -518,16 +518,18 @@ export const getAllCategories = async () => {
   }
 };
 
-export const getAllListings = async () => {
+export const getAllListings = async (listingType: "product" | "services") => {
   try {
     const response = await apiClient.get<{
       success: boolean;
       message: string;
       data: BackendListing[];
-    }>("/catalog/listings");
+    }>(`catalog/listings/${listingType}`);
 
     if (response.data.success !== true || !Array.isArray(response.data.data)) {
-      throw new Error(response.data.message || "Invalid listings response");
+      throw new Error(
+        response.data.message || `Invalid ${listingType} listings response`,
+      );
     }
 
     return response.data.data;
@@ -540,7 +542,7 @@ export const getAllListings = async () => {
         ? apiMessage
         : error instanceof Error
           ? error.message
-          : "Failed to load listings";
+          : `Failed to load ${listingType} listings`;
     notifyError(message);
     throw error;
   }

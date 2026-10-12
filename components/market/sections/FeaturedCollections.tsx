@@ -30,7 +30,7 @@ export function FeaturedCollections({
       />
       <Carousel
         items={collections}
-        itemWidth={280}
+        itemWidth={560}
         gap={16}
         renderItem={(collection) => <CollectionCard collection={collection} />}
       />

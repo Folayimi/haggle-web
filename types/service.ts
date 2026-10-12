@@ -12,7 +12,7 @@ export interface MarketService {
 
   imageUrl: string;
 
-  price: string;
+  price: string | number;
 
   deliveryTime: string;
 
@@ -20,4 +20,15 @@ export interface MarketService {
 
   includes: string[];
 
+  priceCurrency?: string;
+
+  negotiable?: boolean;
+
+  workPlace?: string;
+
+  workAddress?: string;
+
+  negotiationNote?: string;
+
+  gallery?: string[];
 }

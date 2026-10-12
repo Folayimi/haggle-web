@@ -42,7 +42,7 @@ export function TrendingNearYou({
       >
         <Carousel
           items={products}
-          itemWidth={260}
+          itemWidth={280}
           gap={12}
           renderItem={(product) => (
             <ProductCard product={product} onSelect={onProductSelect} />

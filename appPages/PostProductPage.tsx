@@ -9,6 +9,7 @@ import {
   Camera,
   Check,
   ChevronDown,
+  ChevronUp,
   ImagePlus,
   Package,
   Save,
@@ -57,6 +58,7 @@ import { useRouter } from "next/navigation";
 // ============================================
 type TabId = "details" | "pricing" | "media";
 type NegotiationStyle = "flexible" | "moderate" | "firm";
+const MAX_INVENTORY_COUNT = 2_147_483_647;
 
 const NEGOTIATION_STYLES: {
   id: NegotiationStyle;
@@ -657,6 +659,7 @@ const PostProductPage = () => {
     subCategorySlug: "",
     description: "",
     startingPrice: "",
+    inventoryCount: 0,
     lowestAcceptablePrice: "",
     autoDeclinePrice: "",
     negotiationNote: "",
@@ -881,6 +884,7 @@ const PostProductPage = () => {
       title: productInfo?.name,
       description: productInfo?.description,
       starting_amount: productInfo?.startingPrice,
+      inventory_count: productInfo?.inventoryCount,
       lowest_amount: productInfo?.lowestAcceptablePrice,
       auto_decline_amount: productInfo?.autoDeclinePrice,
       tags: tags,
@@ -1412,6 +1416,79 @@ const PostProductPage = () => {
                             })
                           }
                         />
+                      </div>
+                      <div className="space-y-1.5">
+                        <label
+                          htmlFor="inventory-count"
+                          className="text-xs font-medium text-foreground/70"
+                        >
+                          Quantity in stock
+                        </label>
+                        <div className="flex w-full max-w-xs items-center overflow-hidden rounded-xl border border-border/60 bg-background-elevated/40 shadow-sm focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/30">
+                          <input
+                            id="inventory-count"
+                            type="number"
+                            min={0}
+                            max={MAX_INVENTORY_COUNT}
+                            step={1}
+                            value={productInfo.inventoryCount}
+                            onChange={(event) => {
+                              const value = Number(event.target.value);
+                              if (!Number.isFinite(value)) return;
+                              setProductInfo((current) => ({
+                                ...current,
+                                inventoryCount: Math.min(
+                                  MAX_INVENTORY_COUNT,
+                                  Math.max(0, Math.trunc(value)),
+                                ),
+                              }));
+                            }}
+                            className="min-w-0 flex-1 appearance-none bg-transparent px-4 py-3 text-sm text-foreground outline-none"
+                            aria-label="Number of products in stock"
+                          />
+                          <div className="flex flex-col border-l border-border/60">
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setProductInfo((current) => ({
+                                  ...current,
+                                  inventoryCount: Math.min(
+                                    MAX_INVENTORY_COUNT,
+                                    current.inventoryCount + 1,
+                                  ),
+                                }))
+                              }
+                              disabled={
+                                productInfo.inventoryCount >=
+                                MAX_INVENTORY_COUNT
+                              }
+                              aria-label="Increase quantity in stock"
+                              className="flex h-6 w-9 items-center justify-center text-muted transition hover:bg-background-elevated hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <ChevronUp className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setProductInfo((current) => ({
+                                  ...current,
+                                  inventoryCount: Math.max(
+                                    0,
+                                    current.inventoryCount - 1,
+                                  ),
+                                }))
+                              }
+                              disabled={productInfo.inventoryCount <= 0}
+                              aria-label="Decrease quantity in stock"
+                              className="flex h-6 w-9 items-center justify-center text-muted transition hover:bg-background-elevated hover:text-foreground disabled:cursor-not-allowed disabled:opacity-40"
+                            >
+                              <ChevronDown className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-[11px] text-muted/60">
+                          Enter the number of items currently available.
+                        </p>
                       </div>
                       <PriceInput
                         label="Auto Decline Below"

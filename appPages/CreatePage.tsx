@@ -342,17 +342,6 @@ const CreatePage = () => {
   const RIGHT_CARDS = useMemo(() => {
     return [
       {
-        id: "setup-profile",
-        title: "Set Up Your Business Profile",
-        description: "Complete and Manage your business profile.",
-        icon: <Globe className="h-6 w-6" />,
-        href: `/profile/${username}`,
-        color: "primary" as const,
-        stat: "1.2k businesses",
-        step: "①",
-        label: "SETUP",
-      },
-      {
         id: "post-product",
         title: "Post Product",
         description: "List items with pricing and negotiation settings.",
@@ -363,6 +352,18 @@ const CreatePage = () => {
         step: "②",
         label: "CREATE",
       },
+      {
+        id: "setup-profile",
+        title: "Set Up Your Business Profile",
+        description: "Complete and Manage your business profile.",
+        icon: <Globe className="h-6 w-6" />,
+        href: `/profile/${username}`,
+        color: "primary" as const,
+        stat: "1.2k businesses",
+        step: "①",
+        label: "SETUP",
+      },
+
       {
         id: "add-service",
         title: "Add Service",

@@ -26,7 +26,7 @@ function CarouselSectionSkeleton({ cards = 3 }: { cards?: number }) {
         <SkeletonBlock className="h-6 w-40" />
         <SkeletonBlock className="mt-2 h-4 w-64 max-w-full" />
       </div>
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),280px))] justify-start gap-x-4 gap-y-6">
         {Array.from({ length: cards }, (_, index) => (
           <ProductCardSkeleton key={index} />
         ))}
@@ -73,7 +73,7 @@ export function MarketLoadingSkeleton({
               <SkeletonBlock className="h-6 w-44" />
               <SkeletonBlock className="mt-2 h-4 w-60 max-w-full" />
             </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-6 2xl:grid-cols-3">
+            <div className="grid grid-cols-[repeat(auto-fill,minmax(min(100%,260px),280px))] justify-start gap-x-4 gap-y-6">
               {Array.from({ length: 6 }, (_, index) => (
                 <ProductCardSkeleton key={index} />
               ))}
