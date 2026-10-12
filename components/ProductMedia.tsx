@@ -100,12 +100,27 @@ const FIXED_SLOTS: Slot[] = [
   { id: "packaging", label: "Packaging", starred: false, isFixed: true },
 ];
 
+const SERVICE_SLOTS: Slot[] = [
+  { id: "cover", label: "Cover", starred: true, isFixed: true },
+  { id: "sample1", label: "Sample 1", starred: true, isFixed: true },
+  { id: "sample2", label: "Sample 2", starred: true, isFixed: true },
+  { id: "sample3", label: "Sample 3", isFixed: true },
+  { id: "sample4", label: "Sample 4", isFixed: true },
+  { id: "sample5", label: "Sample 5", isFixed: true },
+];
+
 const ROTATING_TIPS = [
   { icon: "📸", text: "Add 4+ high-quality photos" },
   { icon: "⚡", text: "Respond within 1 hour" },
   { icon: "📦", text: "Show packaging in photos" },
   { icon: "🔍", text: "Mention defects honestly" },
   { icon: "💰", text: "Use a realistic asking price" },
+];
+
+const SERVICE_TIPS = [
+  { icon: "📸", text: "Lead with your strongest portfolio sample." },
+  { icon: "✨", text: "Show real examples of your completed work." },
+  { icon: "🎯", text: "Use clear, well-lit images that explain your service." },
 ];
 
 // ============================================
@@ -116,8 +131,9 @@ export const ProductMedia = forwardRef<
   {
     onImagesChange?: (images: Record<SlotId, string>) => void;
     onGalleryChange?: (gallery: GalleryImage[]) => void;
+    variant?: "product" | "service";
   }
->(({ onImagesChange, onGalleryChange }, ref) => {
+>(({ onImagesChange, onGalleryChange, variant = "product" }, ref) => {
   const [images, setImages] = useState<Record<SlotId, string>>({});
   const [imageGallery, setImageGallery] = useState<GalleryImage[]>([]);
   const [extraSlots, setExtraSlots] = useState<Slot[]>([]);
@@ -129,14 +145,16 @@ export const ProductMedia = forwardRef<
   const [tipIndex, setTipIndex] = useState(0);
   const [draggedSlotId, setDraggedSlotId] = useState<SlotId | null>(null);
   const extraCounter = useRef<number>(1);
+  const rotatingTips = variant === "service" ? SERVICE_TIPS : ROTATING_TIPS;
+  const fixedSlots = variant === "service" ? SERVICE_SLOTS : FIXED_SLOTS;
 
   // Rotating seller tips
   useEffect(() => {
     const interval = setInterval(() => {
-      setTipIndex((prev) => (prev + 1) % ROTATING_TIPS.length);
+      setTipIndex((prev) => (prev + 1) % rotatingTips.length);
     }, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, [rotatingTips.length]);
 
   // Notify parent when images change
   useEffect(() => {
@@ -151,7 +169,7 @@ export const ProductMedia = forwardRef<
   // ============================================
   // COMPUTED SLOTS (fixed + extra)
   // ============================================
-  const allSlots = [...FIXED_SLOTS, ...extraSlots];
+  const allSlots = [...fixedSlots, ...extraSlots];
 
   // ============================================
   // CORE: FILL SLOTS WITH MULTIPLE FILES
@@ -569,7 +587,7 @@ export const ProductMedia = forwardRef<
   // ============================================
   // RENDER HELPERS
   // ============================================
-  const currentTip = ROTATING_TIPS[tipIndex];
+  const currentTip = rotatingTips[tipIndex];
   const uploadedCount = imageGallery.length;
   const isAllUploaded = imageGallery.every(
     (item) => item.status === "uploaded",
@@ -609,7 +627,7 @@ export const ProductMedia = forwardRef<
             <ImagePlus className="h-4 w-4" />
           </div>
           <h2 className="text-sm font-semibold text-foreground">
-            Product Media
+            {variant === "service" ? "Service Portfolio" : "Product Media"}
           </h2>
           <div className="flex flex-wrap items-center justify-between gap-1 ml-auto">
             <div className="flex items-center gap-1.5">

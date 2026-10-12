@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import {
   ArrowLeft,
   Camera,
@@ -61,7 +61,18 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
-import { SERVICE_CATEGORIES } from "@/types/categories";
+import { SERVICE_CATEGORIES, type Subcategory } from "@/types/categories";
+import { ProductMedia, ProductMediaRef, GalleryImage } from "@/components/ProductMedia";
+import {
+  createCategory,
+  createListing,
+  getCategory,
+  updateListing,
+} from "@/services/request";
+import { notifyError } from "@/services/toastify";
+import { useHaggleStore } from "@/lib/app-store";
+import Loader from "@/reusables/loader";
+import { useRouter } from "next/navigation";
 
 // ============================================
 // TYPES
@@ -69,11 +80,14 @@ import { SERVICE_CATEGORIES } from "@/types/categories";
 type TabId = "tell" | "offer" | "show";
 type WorkLocation = "home" | "workshop";
 type TargetAudience =
+  | "general"
   | "businesses"
   | "individuals"
   | "creators"
   | "students"
-  | "startups";
+  | "startups"
+  | "professionals";
+type NegotiationStyle = "FIXED" | "NEGOTIABLE" | "COUNTER";
 
 // ============================================
 // CONSTANTS
@@ -87,11 +101,13 @@ const SERVICE_TIPS = [
 ];
 
 const TARGET_AUDIENCES = [
+  { id: "general", label: "Everyone", icon: Users },
   { id: "businesses", label: "Businesses", icon: Building2 },
   { id: "individuals", label: "Individuals", icon: User },
   { id: "creators", label: "Creators", icon: Sparkles },
   { id: "students", label: "Students", icon: Users },
   { id: "startups", label: "Startups", icon: Rocket },
+  { id: "professionals", label: "Professionals", icon: Briefcase },
 ];
 
 const CONFIDENCE_MESSAGES = {
@@ -102,7 +118,7 @@ const CONFIDENCE_MESSAGES = {
   },
   pricing: {
     good: "Clear pricing builds confidence.",
-    neutral: "Consider adding what's included.",
+    neutral: "Add a delivery timeframe and negotiation details.",
     empty: "Set your pricing to start receiving offers.",
   },
   media: {
@@ -130,6 +146,7 @@ function GlassyField({
   onChange,
   helper,
   className,
+  error,
   ...props
 }: {
   label: string;
@@ -144,6 +161,7 @@ function GlassyField({
   ) => void;
   helper?: React.ReactNode;
   className?: string;
+  error?: string;
 }) {
   return (
     <div className={cn("space-y-1.5", className)}>
@@ -182,6 +200,7 @@ function GlassyField({
             shadow-sm
           `,
             prominent && "text-base py-3.5",
+            error && "border-danger/50 focus:border-danger/50 focus:ring-danger/30",
           )}
           {...props}
         />
@@ -203,11 +222,13 @@ function GlassyField({
             shadow-sm
           `,
             prominent && "text-base py-3.5",
+            error && "border-danger/50 focus:border-danger/50 focus:ring-danger/30",
           )}
           {...props}
         />
       )}
       {helper && <div className="mt-1 text-xs text-muted/60">{helper}</div>}
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );
 }
@@ -219,18 +240,18 @@ function GlassySelect({
   label,
   options,
   placeholder,
-  type,
   optional = false,
   onChange,
   value,
+  error,
 }: {
   label: string;
-  options: any[];
+  options: Array<string | { id: string; name: string }>;
   placeholder: string;
-  type?: string;
   optional?: boolean;
   value?: string;
   onChange: (value: string) => void;
+  error?: string;
 }) {
   return (
     <div className="space-y-1.5">
@@ -242,9 +263,14 @@ function GlassySelect({
           </span>
         )}
       </div>
-      <Select items={options}>
+      <Select
+        items={options.map((item) => ({
+          label: typeof item === "string" ? item : item.name,
+          value: typeof item === "string" ? item : item.name,
+        }))}
+      >
         <SelectTrigger
-          className={`
+          className={cn(`
             relative w-full rounded-xl
             border border-border/60 bg-background-elevated/40
             px-4 py-6 text-sm text-foreground
@@ -253,25 +279,30 @@ function GlassySelect({
             focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30
             text-left flex items-center justify-between
             shadow-sm
-          `}
+          `, error && "border-danger/50 focus:border-danger/50 focus:ring-danger/30")}
         >
           <SelectValue placeholder={value ? value : placeholder} />
         </SelectTrigger>
         <SelectContent>
           <SelectGroup className="bg-popover">
-            {options.map((item) => (
-              <SelectItem
-                key={type === "tag" ? item : item.id}
-                value={type === "tag" ? item : item.name}
-                className="w-full px-4 py-2 text-left text-sm text-foreground focus:bg-primary/5 hover:bg-primary/5 transition"
-                onClick={() => onChange(type === "tag" ? item : item.name)}
-              >
-                {type === "tag" ? item : item.name}
-              </SelectItem>
-            ))}
+            {options.map((item) => {
+              const optionValue =
+                typeof item === "string" ? item : item.name;
+              return (
+                <SelectItem
+                  key={typeof item === "string" ? item : item.id}
+                  value={optionValue}
+                  className="w-full px-4 py-2 text-left text-sm text-foreground focus:bg-primary/5 hover:bg-primary/5 transition"
+                  onClick={() => onChange(optionValue)}
+                >
+                  {optionValue}
+                </SelectItem>
+              );
+            })}
           </SelectGroup>
         </SelectContent>
       </Select>
+      {error && <p className="text-xs text-danger">{error}</p>}
     </div>
   );
 }
@@ -283,31 +314,24 @@ function TargetAudiencePicker({
   value,
   onChange,
 }: {
-  value: TargetAudience[];
-  onChange: (value: TargetAudience[]) => void;
+  value: TargetAudience;
+  onChange: (value: TargetAudience) => void;
 }) {
-  const toggleAudience = (audience: TargetAudience) => {
-    if (value.includes(audience)) {
-      onChange(value.filter((a) => a !== audience));
-    } else {
-      onChange([...value, audience]);
-    }
-  };
-
   return (
     <div className="space-y-1.5">
       <span className="text-sm font-medium text-foreground/80">
         Who is this service for?
       </span>
-      <p className="text-[10px] text-muted/40">Select all that apply</p>
       <div className="flex flex-wrap gap-2">
         {TARGET_AUDIENCES.map((audience) => {
           const Icon = audience.icon;
-          const isSelected = value.includes(audience.id as TargetAudience);
+          const isSelected = value === audience.id;
           return (
             <button
               key={audience.id}
-              onClick={() => toggleAudience(audience.id as TargetAudience)}
+              type="button"
+              aria-pressed={isSelected}
+              onClick={() => onChange(audience.id as TargetAudience)}
               className={`
                 rounded-xl border px-4 py-2.5 transition-all duration-200 flex items-center gap-2
                 ${
@@ -357,6 +381,7 @@ function WorkLocationToggle({
       </span>
       <div className="grid grid-cols-2 gap-2">
         <button
+          type="button"
           onClick={() => onChange("home")}
           className={`
             rounded-xl border p-3 text-left transition-all duration-200 flex items-center gap-3
@@ -392,6 +417,7 @@ function WorkLocationToggle({
           </div>
         </button>
         <button
+          type="button"
           onClick={() => onChange("workshop")}
           className={`
             rounded-xl border p-3 text-left transition-all duration-200 flex items-center gap-3
@@ -426,6 +452,77 @@ function WorkLocationToggle({
             </p>
           </div>
         </button>
+      </div>
+    </div>
+  );
+}
+
+function ServiceNegotiationPicker({
+  value,
+  onChange,
+}: {
+  value: NegotiationStyle;
+  onChange: (value: NegotiationStyle) => void;
+}) {
+  const options: {
+    value: NegotiationStyle;
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+  }[] = [
+    {
+      value: "FIXED",
+      label: "Fixed",
+      description: "Price is firm",
+      icon: <Shield className="h-4 w-4" />,
+    },
+    {
+      value: "NEGOTIABLE",
+      label: "Negotiable",
+      description: "Open to offers",
+      icon: <Handshake className="h-4 w-4" />,
+    },
+    {
+      value: "COUNTER",
+      label: "Counter offers",
+      description: "You can make a counter offer",
+      icon: <Scale className="h-4 w-4" />,
+    },
+  ];
+
+  return (
+    <div className="space-y-1.5">
+      <span className="text-sm font-medium text-foreground/80">
+        Negotiation Style
+      </span>
+      <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
+        {options.map((option) => {
+          const selected = value === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              aria-pressed={selected}
+              onClick={() => onChange(option.value)}
+              className={cn(
+                "rounded-xl border p-3 text-left transition-all",
+                selected
+                  ? "border-primary/50 bg-primary/10"
+                  : "border-border/40 bg-background-elevated/20 hover:border-border/60",
+              )}
+            >
+              <span className="flex items-center gap-2">
+                <span className={selected ? "text-primary" : "text-muted/40"}>
+                  {option.icon}
+                </span>
+                <span className="text-sm font-medium">{option.label}</span>
+              </span>
+              <span className="mt-1 block text-[10px] text-muted/50">
+                {option.description}
+              </span>
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -1092,20 +1189,16 @@ function CompletionSummary({
 // ============================================
 // SMART SAVE DRAFT BUTTON
 // ============================================
-function SmartSaveButton() {
-  const [status, setStatus] = useState<"idle" | "saving" | "saved">("idle");
-  const [lastSaved, setLastSaved] = useState<Date | null>(null);
-
-  const handleSave = () => {
-    setStatus("saving");
-    setTimeout(() => {
-      setStatus("saved");
-      setLastSaved(new Date());
-      setTimeout(() => {
-        setStatus("idle");
-      }, 3000);
-    }, 1000);
-  };
+function SmartSaveButton({
+  onSave,
+  saving,
+  lastSaved,
+}: {
+  onSave: () => void;
+  saving: boolean;
+  lastSaved: Date | null;
+}) {
+  const saved = !saving && lastSaved !== null;
 
   const getTimeAgo = () => {
     if (!lastSaved) return "";
@@ -1119,28 +1212,30 @@ function SmartSaveButton() {
 
   return (
     <button
-      onClick={handleSave}
+      type="button"
+      onClick={onSave}
+      disabled={saving}
       className={`
         rounded-full border border-border/60
         px-4 py-2 text-sm font-medium
         transition-all duration-300
         flex items-center gap-2
         ${
-          status === "saved"
+          saved
             ? "bg-success/10 text-success border-success/30"
-            : status === "saving"
+            : saving
               ? "bg-primary/10 text-primary border-primary/30"
               : "text-muted/70 hover:bg-surface hover:text-foreground"
         }
         shadow-sm
       `}
     >
-      {status === "saved" ? (
+      {saved ? (
         <>
           <Check className="h-4 w-4" />
           <span>Draft saved {getTimeAgo()}</span>
         </>
-      ) : status === "saving" ? (
+      ) : saving ? (
         <>
           <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
           <span>Saving...</span>
@@ -1180,7 +1275,7 @@ function RotatingSellerTip() {
       className="flex items-center gap-2 text-xs text-muted/60"
     >
       <span>{tip.icon}</span>
-      <span className="italic">"{tip.text}"</span>
+      <span className="italic">&quot;{tip.text}&quot;</span>
     </motion.div>
   );
 }
@@ -1262,11 +1357,15 @@ function PricePackageCard({
   deliveryTime,
   onPriceChange,
   onDeliveryChange,
+  priceError,
+  deliveryError,
 }: {
   basePrice: string;
   deliveryTime: string;
   onPriceChange: (value: string) => void;
   onDeliveryChange: (value: string) => void;
+  priceError?: string;
+  deliveryError?: string;
 }) {
   return (
     <div className="rounded-xl border border-border/40 bg-background-elevated/20 p-4">
@@ -1281,11 +1380,16 @@ function PricePackageCard({
           <label className="text-xs text-muted/40">Price</label>
           <input
             type="text"
+            inputMode="decimal"
             placeholder="₦50,000"
             value={basePrice}
             onChange={(e) => onPriceChange(e.target.value)}
-            className="w-full rounded-xl border border-border/60 bg-background-elevated/40 px-4 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 shadow-sm mt-1"
+            className={cn(
+              "w-full rounded-xl border border-border/60 bg-background-elevated/40 px-4 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 shadow-sm mt-1",
+              priceError && "border-danger/50 focus:border-danger/50 focus:ring-danger/30",
+            )}
           />
+          {priceError && <p className="mt-1 text-xs text-danger">{priceError}</p>}
         </div>
         <div>
           <label className="text-xs text-muted/40">Delivery</label>
@@ -1294,8 +1398,14 @@ function PricePackageCard({
             placeholder="3-5 days"
             value={deliveryTime}
             onChange={(e) => onDeliveryChange(e.target.value)}
-            className="w-full rounded-xl border border-border/60 bg-background-elevated/40 px-4 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 shadow-sm mt-1"
+            className={cn(
+              "w-full rounded-xl border border-border/60 bg-background-elevated/40 px-4 py-3 text-sm text-foreground placeholder:text-muted/40 backdrop-blur-sm focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 shadow-sm mt-1",
+              deliveryError && "border-danger/50 focus:border-danger/50 focus:ring-danger/30",
+            )}
           />
+          {deliveryError && (
+            <p className="mt-1 text-xs text-danger">{deliveryError}</p>
+          )}
         </div>
       </div>
     </div>
@@ -1310,6 +1420,7 @@ function ServiceCardPreview({
   price = "From ₦50,000",
   category = "Creative Services",
   location = "Remote",
+  negotiationStyle = "NEGOTIABLE",
   rating = 4.9,
   reviews = 8,
   imageCount = 0,
@@ -1319,6 +1430,7 @@ function ServiceCardPreview({
   price?: string;
   category?: string;
   location?: string;
+  negotiationStyle?: NegotiationStyle;
   rating?: number;
   reviews?: number;
   imageCount?: number;
@@ -1333,7 +1445,11 @@ function ServiceCardPreview({
             Service
           </span>
           <span className="rounded-full bg-success/20 px-2 py-0.5 text-[8px] font-medium text-success border border-success/20">
-            Negotiable
+            {negotiationStyle === "FIXED"
+              ? "Fixed"
+              : negotiationStyle === "COUNTER"
+                ? "Counter offers"
+                : "Negotiable"}
           </span>
         </div>
         <div className="absolute top-2 right-2 flex items-center gap-1">
@@ -1399,12 +1515,16 @@ function StickyHeader({
   onCancel,
   onNext,
   title,
+  saving,
+  lastSaved,
 }: {
   activeTab: TabId;
-  onSave?: () => void;
+  onSave: () => void;
   onCancel?: () => void;
-  onNext?: () => void;
+  onNext: () => void;
   title?: string;
+  saving: boolean;
+  lastSaved: Date | null;
 }) {
   // Button text based on active tab
   const getButtonText = () => {
@@ -1447,7 +1567,11 @@ function StickyHeader({
       </div>
 
       <div className="flex items-center gap-3">
-        <SmartSaveButton />
+        <SmartSaveButton
+          onSave={onSave}
+          saving={saving}
+          lastSaved={lastSaved}
+        />
         <Link
           href="/create"
           className="
@@ -1460,7 +1584,9 @@ function StickyHeader({
           Cancel
         </Link>
         <button
+          type="button"
           onClick={onNext}
+          disabled={saving}
           className={`
             rounded-full px-6 py-2.5 text-sm font-semibold text-white
             shadow-lg shadow-secondary/25
@@ -1482,26 +1608,38 @@ function StickyHeader({
 // MAIN PAGE
 // ============================================
 const AddServicePage = () => {
+  const serviceMediaRef = useRef<ProductMediaRef>(null);
+  const userData = useHaggleStore((state) => state.userData);
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("tell");
   const [workLocation, setWorkLocation] = useState<WorkLocation>("home");
-  const [targetAudience, setTargetAudience] = useState<TargetAudience[]>([
-    "businesses",
-  ]);
+  const [targetAudience, setTargetAudience] =
+    useState<TargetAudience>("businesses");
   const [serviceName, setServiceName] = useState("");
   const [price, setPrice] = useState("");
   const [deliveryTime, setDeliveryTime] = useState("");
   const [category, setCategory] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [address, setAddress] = useState("");
-  const [whatsIncluded, setWhatsIncluded] = useState("");
   const [serviceDescription, setServiceDescription] = useState("");
-  const [serviceSubcategories, setServiceSubCategories] = useState<any[]>([]);
-  const [serviceArea, setServiceArea] = useState("");
-  const [addon1, setAddon1] = useState("");
-  const [addon2, setAddon2] = useState("");
-  const [portfolioImages, setPortfolioImages] = useState<
+  const [serviceSubcategories, setServiceSubCategories] = useState<
+    Subcategory[]
+  >([]);
+  const [negotiationStyle, setNegotiationStyle] =
+    useState<NegotiationStyle>("NEGOTIABLE");
+  const [negotiationNote, setNegotiationNote] = useState("");
+  const [imageGallery, setImageGallery] = useState<GalleryImage[]>([]);
+  const [listingId, setListingId] = useState(() =>
+    typeof window === "undefined"
+      ? ""
+      : (window.localStorage.getItem("serviceListingId") ?? ""),
+  );
+  const [validationErrors, setValidationErrors] = useState<
     Record<string, string>
   >({});
+  const [saving, setSaving] = useState(false);
+  const [publishing, setPublishing] = useState(false);
+  const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [completed, setCompleted] = useState({
     tell: false,
     offer: false,
@@ -1546,15 +1684,11 @@ const AddServicePage = () => {
   // INITIALIZE TAGS WHEN CATEGORY CHANGES
   // ============================================
   const selectedCategory = SERVICE_CATEGORIES.find((c) => c.name === category);
-  const requiredTags = selectedCategory?.requiredTags || [];
-
-  useEffect(() => {
-    // Build initial tags string with empty values
-    const initialTags = requiredTags
-      .map((tag) => `${tag.name.toLowerCase()}:`)
-      .join("|");
-    setTags(initialTags);
-  }, [category]);
+  const requiredTags =
+    selectedCategory?.requiredTags.filter(
+      (tag) =>
+        !["delivery time", "location"].includes(tag.name.toLowerCase()),
+    ) ?? [];
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "tell", label: "Tell buyers" },
@@ -1563,24 +1697,194 @@ const AddServicePage = () => {
   ];
 
   const completedCount = Object.values(completed).filter(Boolean).length;
-  const imageCount = Object.keys(portfolioImages).length;
+  const imageCount = imageGallery.length;
+
+  const validateTab = (tab: TabId) => {
+    const errors: Record<string, string> = {};
+    if (tab === "tell") {
+      if (!serviceName.trim()) errors.serviceName = "Service name is required";
+      if (!serviceDescription.trim())
+        errors.serviceDescription = "Description is required";
+      if (!category) errors.category = "Category is required";
+      if (!serviceType) errors.serviceType = "Service type is required";
+      if (workLocation === "workshop" && !address.trim())
+        errors.address = "Workshop address is required";
+
+      requiredTags.forEach((tag) => {
+        if (tag.required && !getTagValue(tag.name).trim()) {
+          errors[tag.name] = `${tag.name} is required`;
+        }
+      });
+    } else if (tab === "offer") {
+      const parsedPrice = Number(price.replace(/[^\d.]/g, ""));
+      if (!Number.isFinite(parsedPrice) || parsedPrice <= 0) {
+        errors.price = "Enter a valid starting price";
+      }
+      if (!deliveryTime.trim())
+        errors.deliveryTime = "Delivery duration is required";
+    }
+
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
   const handleTabChange = (tab: TabId) => {
+    const currentIndex = tabs.findIndex((item) => item.id === activeTab);
+    const targetIndex = tabs.findIndex((item) => item.id === tab);
+    if (targetIndex > currentIndex + 1) return;
+    if (targetIndex > currentIndex && !validateTab(activeTab)) return;
+
+    if (targetIndex > currentIndex) {
+      setCompleted((prev) => ({ ...prev, [activeTab]: true }));
+    }
     setActiveTab(tab);
-    if (tab === "offer") {
-      setCompleted((prev) => ({ ...prev, tell: true }));
-    } else if (tab === "show") {
-      setCompleted((prev) => ({ ...prev, offer: true }));
+  };
+
+  const getServiceCategoryId = async () => {
+    const selectedServiceCategory = SERVICE_CATEGORIES.find(
+      (item) => item.name === category,
+    );
+    const selectedSubcategory = selectedServiceCategory?.subcategories.find(
+      (item) => item.name === serviceType,
+    );
+    if (!selectedServiceCategory || !selectedSubcategory) {
+      throw new Error("Select a service category and type before saving.");
+    }
+
+    let parentCategory = await getCategory(selectedServiceCategory.id);
+    if (!parentCategory?.data?.id) {
+      parentCategory = await createCategory({
+        name: selectedServiceCategory.name,
+        slug: selectedServiceCategory.id,
+        kind: "service",
+        status: "draft",
+      });
+    }
+    const parentCategoryId = parentCategory?.data?.id;
+    if (typeof parentCategoryId !== "string") {
+      throw new Error("Unable to create the service category.");
+    }
+
+    let subcategory = await getCategory(selectedSubcategory.id);
+    if (!subcategory?.data?.id) {
+      subcategory = await createCategory({
+        name: selectedSubcategory.name,
+        slug: selectedSubcategory.id,
+        kind: "service",
+        status: "draft",
+        parent_id: parentCategoryId,
+      });
+    }
+    const subcategoryId = subcategory?.data?.id;
+    if (typeof subcategoryId !== "string") {
+      throw new Error("Unable to create the service type.");
+    }
+    return subcategoryId;
+  };
+
+  const saveListing = async (status: "draft" | "published" = "draft") => {
+    setSaving(true);
+    setPublishing(status === "published");
+    try {
+      const categoryId = await getServiceCategoryId();
+      const sellerId = userData?.profile?.user_id ?? userData?.id;
+      if (typeof sellerId !== "string" || !sellerId) {
+        throw new Error("Sign in as a seller before saving a service.");
+      }
+      const parsedPrice = Number(price.replace(/[^\d.]/g, ""));
+      const payload = {
+        seller_id: sellerId,
+        listing_type: "service",
+        category_id: categoryId,
+        title: serviceName.trim(),
+        description: serviceDescription.trim(),
+        target_audience: targetAudience.toUpperCase(),
+        work_place: workLocation === "home" ? "REMOTE" : "ON_SITE",
+        work_address: workLocation === "workshop" ? address.trim() : "",
+        delivery_duration: deliveryTime.trim(),
+        starting_amount:
+          Number.isFinite(parsedPrice) && parsedPrice > 0
+            ? String(parsedPrice)
+            : null,
+        price_currency: "NGN",
+        negotiation_style: negotiationStyle,
+        negotiation_note: negotiationNote.trim() || null,
+        tags,
+        status: "draft",
+      };
+
+      let savedListingId = listingId;
+      if (savedListingId) {
+        const response = await updateListing(savedListingId, payload);
+        if (!response) throw new Error("Unable to save the service listing.");
+      } else {
+        const response = await createListing(payload);
+        savedListingId = response?.data?.id;
+        if (typeof savedListingId !== "string" || !savedListingId) {
+          throw new Error("The service listing could not be created.");
+        }
+        setListingId(savedListingId);
+        localStorage.setItem("serviceListingId", savedListingId);
+      }
+
+      if (!serviceMediaRef.current) {
+        throw new Error("Service portfolio upload is unavailable.");
+      }
+      const uploadResults =
+        await serviceMediaRef.current.uploadGalleryImages(savedListingId);
+      const failedUpload = uploadResults.find(
+        (image) => image.status !== "uploaded",
+      );
+      if (failedUpload) {
+        throw new Error(
+          failedUpload.error || `Unable to upload ${failedUpload.slotId}.`,
+        );
+      }
+
+      if (status === "published") {
+        const response = await updateListing(savedListingId, {
+          ...payload,
+          status: "published",
+        });
+        if (!response) throw new Error("Unable to publish the service.");
+      }
+
+      setLastSaved(new Date());
+      return true;
+    } catch (error) {
+      console.error("Failed to save service listing:", error);
+      notifyError(
+        error instanceof Error ? error.message : "Unable to save service.",
+      );
+      return false;
+    } finally {
+      setSaving(false);
+      setPublishing(false);
     }
   };
 
-  const handleNext = () => {
-    const currentIndex = tabs.findIndex((t) => t.id === activeTab);
-    if (currentIndex < tabs.length - 1) {
-      handleTabChange(tabs[currentIndex + 1].id);
-    } else {
-      // Publish action
-      console.log("Publishing service...");
+  const handleNext = async () => {
+    if (activeTab === "tell") {
+      if (!validateTab("tell")) return;
+      if (await saveListing()) {
+        setCompleted((prev) => ({ ...prev, tell: true }));
+        setActiveTab("offer");
+      }
+      return;
+    }
+    if (activeTab === "offer") {
+      if (!validateTab("offer")) return;
+      if (await saveListing()) {
+        setCompleted((prev) => ({ ...prev, offer: true }));
+        setActiveTab("show");
+      }
+      return;
+    }
+
+    if (!validateTab("tell") || !validateTab("offer")) return;
+    if (await saveListing("published")) {
+      localStorage.removeItem("serviceListingId");
+      router.push("/create");
     }
   };
 
@@ -1594,8 +1898,8 @@ const AddServicePage = () => {
   };
 
   const getPricingConfidence = () => {
-    if (price.length > 0 && whatsIncluded.length > 10) return "good";
-    if (price.length > 0 || whatsIncluded.length > 0) return "neutral";
+    if (price.length > 0 && deliveryTime.length > 0) return "good";
+    if (price.length > 0 || deliveryTime.length > 0) return "neutral";
     return "empty";
   };
 
@@ -1611,6 +1915,7 @@ const AddServicePage = () => {
 
   return (
     <AppShell>
+      {publishing && <Loader type="publishing" />}
       <div className="min-h-screen flex flex-col">
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 lg:px-6 flex flex-col">
           {/* STICKY HEADER */}
@@ -1618,6 +1923,11 @@ const AddServicePage = () => {
             activeTab={activeTab}
             title="New Service"
             onNext={handleNext}
+            onSave={() => {
+              if (validateTab("tell")) void saveListing("draft");
+            }}
+            saving={saving}
+            lastSaved={lastSaved}
           />
 
           {/* COMPLETION SUMMARY */}
@@ -1629,36 +1939,11 @@ const AddServicePage = () => {
           <div className="flex-1 grid gap-6 lg:grid-cols-2 pb-6">
             {/* LEFT COLUMN - Portfolio Always Visible */}
             <div className="space-y-4">
-              {/* Pro Seller Tip */}
-              <div className="rounded-2xl border border-border/60 bg-secondary/5 p-3 shadow-sm">
-                <div className="flex items-start gap-3">
-                  <div className="rounded-full bg-secondary/10 p-1.5 text-secondary">
-                    <Sparkles className="h-4 w-4" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      Service Seller Tip
-                    </p>
-                    <RotatingSellerTip />
-                  </div>
-                </div>
-              </div>
-
-              {/* Portfolio Card */}
-              <div className="rounded-2xl border border-border/60 bg-background-elevated/20 p-4 backdrop-blur-sm shadow-card">
-                <div className="flex items-center gap-2 mb-3">
-                  <div className="rounded-full bg-secondary/10 p-1.5 text-secondary">
-                    <ImagePlus className="h-4 w-4" />
-                  </div>
-                  <h2 className="text-sm font-semibold text-foreground">
-                    Portfolio
-                  </h2>
-                  <span className="text-[10px] text-muted/40 ml-auto">
-                    {imageCount}/{PORTFOLIO_SLOTS.length}
-                  </span>
-                </div>
-                <ServiceMediaUpload onImagesChange={setPortfolioImages} />
-              </div>
+              <ProductMedia
+                ref={serviceMediaRef}
+                variant="service"
+                onGalleryChange={setImageGallery}
+              />
             </div>
 
             {/* RIGHT COLUMN */}
@@ -1722,6 +2007,7 @@ const AddServicePage = () => {
                         prominent
                         value={serviceName}
                         onChange={(e) => setServiceName(e.target.value)}
+                        error={validationErrors.serviceName}
                         helper={
                           <AITitleSuggestion
                             value={serviceName}
@@ -1736,30 +2022,58 @@ const AddServicePage = () => {
                         multiline
                         value={serviceDescription}
                         onChange={(e) => setServiceDescription(e.target.value)}
+                        error={validationErrors.serviceDescription}
                       />
 
                       <div className="grid gap-3 sm:grid-cols-2">
                         <GlassySelect
                           label="Category"
                           options={SERVICE_CATEGORIES}
+                          value={category}
                           placeholder="Select category"
+                          error={validationErrors.category}
                           onChange={(value) => {
                             setCategory(value);
                             setServiceType("");
-                            setServiceSubCategories(
-                              SERVICE_CATEGORIES[
-                                SERVICE_CATEGORIES.findIndex(
-                                  (cat) => cat.name === value,
-                                )
-                              ].subcategories,
+                            const selected = SERVICE_CATEGORIES.find(
+                              (item) => item.name === value,
                             );
+                            setServiceSubCategories(
+                              selected?.subcategories ?? [],
+                            );
+                            setTags(
+                              selected?.requiredTags
+                                .filter(
+                                  (tag) =>
+                                    !["delivery time", "location"].includes(
+                                      tag.name.toLowerCase(),
+                                    ),
+                                )
+                                .map((tag) => `${tag.name.toLowerCase()}:`)
+                                .join("|") ?? "",
+                            );
+                            setValidationErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.category;
+                              delete next.serviceType;
+                              return next;
+                            });
                           }}
                         />
                         <GlassySelect
                           label="Service Type"
                           options={serviceSubcategories}
+                          value={serviceType}
                           placeholder="Select type"
-                          onChange={setServiceType}
+                          error={validationErrors.serviceType}
+                          onChange={(value) => {
+                            setServiceType(value);
+                            setValidationErrors((prev) => {
+                              const next = { ...prev };
+                              delete next.serviceType;
+                              return next;
+                            });
+                          }}
                         />
                       </div>
 
@@ -1780,7 +2094,8 @@ const AddServicePage = () => {
                                     options={tag?.options ?? []}
                                     placeholder={tag.placeholder ?? "Select"}
                                     value={getTagValue(tag.name)}
-                                    type="tag"
+                                    optional={!tag.required}
+                                    error={validationErrors[tag.name]}
                                     onChange={(value) =>
                                       handleTagChange(tag.name, value)
                                     }
@@ -1791,6 +2106,8 @@ const AddServicePage = () => {
                                     placeholder={tag.placeholder ?? ""}
                                     prominent
                                     value={getTagValue(tag.name)}
+                                    optional={!tag.required}
+                                    error={validationErrors[tag.name]}
                                     onChange={(e) =>
                                       handleTagChange(tag.name, e.target.value)
                                     }
@@ -1826,6 +2143,7 @@ const AddServicePage = () => {
                             icon={<MapPin className="h-3 w-3" />}
                             value={address}
                             onChange={(e) => setAddress(e.target.value)}
+                            error={validationErrors.address}
                           />
                         </motion.div>
                       )}
@@ -1861,7 +2179,7 @@ const AddServicePage = () => {
                           pricingConfidence === "good"
                             ? "Clear pricing builds confidence."
                             : pricingConfidence === "neutral"
-                              ? "Consider adding what's included."
+                              ? "Add a delivery timeframe and negotiation details."
                               : "Set your pricing to start receiving offers."
                         }
                       />
@@ -1869,19 +2187,40 @@ const AddServicePage = () => {
                       <PricePackageCard
                         basePrice={price}
                         deliveryTime={deliveryTime}
-                        onPriceChange={setPrice}
-                        onDeliveryChange={setDeliveryTime}
+                        onPriceChange={(value) => {
+                          setPrice(value);
+                          setValidationErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.price;
+                            return next;
+                          });
+                        }}
+                        onDeliveryChange={(value) => {
+                          setDeliveryTime(value);
+                          setValidationErrors((prev) => {
+                            const next = { ...prev };
+                            delete next.deliveryTime;
+                            return next;
+                          });
+                        }}
+                        priceError={validationErrors.price}
+                        deliveryError={validationErrors.deliveryTime}
+                      />
+
+                      <ServiceNegotiationPicker
+                        value={negotiationStyle}
+                        onChange={setNegotiationStyle}
                       />
 
                       <GlassyField
-                        label="What's included"
-                        placeholder="List everything included in the base package..."
+                        label="Negotiation Note"
+                        placeholder="Add any details buyers should know when making an offer..."
                         multiline
-                        value={whatsIncluded}
-                        onChange={(e) => setWhatsIncluded(e.target.value)}
+                        optional
+                        value={negotiationNote}
+                        onChange={(e) => setNegotiationNote(e.target.value)}
                       />
 
-                      {/* ADD-ONS AND SERVICE AREA REMOVED */}
                     </motion.div>
                   )}
 
@@ -1925,6 +2264,7 @@ const AddServicePage = () => {
                         serviceName={serviceName || "Your Service Name"}
                         price={price ? `From ${price}` : "From ₦50,000"}
                         category={category || "Creative Services"}
+                        negotiationStyle={negotiationStyle}
                         location={
                           workLocation === "workshop"
                             ? address || "Physical Studio"

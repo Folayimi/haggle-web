@@ -33,6 +33,11 @@ const nextConfig: NextConfig = {
         protocol: "https",
         hostname: "picsum.photos",
       },
+      {
+        protocol: "https",
+        hostname: "pub-12f9040e6e934025a9f53c78806dca57.r2.dev",
+        pathname: "/products/**",
+      },
       ...(r2ImagePattern ? [r2ImagePattern] : []),
     ],
   },
