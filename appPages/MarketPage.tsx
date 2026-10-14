@@ -451,7 +451,7 @@ const MarketPage = () => {
 
         <div
           className={cn(
-            "mt-2 flex min-h-0 flex-1 gap-6 overflow-hidden",
+            "mt-2 flex min-h-0 flex-1 gap-2 overflow-hidden",
             (selectedProductId || selectedServiceId) && "flex-col xl:flex-row",
           )}
         >
@@ -459,7 +459,7 @@ const MarketPage = () => {
             <div
               ref={sectionsContainerRef}
               onScroll={handleSectionsScroll}
-              className="h-full min-w-0 space-y-8 overflow-y-auto bg-background-elevated/70 rounded-xl p-5 pb-24 pr-1 xl:pb-20"
+              className="h-full min-w-0 space-y-8 overflow-y-auto bg-background-elevated/50 rounded-xl p-5 pb-24 pr-1 xl:pb-20"
             >
               {selectedProductId || selectedServiceId ? (
                 productDetailLoading || serviceDetailLoading ? (
@@ -707,7 +707,7 @@ const MarketPage = () => {
           </div>
 
           {selectedProductId || selectedServiceId ? (
-            <aside className="max-h-[40vh] w-full shrink-0 space-y-5 overflow-y-auto pb-20 xl:max-h-full xl:w-[360px]">
+            <aside className="max-h-[40vh] w-full shrink-0 space-y-5 overflow-y-auto bg-background-elevated/50 rounded-xl p-3 pb-20 xl:max-h-full xl:w-[360px]">
               <section className="rounded-xl border border-border bg-background-elevated p-5">
                 <h2 className="text-lg font-semibold">Seller information</h2>
                 {sellerLoading && (
@@ -891,7 +891,7 @@ const MarketPage = () => {
           ) : productsLoading ? (
             <MarketSidebarSkeleton />
           ) : (
-          <div className="hidden w-[360px] shrink-0 space-y-5 overflow-y-auto pb-20 pt-5 xl:block">
+          <div className="hidden w-[360px] shrink-0 space-y-5 overflow-y-auto bg-background-elevated/50 rounded-xl p-3 pb-20 pt-5 xl:block">
             <div className="h-[220px] rounded-xl border border-border bg-background-elevated p-5">
               <h2 className="text-lg font-semibold">Marketplace Activity</h2>
               <div className="mt-5 grid grid-cols-2 gap-3">

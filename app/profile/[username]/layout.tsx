@@ -4,11 +4,13 @@ import { Metadata } from "next";
 export async function generateMetadata({
   params,
 }: {
-  params: { username: string };
+  params: Promise<{ username: string }>;
 }): Promise<Metadata> {
+  const { username } = await params;
+
   return {
-    title: `${params?.username} | Haggle Business Profile`,
-    description: `View ${params?.username}'s business profile on Haggle`,
+    title: `${username} | Haggle Business Profile`,
+    description: `View ${username}'s business profile on Haggle`,
   };
 }
 

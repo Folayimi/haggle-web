@@ -1,4 +1,4 @@
-// app/create/page.tsx
+﻿// app/create/page.tsx
 "use client";
 
 import { motion } from "framer-motion";
@@ -31,7 +31,6 @@ import {
   Star,
   Eye,
   ThumbsUp,
-  Globe, // ← NEW
   LayoutDashboard, // alternative icon
 } from "lucide-react";
 
@@ -51,10 +50,10 @@ function GlassyActionCard({
   href,
   color,
   stat,
-  step,
   label,
   index,
   isTop = false,
+  className = "",
 }: {
   title: string;
   description: string;
@@ -66,6 +65,7 @@ function GlassyActionCard({
   label: string;
   index: number;
   isTop?: boolean;
+  className?: string;
 }) {
   const colorMap = {
     primary: {
@@ -116,7 +116,7 @@ function GlassyActionCard({
       initial="hidden"
       animate="visible"
       whileHover={{ y: -2 }}
-      className="h-full"
+      className={`h-full ${className}`}
     >
       <div
         className={`
@@ -138,7 +138,6 @@ function GlassyActionCard({
           className="flex flex-col items-start gap-1.5 h-full w-full"
         >
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-xs font-bold text-muted/40">{step}</span>
             <span
               className={`text-[8px] font-medium uppercase tracking-[0.12em] px-2 py-0.5 rounded-full border ${config.badge}`}
             >
@@ -291,14 +290,15 @@ function AnalyticsSection() {
                   strokeLinejoin="round"
                 />
                 <polygon
-                  points={sparklines[idx]
-                    .map((v, i) => {
-                      const x = (i / (sparklines[idx].length - 1)) * 60;
-                      const y = 16 - (v / 100) * 14;
-                      return `${x},${y}`;
-                    })
-                    .join(" ")}
-                  pointsSuffix={` 60,16 0,16`}
+                  points={
+                    sparklines[idx]
+                      .map((v, i) => {
+                        const x = (i / (sparklines[idx].length - 1)) * 60;
+                        const y = 16 - (v / 100) * 14;
+                        return `${x},${y}`;
+                      })
+                      .join(" ") + " 60,16 0,16"
+                  }
                   fill="currentColor"
                   className={`${colorMap[metric.color]} opacity-10`}
                 />
@@ -338,7 +338,7 @@ const CreatePage = () => {
   // Extract username from userData
   const username = userData?.username || userData?.profile?.username || "";
 
-  // Build the action cards dynamically using the username
+  // Action cards for the create page
   const RIGHT_CARDS = useMemo(() => {
     return [
       {
@@ -349,21 +349,8 @@ const CreatePage = () => {
         href: "/post-product",
         color: "success" as const,
         stat: "2.4k listed",
-        step: "②",
         label: "CREATE",
       },
-      {
-        id: "setup-profile",
-        title: "Set Up Your Business Profile",
-        description: "Complete and Manage your business profile.",
-        icon: <Globe className="h-6 w-6" />,
-        href: `/profile/${username}`,
-        color: "primary" as const,
-        stat: "1.2k businesses",
-        step: "①",
-        label: "SETUP",
-      },
-
       {
         id: "add-service",
         title: "Add Service",
@@ -372,7 +359,6 @@ const CreatePage = () => {
         href: "/add-service",
         color: "warning" as const,
         stat: "1.8k added",
-        step: "③",
         label: "CREATE",
       },
       {
@@ -383,25 +369,19 @@ const CreatePage = () => {
         href: "/room-styling",
         color: "secondary" as const,
         stat: "12 presets",
-        step: "④",
         label: "SETUP",
       },
     ];
-  }, [username]);
+  }, []);
 
   return (
     <AppShell>
-      <div className="min-h-screen flex flex-col">
-        <div className="flex-1 mx-auto max-w-7xl w-full px-3 py-5 lg:px-6 flex flex-col">
+      <div className="min-h-screen flex flex-col xl:h-full xl:min-h-0">
+        <div className="flex-1 mx-auto max-w-7xl w-full px-3 py-5 lg:px-6 flex flex-col xl:min-h-0">
           {/* Top Row: BroadcastShowRoom + Action Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-5">
-            {/* LEFT: BroadcastShowRoom - fills height */}
-            <div className="h-full">
-              <BroadCastShowRoom />
-            </div>
-
+          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-5 xl:flex-1 xl:min-h-0 xl:grid-rows-[minmax(0,1fr)]">
             {/* RIGHT: Action Cards - 2x2 grid, fills height */}
-            <div className="grid grid-cols-2 grid-rows-2 gap-4 h-100">
+            <div className="grid grid-cols-2 grid-rows-2 gap-4 h-100 xl:h-full xl:min-h-0 xl:grid-rows-[12rem_minmax(12rem,1fr)]">
               {RIGHT_CARDS.map((card, index) => (
                 <GlassyActionCard
                   key={card.id}
@@ -411,17 +391,22 @@ const CreatePage = () => {
                   href={card.href}
                   color={card.color}
                   stat={card.stat}
-                  step={card.step}
                   label={card.label}
                   index={index}
                   isTop={index < 2}
+                  className={card.id === "seller-studio" ? "col-span-2" : ""}
                 />
               ))}
+            </div>
+
+            {/* LEFT: BroadcastShowRoom - fills height */}
+            <div className="h-full min-h-[25rem] xl:min-h-0">
+              <BroadCastShowRoom />
             </div>
           </div>
 
           {/* Bottom Row: Analytics - Full Width */}
-          <div className="mt-6 w-full">
+          <div className="mt-6 w-full shrink-0">
             <AnalyticsSection />
           </div>
         </div>

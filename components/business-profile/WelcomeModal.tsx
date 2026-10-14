@@ -3,7 +3,7 @@
 
 import { motion, AnimatePresence } from "framer-motion";
 import { useRouter } from "next/navigation";
-import { Sparkles, Rocket, Users, Zap, Shield, Star, TrendingUp, MessageSquare } from "lucide-react";
+import { Check, X } from "lucide-react";
 
 interface WelcomeModalProps {
   isOpen: boolean;
@@ -13,14 +13,14 @@ interface WelcomeModalProps {
 }
 
 const BENEFITS = [
-  { icon: <Sparkles className="h-5 w-5" />, label: "AI-powered insights" },
-  { icon: <Rocket className="h-5 w-5" />, label: "Live shopping rooms" },
-  { icon: <Users className="h-5 w-5" />, label: "Reach nearby buyers" },
-  { icon: <Zap className="h-5 w-5" />, label: "Instant negotiation" },
-  { icon: <Shield className="h-5 w-5" />, label: "Trust & verification" },
-  { icon: <Star className="h-5 w-5" />, label: "Build your brand" },
-  { icon: <TrendingUp className="h-5 w-5" />, label: "Analytics dashboard" },
-  { icon: <MessageSquare className="h-5 w-5" />, label: "Customer engagement" },
+  "AI-powered insights",
+  "Live shopping rooms",
+  "Reach nearby buyers",
+  "Instant negotiation",
+  "Trust & verification",
+  "Build your brand",
+  "Analytics dashboard",
+  "Customer engagement",
 ];
 
 export default function WelcomeModal({
@@ -47,11 +47,11 @@ export default function WelcomeModal({
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          className="absolute inset-0 z-40 flex items-center justify-center overflow-y-auto p-4"
           style={{
-            background: "rgba(0, 0, 0, 0.7)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
+            background: "rgba(0, 0, 0, 0.4)",
+            backdropFilter: "blur(8px)",
+            WebkitBackdropFilter: "blur(8px)",
           }}
           onClick={handleExplore}
         >
@@ -60,15 +60,21 @@ export default function WelcomeModal({
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 30 }}
             transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-            className="relative w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-border/40 bg-background-elevated/95 backdrop-blur-xl p-8 shadow-2xl"
+            className="relative my-auto w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-border/40 bg-background-elevated/80 p-6 pt-14 shadow-2xl backdrop-blur-xl sm:p-8 sm:pt-14"
             onClick={(e) => e.stopPropagation()}
           >
+            <button
+              type="button"
+              onClick={onClose}
+              aria-label="Close welcome modal"
+              className="absolute right-4 top-4 inline-flex h-9 w-9 items-center justify-center rounded-full text-muted transition-colors hover:bg-background-elevated hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
             {/* Header */}
             <div className="text-center mb-8">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/20 text-primary mb-4">
-                <Sparkles className="h-10 w-10" />
-              </div>
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground">
+              <h2 className="text-3xl font-bold text-foreground md:text-4xl">
                 Welcome to <span className="text-primary">Haggle</span> Business
               </h2>
               <p className="text-muted/80 mt-2 max-w-lg mx-auto">
@@ -77,34 +83,27 @@ export default function WelcomeModal({
             </div>
 
             {/* Benefits Grid */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-8">
-              {BENEFITS.map((benefit, idx) => (
+            <div className="mx-auto mb-8 grid max-w-2xl grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
+              {BENEFITS.map((benefit) => (
                 <div
-                  key={idx}
-                  className="flex flex-col items-center gap-2 p-4 rounded-2xl border border-border/30 bg-background-elevated/20 hover:bg-background-elevated/40 transition"
+                  key={benefit}
+                  className="flex items-center gap-3 text-sm font-medium text-foreground/85"
                 >
-                  <div className="text-primary">{benefit.icon}</div>
-                  <span className="text-xs font-medium text-center text-foreground/80">
-                    {benefit.label}
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                    <Check className="h-4 w-4" strokeWidth={2.5} />
                   </span>
+                  <span>{benefit}</span>
                 </div>
               ))}
             </div>
 
             {/* Actions */}
-            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <div className="flex justify-center">
               <button
                 onClick={handleContinue}
-                className="inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-primary px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary/30 hover:shadow-xl hover:shadow-primary/40 hover:bg-primary-strong transition-all"
+                className="inline-flex w-full max-w-sm cursor-pointer items-center justify-center rounded-xl bg-primary px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-strong hover:shadow-xl hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
-                <Rocket className="h-5 w-5" />
-                Become a seller
-              </button>
-              <button
-                onClick={handleExplore}
-                className="inline-flex items-center cursor-pointer justify-center gap-2 rounded-full border border-border/60 px-8 py-3.5 text-base font-medium text-foreground hover:bg-surface transition-all"
-              >
-                Explore on My Own
+                Set up your business
               </button>
             </div>
 

@@ -506,7 +506,7 @@ export function BroadCastShowRoom() {
 
   return (
     <div
-      className="relative flex flex-col rounded-[32px] overflow-hidden border border-border/40 bg-black/0 flex-1 h-[400px]"
+      className="relative flex h-full min-h-[25rem] flex-1 flex-col overflow-hidden rounded-[32px] border border-border/40 bg-black/0 xl:min-h-0"
       style={{ backgroundImage: "url('./bg2.jpg')" }}
     >
       {/* Two-Column Feed - Clean, no outlines/borders/backgrounds */}

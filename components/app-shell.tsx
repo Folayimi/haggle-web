@@ -122,7 +122,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <main className="flex-1 pb-24 xl:pb-0">{children}</main>
+        <main
+          className={`flex-1 pb-24 xl:pb-0 ${pathname === "/create" ? "relative xl:min-h-0" : ""}`}
+        >
+          {children}
+        </main>
 
         <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-background/92 px-3 py-3 backdrop-blur xl:hidden">
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-2">
