@@ -1,5 +1,5 @@
-import { ScheduleLivePage } from "@/components/workspace-pages";
+// import { ScheduleLivePage } from "@/components/workspace-pages";
 
 export default function Page() {
-  return <ScheduleLivePage />;
+  // return <ScheduleLivePage />;
 }
