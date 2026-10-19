@@ -230,7 +230,7 @@ function BroadcastItem({
 }: {
   broadcast: BroadcastRequest;
   isNew: boolean;
-  onAction: (action: "go-live" | "message", id: string) => void;
+  onAction: (action: "respond", id: string) => void;
   side: "left" | "right";
 }) {
   const badge = broadcast.urgency ? BADGE_CONFIG[broadcast.urgency] : null;
@@ -307,19 +307,12 @@ function BroadcastItem({
             </span>
           </div>
 
-          {/* Actions - Smaller text */}
-          <div className="flex items-center gap-1.5 pt-0.5">
+          <div className="flex items-center pt-0.5">
             <button
-              onClick={() => onAction("go-live", broadcast.id)}
-              className="text-[7px] font-medium text-primary hover:text-primary-strong transition px-2 py-0.5 rounded-full border border-primary/30 hover:bg-primary/10"
+              onClick={() => onAction("respond", broadcast.id)}
+              className="text-[8px] font-semibold text-slate-700 hover:text-slate-950 transition px-2.5 py-1 rounded-full border border-black/10 bg-white/60 hover:bg-white"
             >
-              Go Live
-            </button>
-            <button
-              onClick={() => onAction("message", broadcast.id)}
-              className="text-[7px] font-medium text-black/30 hover:text-black/60 transition px-2 py-0.5 rounded-full border border-black/10 hover:bg-black/5"
-            >
-              Message
+              Respond
             </button>
           </div>
         </div>
@@ -343,7 +336,7 @@ function BroadcastColumn({
   icon: React.ReactNode;
   broadcasts: BroadcastRequest[];
   newBroadcastId: string | null;
-  onAction: (action: "go-live" | "message", id: string) => void;
+  onAction: (action: "respond", id: string) => void;
   side: "left" | "right";
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -427,6 +420,31 @@ function TooltipButton({
   );
 }
 
+export function BroadcastControls() {
+  return (
+    <div className="w-full">
+      <div className="flex items-center justify-between gap-4 max-w-2xl mx-auto">
+        <div className="flex items-center gap-2">
+          <TooltipButton icon={<Camera className="h-4 w-4" />} label="Set up camera" />
+          <TooltipButton icon={<Mic className="h-4 w-4" />} label="Configure microphone" />
+          <TooltipButton icon={<MessageSquare className="h-4 w-4" />} label="Open chat settings" />
+          <TooltipButton icon={<ShoppingBag className="h-4 w-4" />} label="Manage products" />
+        </div>
+        <div className="h-8 w-px bg-white/10" />
+        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+          <Link
+            href="/instant-live"
+            className="flex items-center justify-center gap-2 rounded-full bg-primary px-6 py-2.5 text-sm font-bold text-white shadow-lg shadow-primary/25 transition-all duration-300 hover:bg-primary-strong hover:shadow-xl hover:shadow-primary/35 border border-primary/20"
+          >
+            <Zap className="h-4 w-4" />
+            Go Live
+          </Link>
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
 // ============================================
 // MAIN EXPORT: BroadCastShowRoom
 // ============================================
@@ -500,7 +518,7 @@ export function BroadCastShowRoom() {
     return () => clearInterval(interval);
   }, [servicePointer, allServices]);
 
-  const handleAction = (action: "go-live" | "message", id: string) => {
+  const handleAction = (action: "respond", id: string) => {
     console.log(`Action: ${action} on broadcast ${id}`);
   };
 
@@ -536,50 +554,6 @@ export function BroadCastShowRoom() {
         </div>
       </div>
 
-      {/* Controls */}
-      <div className="absolute bottom-0 left-0 right-0 z-10 bg-gradient-to-t from-black/80 via-black/40 to-transparent pt-10 pb-4 px-6">
-        <div className="flex items-center justify-between gap-4 max-w-2xl mx-auto">
-          <div className="flex items-center gap-2">
-            <TooltipButton
-              icon={<Camera className="h-4 w-4" />}
-              label="Set up camera"
-            />
-            <TooltipButton
-              icon={<Mic className="h-4 w-4" />}
-              label="Configure microphone"
-            />
-            <TooltipButton
-              icon={<MessageSquare className="h-4 w-4" />}
-              label="Open chat settings"
-            />
-            <TooltipButton
-              icon={<ShoppingBag className="h-4 w-4" />}
-              label="Manage products"
-            />
-          </div>
-
-          <div className="h-8 w-px bg-white/10" />
-
-          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-            <Link
-              href="/instant-live"
-              className="
-                flex items-center justify-center gap-2
-                rounded-full bg-primary px-6 py-2.5
-                text-sm font-bold text-white
-                shadow-lg shadow-primary/25
-                hover:shadow-xl hover:shadow-primary/35
-                transition-all duration-300
-                hover:bg-primary-strong
-                border border-primary/20
-              "
-            >
-              <Zap className="h-4 w-4" />
-              Go Live
-            </Link>
-          </motion.div>
-        </div>
-      </div>
     </div>
   );
 }

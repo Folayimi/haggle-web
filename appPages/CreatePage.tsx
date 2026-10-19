@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
-import { BroadCastShowRoom } from "@/components/BroadCastShowRoom";
+import { BroadcastControls, BroadCastShowRoom } from "@/components/BroadCastShowRoom";
 import Link from "next/link";
 import { useHaggleStore } from "@/lib/app-store";
 import WelcomeModal from "@/components/business-profile/WelcomeModal";
@@ -54,6 +54,8 @@ function GlassyActionCard({
   index,
   isTop = false,
   className = "",
+  isStudio = false,
+  footer,
 }: {
   title: string;
   description: string;
@@ -66,6 +68,8 @@ function GlassyActionCard({
   index: number;
   isTop?: boolean;
   className?: string;
+  isStudio?: boolean;
+  footer?: React.ReactNode;
 }) {
   const colorMap = {
     primary: {
@@ -116,13 +120,13 @@ function GlassyActionCard({
       initial="hidden"
       animate="visible"
       whileHover={{ y: -2 }}
-      className={`h-full ${className}`}
+      className={`relative h-full ${className}`}
     >
       <div
         className={`
           h-full rounded-2xl
           border border-border/40
-        bg-background-elevated/20 backdrop-blur-sm
+          ${isStudio ? "bg-black" : "bg-background-elevated/20 backdrop-blur-sm"}
           transition-all duration-200
           shadow-card hover:shadow-soft
           hover:border-border
@@ -135,7 +139,7 @@ function GlassyActionCard({
       >
         <Link
           href={href}
-          className="flex flex-col items-start gap-1.5 h-full w-full"
+          className={`flex flex-col items-start gap-1.5 h-full w-full ${footer ? "pb-20" : ""}`}
         >
           <div className="flex items-center gap-2 mb-1">
             <span
@@ -168,6 +172,11 @@ function GlassyActionCard({
           </div>
         </Link>
       </div>
+      {footer && (
+        <div className="absolute bottom-5 left-5 right-5 z-10">
+          {footer}
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -215,13 +224,6 @@ function AnalyticsSection() {
     },
   ];
 
-  const sparklines = [
-    [30, 45, 38, 55, 62, 70, 78],
-    [88, 89, 90, 91, 92, 92, 93],
-    [72, 70, 68, 69, 68, 67, 68],
-    [60, 62, 65, 68, 70, 72, 74],
-  ];
-
   const colorMap = {
     primary: "text-primary stroke-primary",
     secondary: "text-secondary stroke-secondary",
@@ -238,22 +240,26 @@ function AnalyticsSection() {
         flex-shrink-0
       "
     >
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted">
+        Your Seller Pulse
+      </h2>
+      <div className="grid h-full grid-cols-4 items-center gap-2">
         {metrics.map((metric, idx) => (
           <div
             key={idx}
             className="
-              rounded-xl
+              aspect-square w-full max-w-[7.5rem] justify-self-center rounded-full
               bg-background-elevated/20 backdrop-blur-sm
               border border-border/30
-              p-4
+              p-2
               transition-all duration-200
               hover:border-primary/30 hover:shadow-sm
+              flex flex-col items-center justify-center text-center
             "
           >
-            <div className="flex items-start justify-between">
+            <div className="flex w-full items-center justify-center gap-1">
               <div
-                className={`rounded-lg ${colorMap[metric.color].split(" ")[0]} bg-primary/5 p-1.5`}
+                className={`rounded-full ${colorMap[metric.color].split(" ")[0]} bg-primary/5 p-1`}
               >
                 {metric.icon}
               </div>
@@ -266,44 +272,10 @@ function AnalyticsSection() {
               </span>
             </div>
 
-            <p className="mt-3 text-xl font-bold text-foreground">
+            <p className="mt-1 text-sm font-bold text-foreground">
               {metric.value}
             </p>
-            <p className="text-xs text-muted">{metric.label}</p>
-            <p className="text-[10px] text-muted/40 mt-1">{metric.detail}</p>
-
-            <div className="mt-2 h-6 w-full">
-              <svg viewBox="0 0 60 16" className="w-full h-full">
-                <polyline
-                  points={sparklines[idx]
-                    .map((v, i) => {
-                      const x = (i / (sparklines[idx].length - 1)) * 60;
-                      const y = 16 - (v / 100) * 14;
-                      return `${x},${y}`;
-                    })
-                    .join(" ")}
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="1.2"
-                  className={colorMap[metric.color]}
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-                <polygon
-                  points={
-                    sparklines[idx]
-                      .map((v, i) => {
-                        const x = (i / (sparklines[idx].length - 1)) * 60;
-                        const y = 16 - (v / 100) * 14;
-                        return `${x},${y}`;
-                      })
-                      .join(" ") + " 60,16 0,16"
-                  }
-                  fill="currentColor"
-                  className={`${colorMap[metric.color]} opacity-10`}
-                />
-              </svg>
-            </div>
+            <p className="text-[9px] leading-tight text-muted">{metric.label}</p>
           </div>
         ))}
       </div>
@@ -378,11 +350,36 @@ const CreatePage = () => {
     <AppShell>
       <div className="min-h-screen flex flex-col xl:h-full xl:min-h-0">
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 py-5 lg:px-6 flex flex-col xl:min-h-0">
-          {/* Top Row: BroadcastShowRoom + Action Cards */}
-          <div className="grid grid-cols-1 lg:grid-cols-[1.2fr_0.8fr] gap-5 xl:flex-1 xl:min-h-0 xl:grid-rows-[minmax(0,1fr)]">
-            {/* RIGHT: Action Cards - 2x2 grid, fills height */}
-            <div className="grid grid-cols-2 grid-rows-2 gap-4 h-100 xl:h-full xl:min-h-0 xl:grid-rows-[12rem_minmax(12rem,1fr)]">
-              {RIGHT_CARDS.map((card, index) => (
+          {/* Seller workspace on the left, showroom and analytics on the right. */}
+          <div className="grid grid-cols-1 gap-5 xl:flex-1 xl:min-h-0 xl:grid-cols-[1.2fr_0.8fr] xl:grid-rows-[minmax(0,1fr)_14rem] xl:gap-4">
+            {/* The studio owns the full upper-left area. */}
+            <div className="min-h-[16rem] xl:min-h-0">
+              {RIGHT_CARDS.filter((card) => card.id === "seller-studio").map((card) => (
+                <GlassyActionCard
+                  key={card.id}
+                  title={card.title}
+                  description={card.description}
+                  icon={<Layers className="h-10 w-10" />}
+                  href={card.href}
+                  color={card.color}
+                  stat={card.stat}
+                  label={card.label}
+                  index={0}
+                  isTop
+                  isStudio
+                  footer={<BroadcastControls />}
+                  className="h-full"
+                />
+              ))}
+            </div>
+
+            <div className="min-h-[25rem] xl:min-h-0">
+              <BroadCastShowRoom />
+            </div>
+
+            {/* Product and service creation sit together beneath Seller Studio. */}
+            <div className="grid min-h-[12rem] grid-cols-2 gap-4 xl:h-48 xl:min-h-0">
+              {RIGHT_CARDS.filter((card) => card.id !== "seller-studio").map((card, index) => (
                 <GlassyActionCard
                   key={card.id}
                   title={card.title}
@@ -392,22 +389,16 @@ const CreatePage = () => {
                   color={card.color}
                   stat={card.stat}
                   label={card.label}
-                  index={index}
-                  isTop={index < 2}
-                  className={card.id === "seller-studio" ? "col-span-2" : ""}
+                  index={index + 1}
+                  isTop={false}
                 />
               ))}
             </div>
 
-            {/* LEFT: BroadcastShowRoom - fills height */}
-            <div className="h-full min-h-[25rem] xl:min-h-0">
-              <BroadCastShowRoom />
+            {/* All four analytics fit in the lower-right area. */}
+            <div className="flex min-h-[14rem] flex-col justify-center xl:min-h-0">
+              <AnalyticsSection />
             </div>
-          </div>
-
-          {/* Bottom Row: Analytics - Full Width */}
-          <div className="mt-6 w-full shrink-0">
-            <AnalyticsSection />
           </div>
         </div>
       </div>

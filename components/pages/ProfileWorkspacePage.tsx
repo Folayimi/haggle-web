@@ -272,7 +272,7 @@ export default function ProfileWorkspacePage({
         );
         return;
       }
-      const field = slot === "avatar" ? "avatar_url" : "cover_url";
+      const field = slot === "avatar" ? "avatar_url" : "cover_image_url";
       const nextMedia = { ...media, [slot]: uploadedUrl };
       setMedia(nextMedia);
       localStorage.setItem(
