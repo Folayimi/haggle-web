@@ -2,7 +2,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Calendar,
   Clock,
@@ -56,6 +56,7 @@ function GlassyActionCard({
   className = "",
   isStudio = false,
   footer,
+  cameraStream,
 }: {
   title: string;
   description: string;
@@ -70,6 +71,7 @@ function GlassyActionCard({
   className?: string;
   isStudio?: boolean;
   footer?: React.ReactNode;
+  cameraStream?: MediaStream | null;
 }) {
   const colorMap = {
     primary: {
@@ -139,37 +141,39 @@ function GlassyActionCard({
       >
         <Link
           href={href}
-          className={`flex flex-col items-start gap-1.5 h-full w-full ${footer ? "pb-20" : ""}`}
+          className={`flex flex-col items-start gap-1.5 h-full w-full ${footer && !(isStudio && cameraStream) ? "pb-20" : ""} ${isStudio && cameraStream ? "absolute inset-0" : ""}`}
         >
-          <div className="flex items-center gap-2 mb-1">
-            <span
-              className={`text-[8px] font-medium uppercase tracking-[0.12em] px-2 py-0.5 rounded-full border ${config.badge}`}
-            >
-              {label}
-            </span>
-          </div>
+          {label && !(isStudio && cameraStream) && (
+            <div className="flex items-center gap-2 mb-1">
+              <span
+                className={`text-[8px] font-medium uppercase tracking-[0.12em] px-2 py-0.5 rounded-full border ${config.badge}`}
+              >
+                {label}
+              </span>
+            </div>
+          )}
 
-          <div
-            className={`${config.icon} transition-all duration-300 group-hover:scale-105`}
-          >
-            {icon}
-          </div>
+          {!(isStudio && cameraStream) && (
+            <div className={`${config.icon} transition-all duration-300 group-hover:scale-105`}>
+              {icon}
+            </div>
+          )}
 
-          <div className="flex-1 min-w-0 w-full mt-1">
-            <p className="font-semibold text-sm text-foreground truncate">
-              {title}
-            </p>
-            <p className="text-xs text-muted/70 line-clamp-2 leading-relaxed">
-              {description}
-            </p>
-          </div>
+          {isStudio && <StudioCameraPreview stream={cameraStream ?? null} active={Boolean(cameraStream)} />}
 
-          <div className="flex items-center gap-1.5 text-xs text-muted/50 mt-auto pt-1">
-            <span>{stat}</span>
-            <ArrowRight
-              className={`h-3.5 w-3.5 ${config.arrow} transition-transform group-hover:translate-x-1`}
-            />
-          </div>
+          {!(isStudio && cameraStream) && (
+            <div className="flex-1 min-w-0 w-full mt-1">
+              <p className="font-semibold text-sm text-foreground truncate">{title}</p>
+              <p className="text-xs text-muted/70 line-clamp-2 leading-relaxed">{description}</p>
+            </div>
+          )}
+
+          {!(isStudio && cameraStream) && (
+            <div className="flex items-center gap-1.5 text-xs text-muted/50 mt-auto pt-1">
+              <span>{stat}</span>
+              <ArrowRight className={`h-3.5 w-3.5 ${config.arrow} transition-transform group-hover:translate-x-1`} />
+            </div>
+          )}
         </Link>
       </div>
       {footer && (
@@ -178,6 +182,29 @@ function GlassyActionCard({
         </div>
       )}
     </motion.div>
+  );
+}
+
+function StudioCameraPreview({ stream, active }: { stream: MediaStream | null; active: boolean }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    if (videoRef.current) videoRef.current.srcObject = stream;
+  }, [stream]);
+
+  return (
+    <div className={active
+      ? "absolute inset-0 z-0 flex items-center justify-center overflow-hidden bg-black"
+      : "my-2 flex min-h-0 flex-1 w-full items-center justify-center overflow-hidden rounded-xl border border-white/15 bg-zinc-900"}>
+      {stream ? (
+        <video ref={videoRef} autoPlay muted playsInline className="h-full w-full object-cover" />
+      ) : (
+        <div className="flex flex-col items-center gap-2 px-4 py-8 text-center text-white/50">
+          <Camera className="h-8 w-8" />
+          <span className="text-xs">Your camera preview will appear here</span>
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -289,6 +316,16 @@ function AnalyticsSection() {
 const CreatePage = () => {
   const userData = useHaggleStore((state) => state.userData);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [cameraStream, setCameraStream] = useState<MediaStream | null>(null);
+
+  useEffect(() => () => cameraStream?.getTracks().forEach((track) => track.stop()), [cameraStream]);
+
+  const replaceCameraStream = (nextStream: MediaStream | null) => {
+    setCameraStream((current) => {
+      current?.getTracks().forEach((track) => track.stop());
+      return nextStream;
+    });
+  };
 
   // Check if the user has already seen the welcome modal
   useEffect(() => {
@@ -335,13 +372,13 @@ const CreatePage = () => {
       },
       {
         id: "seller-studio",
-        title: "Seller Studio",
-        description: "Configure your live room.",
+        title: "Go Live",
+        description: "Check your camera and microphone, then get ready to broadcast.",
         icon: <Layers className="h-6 w-6" />,
         href: "/room-styling",
         color: "secondary" as const,
-        stat: "12 presets",
-        label: "SETUP",
+        stat: "Live studio",
+        label: "",
       },
     ];
   }, []);
@@ -367,7 +404,8 @@ const CreatePage = () => {
                   index={0}
                   isTop
                   isStudio
-                  footer={<BroadcastControls />}
+                  footer={<BroadcastControls onCameraStream={replaceCameraStream} />}
+                  cameraStream={cameraStream}
                   className="h-full"
                 />
               ))}

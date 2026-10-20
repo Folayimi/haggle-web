@@ -7,7 +7,6 @@ import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Camera,
   Mic,
-  MessageSquare,
   ShoppingBag,
   Zap,
   MapPin,
@@ -21,7 +20,20 @@ import {
   Sparkles,
   Send,
   MessageCircle,
+  VideoOff,
+  MicOff,
 } from "lucide-react";
+import { useHaggleStore } from "@/lib/app-store";
+import { getSellerListings } from "@/services/request";
+import type { BackendListing } from "@/services/mappers";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 // ============================================
 // TYPES
@@ -310,7 +322,7 @@ function BroadcastItem({
           <div className="flex items-center pt-0.5">
             <button
               onClick={() => onAction("respond", broadcast.id)}
-              className="text-[8px] font-semibold text-slate-700 hover:text-slate-950 transition px-2.5 py-1 rounded-full border border-black/10 bg-white/60 hover:bg-white"
+              className="text-[6px] font-semibold text-orange-900 hover:text-orange-950 transition px-1.5 py-0.5 rounded-full border border-orange-300/70 bg-orange-100/90 hover:bg-orange-200 leading-tight"
             >
               Respond
             </button>
@@ -387,20 +399,23 @@ function TooltipButton({
   icon,
   label,
   onClick,
+  active = false,
 }: {
   icon: React.ReactNode;
   label: string;
   onClick?: () => void;
+  active?: boolean;
 }) {
   return (
     <div className="relative group">
       <button
         onClick={onClick}
-        className="
-          rounded-full bg-white/15 backdrop-blur-sm p-2.5
-          text-white hover:bg-white/25 transition border border-white/10
+        className={`
+          rounded-full backdrop-blur-sm p-2.5
+          text-white transition border
+          ${active ? "bg-emerald-500/80 border-emerald-300/50 hover:bg-emerald-500" : "bg-white/15 border-white/10 hover:bg-white/25"}
           w-10 h-10 flex items-center justify-center
-        "
+        `}
       >
         {icon}
       </button>
@@ -420,15 +435,93 @@ function TooltipButton({
   );
 }
 
-export function BroadcastControls() {
+export function BroadcastControls({ onCameraStream }: { onCameraStream?: (stream: MediaStream | null) => void }) {
+  const userData = useHaggleStore((state) => state.userData);
+  const [products, setProducts] = useState<BackendListing[]>([]);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [productsOpen, setProductsOpen] = useState(false);
+  const [cameraState, setCameraState] = useState("Set up camera");
+  const [micState, setMicState] = useState("Configure microphone");
+  const [cameraOn, setCameraOn] = useState(false);
+  const [micOn, setMicOn] = useState(false);
+  const [deviceMessage, setDeviceMessage] = useState("");
+  const [loadingProducts, setLoadingProducts] = useState(false);
+  const sellerId = String(userData?.id || userData?.user_id || userData?.profile?.user_id || "");
+  const cameraStreamRef = useRef<MediaStream | null>(null);
+  const microphoneStreamRef = useRef<MediaStream | null>(null);
+
+  useEffect(() => () => {
+    cameraStreamRef.current?.getTracks().forEach((track) => track.stop());
+    microphoneStreamRef.current?.getTracks().forEach((track) => track.stop());
+  }, []);
+
+  const requestDevice = async (kind: "video" | "audio") => {
+    setDeviceMessage("");
+    const isOn = kind === "video" ? cameraOn : micOn;
+    const streamRef = kind === "video" ? cameraStreamRef : microphoneStreamRef;
+    if (isOn) {
+      streamRef.current?.getTracks().forEach((track) => track.stop());
+      streamRef.current = null;
+      if (kind === "video") {
+        onCameraStream?.(null);
+        setCameraOn(false);
+        setCameraState("Set up camera");
+      } else {
+        setMicOn(false);
+        setMicState("Configure microphone");
+      }
+      return;
+    }
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia(
+        kind === "video" ? { video: true } : { audio: true },
+      );
+      if (kind === "video") {
+        cameraStreamRef.current = stream;
+        onCameraStream?.(stream);
+        setCameraOn(true);
+        setCameraState("Turn camera off");
+      } else {
+        microphoneStreamRef.current = stream;
+        setMicOn(true);
+        setMicState("Turn microphone off");
+      }
+    } catch {
+      setDeviceMessage(`Allow ${kind === "video" ? "camera" : "microphone"} access in your browser to turn it on.`);
+    }
+  };
+
+  const openProducts = async () => {
+    setProductsOpen(true);
+    if (!sellerId || products.length || loadingProducts) return;
+    setLoadingProducts(true);
+    try {
+      const result = await getSellerListings(sellerId);
+      const rows = Array.isArray(result) ? result : result?.data;
+      setProducts((Array.isArray(rows) ? rows : []).filter(
+        (item: BackendListing) => (item.listing_type || "product").toLowerCase() === "product",
+      ));
+    } catch {
+      setProducts([]);
+    } finally {
+      setLoadingProducts(false);
+    }
+  };
+
+  const saveProducts = () => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(`haggle-live-products:${sellerId}`, JSON.stringify(selectedIds));
+    }
+    setProductsOpen(false);
+  };
+
   return (
     <div className="w-full">
       <div className="flex items-center justify-between gap-4 max-w-2xl mx-auto">
         <div className="flex items-center gap-2">
-          <TooltipButton icon={<Camera className="h-4 w-4" />} label="Set up camera" />
-          <TooltipButton icon={<Mic className="h-4 w-4" />} label="Configure microphone" />
-          <TooltipButton icon={<MessageSquare className="h-4 w-4" />} label="Open chat settings" />
-          <TooltipButton icon={<ShoppingBag className="h-4 w-4" />} label="Manage products" />
+          <TooltipButton icon={cameraOn ? <Camera className="h-4 w-4" /> : <VideoOff className="h-4 w-4" />} label={cameraState} onClick={() => void requestDevice("video")} active={cameraOn} />
+          <TooltipButton icon={micOn ? <Mic className="h-4 w-4" /> : <MicOff className="h-4 w-4" />} label={micState} onClick={() => void requestDevice("audio")} active={micOn} />
+          <TooltipButton icon={<ShoppingBag className="h-4 w-4" />} label="Manage products" onClick={() => void openProducts()} />
         </div>
         <div className="h-8 w-px bg-white/10" />
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
@@ -441,6 +534,29 @@ export function BroadcastControls() {
           </Link>
         </motion.div>
       </div>
+      {deviceMessage && <p role="status" className="mt-2 text-center text-xs text-white/70">{deviceMessage}</p>}
+      <Dialog open={productsOpen} onOpenChange={setProductsOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Products for your live</DialogTitle>
+            <DialogDescription>Select the listings you plan to feature during your broadcast.</DialogDescription>
+          </DialogHeader>
+          <div className="max-h-80 space-y-2 overflow-y-auto py-2">
+            {loadingProducts ? <p className="text-sm text-muted">Loading your listings…</p> : null}
+            {!loadingProducts && products.length === 0 ? <p className="text-sm text-muted">No product listings found.</p> : null}
+            {products.map((product) => (
+              <label key={product.id} className="flex cursor-pointer items-center gap-3 rounded-xl border border-border/60 p-3 hover:bg-background-elevated/40">
+                <input type="checkbox" checked={selectedIds.includes(product.id)} onChange={(event) => setSelectedIds((current) => event.target.checked ? [...current, product.id] : current.filter((id) => id !== product.id))} />
+                <span className="min-w-0 flex-1 truncate text-sm font-medium">{product.title}</span>
+                <span className="text-xs text-muted">{product.starting_amount ? `${product.price_currency || "₦"} ${product.starting_amount}` : "Price on request"}</span>
+              </label>
+            ))}
+          </div>
+          <DialogFooter>
+            <button onClick={saveProducts} className="rounded-full bg-primary px-5 py-2 text-sm font-semibold text-white">Save selection</button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
@@ -552,6 +668,10 @@ export function BroadCastShowRoom() {
             side="right"
           />
         </div>
+      </div>
+
+      <div className="absolute bottom-3 left-4 rounded-full border border-white/15 bg-black/45 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-white/80 backdrop-blur-sm">
+        Live Broadcasts
       </div>
 
     </div>
