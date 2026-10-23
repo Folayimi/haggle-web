@@ -586,22 +586,34 @@ export const getListing = async (id: string): Promise<BackendListing> => {
   }
 };
 
-export const getSellerListings = async (sellerId: string) => {
-  let result: any = "";
-  await apiClient
-    .get(`/catalog/listings/seller/${sellerId}`) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
-    .then((response: any) => {
-      if (response?.data?.success === true) {
-        result = response?.data;
-        console.log(result);
-      }
-    })
-    .catch((err) => {
-      // notifyError(err?.response?.data?.error);
-      // throw err;
-    });
+export const getSellerListings = async (
+  sellerId: string,
+): Promise<BackendListing[]> => {
+  try {
+    const response = await apiClient.get<{
+      success: boolean;
+      message?: string;
+      data: BackendListing[];
+    }>(`/catalog/listings/seller/${encodeURIComponent(sellerId)}`);
 
-  return result;
+    if (response.data.success !== true || !Array.isArray(response.data.data)) {
+      throw new Error(response.data.message || "Invalid seller listings response");
+    }
+
+    return response.data.data;
+  } catch (error) {
+    const apiMessage = axios.isAxiosError(error)
+      ? (error.response?.data?.message ?? error.response?.data?.error)
+      : undefined;
+    const message =
+      typeof apiMessage === "string"
+        ? apiMessage
+        : error instanceof Error
+          ? error.message
+          : "Failed to load seller listings";
+    notifyError(message);
+    throw error;
+  }
 };
 
 export const createListing = async (data: any) => {

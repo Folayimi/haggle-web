@@ -483,9 +483,9 @@ function ProductCardPreview({
 
   const style = styleMap[negotiationStyle];
 
-  const frontImage = imageGallery.find(
-    (item) => item.slotId === "front",
-  )?.previewUrl;
+  const frontImage =
+    imageGallery.find((item) => item.slotId === "cover")?.previewUrl ??
+    imageGallery[0]?.previewUrl;
 
   return (
     <div className="rounded-xl border border-border/40 bg-background-elevated/20 overflow-hidden shadow-sm">

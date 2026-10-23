@@ -3,6 +3,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
   CalendarDays,
@@ -18,6 +19,7 @@ import {
   Star,
   Store,
   Wrench,
+  X,
 } from "lucide-react";
 import { useHaggleStore } from "@/lib/app-store";
 import {
@@ -45,11 +47,16 @@ type ImageSlot = "avatar" | "cover";
 type ProfileMedia = { avatar: string; cover: string };
 type ProfileDetailsDraft = {
   full_name: string;
+  username: string;
   business_name: string;
   bio: string;
   city: string;
   state: string;
   country: string;
+  postal_code: string;
+  email: string;
+  phone: string;
+  website: string;
 };
 type ProfileTab = "Products" | "Services" | "Liked" | "Scheduled lives";
 const emptyMedia: ProfileMedia = { avatar: "", cover: "" };
@@ -70,9 +77,14 @@ function toPublicImageUrl(key: string) {
   ).toString();
 }
 
-function asListings(result: any): BackendListing[] {
-  const rows = Array.isArray(result) ? result : result?.data;
-  return Array.isArray(rows) ? rows : [];
+function listingImageUrl(listing: BackendListing) {
+  const imagePath =
+    listing.thumbnail_url?.trim() ||
+    listing.medias?.find((media) => media.is_cover)?.url ||
+    listing.media?.find((media) => media.is_cover)?.url ||
+    listing.medias?.[0]?.url ||
+    listing.media?.[0]?.url;
+  return imagePath ? toPublicImageUrl(imagePath) || imagePath : "";
 }
 
 export default function ProfileWorkspacePage({
@@ -80,6 +92,7 @@ export default function ProfileWorkspacePage({
 }: {
   username: string;
 }) {
+  const router = useRouter();
   const userData = useHaggleStore((state) => state.userData);
   const setUserData = useHaggleStore((state) => state.setUserData);
   const savedItemIds = useHaggleStore((state) => state.savedItemIds);
@@ -92,26 +105,40 @@ export default function ProfileWorkspacePage({
   const profile = isOwner ? accountProfile : {};
   const ownerData = isOwner ? userData : null;
   const [media, setMedia] = useState<ProfileMedia>(emptyMedia);
+  const [imagePreview, setImagePreview] = useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
   const [uploading, setUploading] = useState<ImageSlot | null>(null);
   const [uploadMessage, setUploadMessage] = useState("");
   const [profileDraft, setProfileDraft] = useState<ProfileDetailsDraft>({
     full_name: "",
+    username: "",
     business_name: "",
     bio: "",
     city: "",
     state: "",
     country: "",
+    postal_code: "",
+    email: "",
+    phone: "",
+    website: "",
   });
   const [editOpen, setEditOpen] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaveMessage, setProfileSaveMessage] = useState("");
   const [activeTab, setActiveTab] = useState<ProfileTab>("Products");
   const [listings, setListings] = useState<BackendListing[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(false);
+  const [listingsError, setListingsError] = useState(false);
 
   useEffect(() => {
     if (!isOwner) return;
     setProfileDraft({
       full_name: String(accountProfile.full_name || userData?.full_name || ""),
+      username: String(
+        userData?.username || accountProfile.username || routeUsername,
+      ).replace(/^@/, ""),
       business_name: String(
         accountProfile.business_name || userData?.business_name || "",
       ),
@@ -119,6 +146,12 @@ export default function ProfileWorkspacePage({
       city: String(accountProfile.city || accountProfile.location || ""),
       state: String(accountProfile.state || ""),
       country: String(accountProfile.country || ""),
+      postal_code: String(
+        accountProfile.postal_code || userData?.postal_code || "",
+      ),
+      email: String(accountProfile.email || userData?.email || ""),
+      phone: String(accountProfile.phone || userData?.phone || ""),
+      website: String(accountProfile.website || userData?.website || ""),
     });
   }, [
     accountProfile.bio,
@@ -127,33 +160,59 @@ export default function ProfileWorkspacePage({
     accountProfile.country,
     accountProfile.full_name,
     accountProfile.location,
+    accountProfile.username,
+    accountProfile.postal_code,
+    accountProfile.email,
+    accountProfile.phone,
+    accountProfile.website,
     accountProfile.state,
     isOwner,
     userData?.bio,
     userData?.business_name,
+    userData?.username,
     userData?.full_name,
+    userData?.postal_code,
+    userData?.email,
+    userData?.phone,
+    userData?.website,
   ]);
 
   useEffect(() => {
-    if (!routeUsername) return;
-    try {
-      const saved = localStorage.getItem(
-        `haggle-profile-media:${routeUsername}`,
-      );
-      setMedia(saved ? { ...emptyMedia, ...JSON.parse(saved) } : emptyMedia);
-    } catch {
-      setMedia(emptyMedia);
-    }
+    setMedia(emptyMedia);
   }, [routeUsername]);
 
   useEffect(() => {
     const sellerId =
       ownerData?.id || ownerData?.user_id || accountProfile.user_id;
-    if (!isOwner || !sellerId) return;
+    if (!isOwner || !sellerId) {
+      setListings([]);
+      setListingsLoading(false);
+      setListingsError(false);
+      return;
+    }
     let active = true;
-    void getSellerListings(String(sellerId)).then((result) => {
-      if (active) setListings(asListings(result));
-    });
+    setListingsLoading(true);
+    setListingsError(false);
+    void getSellerListings(String(sellerId))
+      .then((result) => {
+        if (active) {
+          setListings(
+            result.filter(
+              (listing) =>
+                !listing.status || listing.status.toLowerCase() === "published",
+            ),
+          );
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setListings([]);
+          setListingsError(true);
+        }
+      })
+      .finally(() => {
+        if (active) setListingsLoading(false);
+      });
     return () => {
       active = false;
     };
@@ -174,9 +233,8 @@ export default function ProfileWorkspacePage({
     media.avatar || profile.avatar_url || ownerData?.avatar_url || "";
   const coverUrl =
     media.cover ||
-    profile.cover_url ||
     profile.cover_image_url ||
-    ownerData?.cover_url ||
+    ownerData?.cover_image_url ||
     "";
   const verified = Boolean(
     profile.is_verified || ownerData?.is_verified || profile.verified,
@@ -190,8 +248,8 @@ export default function ProfileWorkspacePage({
   ).toLowerCase();
   const isSeller = Boolean(
     profile.business_name ||
-      ownerData?.business_name ||
-      /seller|vendor|business|both/.test(role),
+    ownerData?.business_name ||
+    /seller|vendor|business|both/.test(role),
   );
   const followers =
     profile.followers ??
@@ -267,35 +325,37 @@ export default function ProfileWorkspacePage({
       await confirmUpload({ key: upload.key });
       const uploadedUrl = toPublicImageUrl(upload.key);
       if (!uploadedUrl) {
+        setMedia((current) => ({ ...current, [slot]: "" }));
+        URL.revokeObjectURL(previewUrl);
         setUploadMessage(
           "The image uploaded, but the public image URL is not configured yet.",
         );
         return;
       }
       const field = slot === "avatar" ? "avatar_url" : "cover_image_url";
-      const nextMedia = { ...media, [slot]: uploadedUrl };
-      setMedia(nextMedia);
-      localStorage.setItem(
-        `haggle-profile-media:${routeUsername}`,
-        JSON.stringify(nextMedia),
-      );
-      setUserData({
-        ...userData,
-        [field]: uploadedUrl,
-        profile: { ...profile, [field]: uploadedUrl },
-      });
       try {
-        await updateUserProfile({ [field]: uploadedUrl });
+        const result = await updateUserProfile({ [field]: uploadedUrl });
+        if (!result) throw new Error("Profile image update failed.");
+        setUserData({
+          ...userData,
+          [field]: uploadedUrl,
+          profile: { ...profile, [field]: uploadedUrl },
+        });
+        setMedia((current) => ({ ...current, [slot]: uploadedUrl }));
         setUploadMessage(
           slot === "cover" ? "Cover image updated." : "Profile photo updated.",
         );
       } catch {
+        setMedia((current) => ({ ...current, [slot]: "" }));
+        URL.revokeObjectURL(previewUrl);
         setUploadMessage(
-          "Image uploaded. Profile sync is temporarily unavailable.",
+          "The image uploaded, but your profile could not be updated. Please try again.",
         );
       }
       URL.revokeObjectURL(previewUrl);
     } catch (error) {
+      setMedia((current) => ({ ...current, [slot]: "" }));
+      URL.revokeObjectURL(previewUrl);
       setUploadMessage(
         error instanceof Error
           ? error.message
@@ -311,22 +371,18 @@ export default function ProfileWorkspacePage({
     const nextProfile: ProfileDetailsDraft = {
       ...profileDraft,
       full_name: profileDraft.full_name.trim(),
+      username: profileDraft.username.trim().replace(/^@/, ""),
       business_name: profileDraft.business_name.trim(),
       bio: profileDraft.bio.trim(),
       city: profileDraft.city.trim(),
       state: profileDraft.state.trim(),
       country: profileDraft.country.trim(),
+      postal_code: profileDraft.postal_code.trim(),
+      email: profileDraft.email.trim(),
+      phone: profileDraft.phone.trim(),
+      website: profileDraft.website.trim(),
     };
-    const personalFields = {
-      full_name: nextProfile.full_name,
-      bio: nextProfile.bio,
-      city: nextProfile.city,
-      state: nextProfile.state,
-      country: nextProfile.country,
-    };
-    const profileUpdates = isSeller
-      ? nextProfile
-      : personalFields;
+    const profileUpdates = nextProfile;
     setProfileSaving(true);
     setProfileSaveMessage("");
     try {
@@ -339,8 +395,13 @@ export default function ProfileWorkspacePage({
       });
       setProfileDraft(nextProfile);
       setEditOpen(false);
+      if (nextProfile.username && nextProfile.username !== routeUsername) {
+        router.replace(`/profile/${encodeURIComponent(nextProfile.username)}`);
+      }
     } catch {
-      setProfileSaveMessage("Your changes could not be saved. Please try again.");
+      setProfileSaveMessage(
+        "Your changes could not be saved. Please try again.",
+      );
     } finally {
       setProfileSaving(false);
     }
@@ -350,6 +411,9 @@ export default function ProfileWorkspacePage({
     setProfileSaveMessage("");
     setProfileDraft({
       full_name: String(accountProfile.full_name || userData?.full_name || ""),
+      username: String(
+        userData?.username || accountProfile.username || routeUsername,
+      ).replace(/^@/, ""),
       business_name: String(
         accountProfile.business_name || userData?.business_name || "",
       ),
@@ -357,6 +421,12 @@ export default function ProfileWorkspacePage({
       city: String(accountProfile.city || accountProfile.location || ""),
       state: String(accountProfile.state || ""),
       country: String(accountProfile.country || ""),
+      postal_code: String(
+        accountProfile.postal_code || userData?.postal_code || "",
+      ),
+      email: String(accountProfile.email || userData?.email || ""),
+      phone: String(accountProfile.phone || userData?.phone || ""),
+      website: String(accountProfile.website || userData?.website || ""),
     });
     setEditOpen(true);
   };
@@ -379,61 +449,85 @@ export default function ProfileWorkspacePage({
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-transparent text-foreground">
       <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
         <section aria-label="Business profile">
           <div className="relative">
             <div className="relative h-[150px] overflow-hidden rounded-3xl border border-border/50 bg-background-elevated/40 sm:h-[180px] lg:h-[200px]">
-            {coverUrl ? (
-              <img
-                src={coverUrl}
-                alt={`${displayName} cover image`}
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/15 via-background-elevated/50 to-secondary/15 px-6 text-center">
-                <ImagePlus className="mb-3 h-9 w-9 text-primary" />
-                <p className="max-w-xs text-base font-semibold">
-                  Upload your business cover image or an elegant picture of
-                  yourself
-                </p>
-                {isOwner && (
-                  <p className="mt-2 text-sm text-muted">
-                    This image introduces your business.
+              {coverUrl ? (
+                <button
+                  type="button"
+                  aria-label="View cover image"
+                  onClick={() =>
+                    setImagePreview({
+                      src: coverUrl,
+                      alt: `${displayName} cover image`,
+                    })
+                  }
+                  className="absolute inset-0 z-0 h-full w-full cursor-zoom-in"
+                >
+                  <img
+                    src={coverUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/15 via-background-elevated/50 to-secondary/15 px-6 text-center">
+                  <ImagePlus className="mb-3 h-9 w-9 text-primary" />
+                  <p className="max-w-xs text-base font-semibold">
+                    Upload your business cover image or an elegant picture of
+                    yourself
                   </p>
-                )}
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/15" />
-            {isOwner && (
-              <label className="absolute left-4 top-4 inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/20 bg-black/45 px-3.5 py-2.5 text-sm font-semibold text-white backdrop-blur hover:bg-black/60">
-                {uploading === "cover" ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4" />
-                )}
-                {coverUrl ? "Change cover" : "Upload cover"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  disabled={uploading !== null}
-                  onChange={(event) => {
-                    void handleImageUpload("cover", event.target.files?.[0]);
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </label>
-            )}
+                  {isOwner && (
+                    <p className="mt-2 text-sm text-muted">
+                      This image introduces your business.
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/55 via-transparent to-black/15" />
+              {isOwner && (
+                <label className="absolute left-4 top-4 z-10 inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/20 bg-black/45 px-3.5 py-2.5 text-sm font-semibold text-white backdrop-blur hover:bg-black/60">
+                  {uploading === "cover" ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                  {coverUrl ? "Change cover" : "Upload cover"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    disabled={uploading !== null}
+                    onChange={(event) => {
+                      void handleImageUpload("cover", event.target.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+              )}
             </div>
             <div className="absolute -bottom-8 left-4 z-10 h-20 w-20 rounded-full border-4 border-background bg-background-elevated shadow-xl sm:-bottom-9 sm:left-8 sm:h-24 sm:w-24">
               <div className="h-full w-full overflow-hidden rounded-full bg-background-elevated">
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={`${fullName} profile`}
-                    className="h-full w-full object-cover"
-                  />
+                  <button
+                    type="button"
+                    aria-label="View profile photo"
+                    onClick={() =>
+                      setImagePreview({
+                        src: avatarUrl,
+                        alt: `${fullName} profile photo`,
+                      })
+                    }
+                    className="h-full w-full cursor-zoom-in"
+                  >
+                    <img
+                      src={avatarUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/15 to-secondary/15 text-muted">
                     <Store className="h-9 w-9" />
@@ -441,7 +535,7 @@ export default function ProfileWorkspacePage({
                 )}
               </div>
               {isOwner && (
-                <label className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-primary text-white shadow-md">
+                <label className="absolute bottom-0 right-0 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-primary text-white shadow-md">
                   {uploading === "avatar" ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
                   ) : (
@@ -552,45 +646,47 @@ export default function ProfileWorkspacePage({
             </div>
             <aside
               className="rounded-3xl border border-border/50 bg-background-elevated/25 p-4 sm:p-5"
-              aria-label={isSeller ? "Business details" : "Followers and following"}
+              aria-label={
+                isSeller ? "Business details" : "Followers and following"
+              }
             >
               <h2 className="text-base font-bold">
                 {isSeller ? "Business details" : "Community"}
               </h2>
               {isSeller ? (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-2xl bg-background/60 p-4">
-                  <p className="text-xs text-muted">Rating</p>
-                  <p className="mt-2 flex items-center gap-1.5 font-bold">
-                    <Star className="h-4 w-4 fill-primary text-primary" />
-                    {profile.rating || profile.average_rating || "—"}
-                  </p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-2xl bg-background/60 p-4">
+                    <p className="text-xs text-muted">Rating</p>
+                    <p className="mt-2 flex items-center gap-1.5 font-bold">
+                      <Star className="h-4 w-4 fill-primary text-primary" />
+                      {profile.rating || profile.average_rating || "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-background/60 p-4">
+                    <p className="text-xs text-muted">Reviews</p>
+                    <p className="mt-2 font-bold">
+                      {profile.review_count ?? profile.reviews_count ?? "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-background/60 p-4">
+                    <p className="text-xs text-muted">Response time</p>
+                    <p className="mt-2 truncate font-bold">
+                      {profile.average_response_time ||
+                        profile.response_time ||
+                        "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-background/60 p-4">
+                    <p className="text-xs text-muted">Followers</p>
+                    <p className="mt-2 font-bold">
+                      {profile.followers ?? profile.follower_count ?? "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-background/60 p-3">
+                    <p className="text-xs text-muted">Following</p>
+                    <p className="mt-1 font-bold">{following}</p>
+                  </div>
                 </div>
-                <div className="rounded-2xl bg-background/60 p-4">
-                  <p className="text-xs text-muted">Reviews</p>
-                  <p className="mt-2 font-bold">
-                    {profile.review_count ?? profile.reviews_count ?? "—"}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-background/60 p-4">
-                  <p className="text-xs text-muted">Response time</p>
-                  <p className="mt-2 truncate font-bold">
-                    {profile.average_response_time ||
-                      profile.response_time ||
-                      "—"}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-background/60 p-4">
-                  <p className="text-xs text-muted">Followers</p>
-                  <p className="mt-2 font-bold">
-                    {profile.followers ?? profile.follower_count ?? "—"}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-background/60 p-3">
-                  <p className="text-xs text-muted">Following</p>
-                  <p className="mt-1 font-bold">{following}</p>
-                </div>
-              </div>
               ) : (
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <div className="rounded-2xl bg-background/60 p-3">
@@ -604,16 +700,16 @@ export default function ProfileWorkspacePage({
                 </div>
               )}
               {isSeller && (
-              <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border/50 px-3 py-2.5 text-sm">
-                {verified ? (
-                  <BadgeCheck className="h-4 w-4 text-secondary" />
-                ) : (
-                  <Store className="h-4 w-4 text-primary" />
-                )}
-                <span>
-                  {verified ? "Verified business" : "Business profile"}
-                </span>
-              </div>
+                <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border/50 px-3 py-2.5 text-sm">
+                  {verified ? (
+                    <BadgeCheck className="h-4 w-4 text-secondary" />
+                  ) : (
+                    <Store className="h-4 w-4 text-primary" />
+                  )}
+                  <span>
+                    {verified ? "Verified business" : "Business profile"}
+                  </span>
+                </div>
               )}
               {uploadMessage && (
                 <p className="mt-4 text-xs leading-5 text-muted" role="status">
@@ -626,13 +722,13 @@ export default function ProfileWorkspacePage({
 
         {isOwner && (
           <Dialog open={editOpen} onOpenChange={setEditOpen}>
-            <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-2xl gap-5 overflow-y-auto rounded-2xl p-5 sm:p-7">
-              <DialogHeader>
+            <DialogContent className="flex w-[calc(100vw-2rem)] min-w-0 max-h-[min(90dvh,52rem)] max-w-none flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:w-[85vw] lg:w-[65vw] lg:min-w-[65vw] lg:max-w-none">
+              <DialogHeader className="shrink-0 border-b border-border/60 px-5 py-4 pr-14 sm:px-7">
                 <DialogTitle className="text-xl font-bold">
                   Edit profile
                 </DialogTitle>
                 <DialogDescription>
-                  Update the details people see when they visit your profile.
+                  Keep your personal and business details up to date.
                 </DialogDescription>
               </DialogHeader>
               <form
@@ -640,26 +736,79 @@ export default function ProfileWorkspacePage({
                   event.preventDefault();
                   void handleProfileSave();
                 }}
-                className="space-y-4"
+                className="flex min-h-0 flex-1 flex-col"
               >
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="space-y-1.5 text-sm font-medium">
-                    <span>Your name</span>
-                    <input
-                      value={profileDraft.full_name}
-                      onChange={(event) =>
-                        setProfileDraft((draft) => ({
-                          ...draft,
-                          full_name: event.target.value,
-                        }))
-                      }
-                      maxLength={100}
-                      className="w-full rounded-xl border border-border/60 bg-background px-3.5 py-2.5 font-normal outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
-                    />
-                  </label>
-                  {isSeller && (
-                    <label className="space-y-1.5 text-sm font-medium">
-                      <span>Business name</span>
+                <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-5 py-5 sm:px-7">
+                  <p className="text-xs text-muted">* Indicates required</p>
+
+                  <section
+                    className="space-y-4"
+                    aria-labelledby="profile-basic-info"
+                  >
+                    <h3
+                      id="profile-basic-info"
+                      className="text-base font-semibold"
+                    >
+                      Basic info
+                    </h3>
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium">Full name</span>
+                      <input
+                        value={profileDraft.full_name}
+                        onChange={(event) =>
+                          setProfileDraft((draft) => ({
+                            ...draft,
+                            full_name: event.target.value,
+                          }))
+                        }
+                        maxLength={100}
+                        autoComplete="name"
+                        className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                      />
+                    </label>
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium">Username*</span>
+                      <div className="flex overflow-hidden rounded-lg border border-border/70 bg-background focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15">
+                        <span className="flex items-center border-r border-border/60 px-3 text-muted">
+                          @
+                        </span>
+                        <input
+                          value={profileDraft.username}
+                          onChange={(event) =>
+                            setProfileDraft((draft) => ({
+                              ...draft,
+                              username: event.target.value.replace(/^@/, ""),
+                            }))
+                          }
+                          maxLength={50}
+                          autoComplete="username"
+                          required
+                          className="min-w-0 flex-1 bg-transparent px-3 py-2.5 outline-none"
+                        />
+                      </div>
+                      <span className="block text-xs text-muted">
+                        Your profile address will use this username.
+                      </span>
+                    </label>
+                  </section>
+
+                  <section
+                    className="space-y-4"
+                    aria-labelledby="profile-business-info"
+                  >
+                    <div>
+                      <h3
+                        id="profile-business-info"
+                        className="text-base font-semibold"
+                      >
+                        Business info
+                      </h3>
+                      <p className="mt-1 text-sm text-muted">
+                        Help customers recognize and understand your business.
+                      </p>
+                    </div>
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium">Business name</span>
                       <input
                         value={profileDraft.business_name}
                         onChange={(event) =>
@@ -669,68 +818,169 @@ export default function ProfileWorkspacePage({
                           }))
                         }
                         maxLength={120}
-                        className="w-full rounded-xl border border-border/60 bg-background px-3.5 py-2.5 font-normal outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
+                        autoComplete="organization"
+                        className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
                       />
                     </label>
-                  )}
-                </div>
-                <label className="block space-y-1.5 text-sm font-medium">
-                  <span>About you or your business</span>
-                  <textarea
-                    value={profileDraft.bio}
-                    onChange={(event) =>
-                      setProfileDraft((draft) => ({
-                        ...draft,
-                        bio: event.target.value.slice(0, 500),
-                      }))
-                    }
-                    placeholder="Add a short introduction..."
-                    maxLength={500}
-                    rows={4}
-                    className="w-full resize-y rounded-xl border border-border/60 bg-background px-3.5 py-2.5 font-normal leading-6 outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
-                  />
-                  <span className="block text-right text-xs font-normal text-muted">
-                    {profileDraft.bio.length}/500
-                  </span>
-                </label>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {(["city", "state", "country"] as const).map((field) => (
-                    <label
-                      key={field}
-                      className="space-y-1.5 text-sm font-medium"
-                    >
-                      <span>{field[0].toUpperCase() + field.slice(1)}</span>
-                      <input
-                        value={profileDraft[field]}
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium">Bio</span>
+                      <textarea
+                        value={profileDraft.bio}
                         onChange={(event) =>
                           setProfileDraft((draft) => ({
                             ...draft,
-                            [field]: event.target.value,
+                            bio: event.target.value.slice(0, 500),
                           }))
                         }
-                        maxLength={80}
-                        className="w-full rounded-xl border border-border/60 bg-background px-3.5 py-2.5 font-normal outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
+                        placeholder="Tell people what you do and what makes your business special."
+                        maxLength={500}
+                        rows={4}
+                        className="w-full resize-y rounded-lg border border-border/70 bg-background px-3 py-2.5 leading-6 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                      />
+                      <span className="block text-right text-xs text-muted">
+                        {profileDraft.bio.length}/500
+                      </span>
+                    </label>
+                  </section>
+
+                  <section
+                    className="space-y-4"
+                    aria-labelledby="profile-location"
+                  >
+                    <h3
+                      id="profile-location"
+                      className="text-base font-semibold"
+                    >
+                      Location
+                    </h3>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {(
+                        ["city", "state", "country", "postal_code"] as const
+                      ).map((field) => (
+                        <label
+                          key={field}
+                          className="block space-y-1.5 text-sm"
+                        >
+                          <span className="font-medium">
+                            {
+                              {
+                                city: "City",
+                                state: "State / Region",
+                                country: "Country / Region",
+                                postal_code: "Postal code",
+                              }[field]
+                            }
+                          </span>
+                          <input
+                            value={profileDraft[field]}
+                            onChange={(event) =>
+                              setProfileDraft((draft) => ({
+                                ...draft,
+                                [field]: event.target.value,
+                              }))
+                            }
+                            maxLength={field === "postal_code" ? 20 : 80}
+                            autoComplete={
+                              {
+                                city: "address-level2",
+                                state: "address-level1",
+                                country: "country-name",
+                                postal_code: "postal-code",
+                              }[field]
+                            }
+                            className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section
+                    className="space-y-4"
+                    aria-labelledby="profile-contact-info"
+                  >
+                    <div>
+                      <h3
+                        id="profile-contact-info"
+                        className="text-base font-semibold"
+                      >
+                        Contact info
+                      </h3>
+                      <p className="mt-1 text-sm text-muted">
+                        Add the best ways for customers to reach your business.
+                      </p>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="block space-y-1.5 text-sm">
+                        <span className="font-medium">Email</span>
+                        <input
+                          type="email"
+                          value={profileDraft.email}
+                          onChange={(event) =>
+                            setProfileDraft((draft) => ({
+                              ...draft,
+                              email: event.target.value,
+                            }))
+                          }
+                          maxLength={254}
+                          autoComplete="email"
+                          className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                        />
+                      </label>
+                      <label className="block space-y-1.5 text-sm">
+                        <span className="font-medium">Phone</span>
+                        <input
+                          type="tel"
+                          value={profileDraft.phone}
+                          onChange={(event) =>
+                            setProfileDraft((draft) => ({
+                              ...draft,
+                              phone: event.target.value,
+                            }))
+                          }
+                          maxLength={30}
+                          autoComplete="tel"
+                          className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                        />
+                      </label>
+                    </div>
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium">Website</span>
+                      <input
+                        type="url"
+                        value={profileDraft.website}
+                        onChange={(event) =>
+                          setProfileDraft((draft) => ({
+                            ...draft,
+                            website: event.target.value,
+                          }))
+                        }
+                        maxLength={240}
+                        placeholder="https://example.com"
+                        autoComplete="url"
+                        className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
                       />
                     </label>
-                  ))}
+                  </section>
+
+                  {profileSaveMessage && (
+                    <p className="text-sm text-destructive" role="alert">
+                      {profileSaveMessage}
+                    </p>
+                  )}
                 </div>
-                {profileSaveMessage && (
-                  <p className="text-sm text-destructive" role="alert">
-                    {profileSaveMessage}
-                  </p>
-                )}
-                <DialogFooter className="-mx-5 -mb-5 px-5 sm:-mx-7 sm:-mb-7 sm:px-7">
+                <DialogFooter className="mx-0 mb-0 mt-0 flex-row justify-end gap-2 rounded-none border-t border-border/60 bg-background px-5 py-3 sm:px-7">
                   <button
                     type="button"
                     onClick={() => setEditOpen(false)}
-                    className="rounded-xl border border-border/60 px-4 py-2.5 text-sm font-semibold transition hover:bg-background-elevated"
+                    className="rounded-full border border-border/60 px-5 py-2.5 text-sm font-semibold transition hover:bg-background-elevated"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={profileSaving}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong disabled:cursor-wait disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong disabled:cursor-wait disabled:opacity-60"
                   >
                     {profileSaving && (
                       <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -774,7 +1024,17 @@ export default function ProfileWorkspacePage({
             ))}
           </div>
           <div className="min-h-44 py-6" role="tabpanel">
-            {activeTab === "Liked" && likedItems.length > 0 ? (
+            {listingsLoading &&
+            (activeTab === "Products" || activeTab === "Services") ? (
+              <p className="py-10 text-center text-sm text-muted" role="status">
+                Loading your {activeTab.toLowerCase()} from the catalog...
+              </p>
+            ) : listingsError &&
+              (activeTab === "Products" || activeTab === "Services") ? (
+              <p className="py-10 text-center text-sm text-muted" role="alert">
+                We couldn&apos;t load your {activeTab.toLowerCase()}. Please refresh and try again.
+              </p>
+            ) : activeTab === "Liked" && likedItems.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {likedItems.map((item) => (
                   <article
@@ -811,9 +1071,9 @@ export default function ProfileWorkspacePage({
                     key={item.id}
                     className="overflow-hidden rounded-2xl border border-border/50 bg-background-elevated/20"
                   >
-                    {item.thumbnail_url ? (
+                    {listingImageUrl(item) ? (
                       <img
-                        src={item.thumbnail_url}
+                        src={listingImageUrl(item)}
                         alt=""
                         className="h-40 w-full object-cover"
                       />
@@ -891,6 +1151,42 @@ export default function ProfileWorkspacePage({
           </div>
         </section>
       </div>
+      <Dialog
+        open={Boolean(imagePreview)}
+        onOpenChange={(open) => {
+          if (!open) setImagePreview(null);
+        }}
+      >
+        <DialogContent
+          overlayClassName="bg-black/85 supports-backdrop-filter:backdrop-blur-sm"
+          showCloseButton={false}
+          className="flex max-h-[92dvh] w-[min(94vw,1200px)] max-w-[94vw] flex-col items-center justify-center gap-0 border-0 bg-transparent p-0 shadow-none ring-0"
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>Profile image</DialogTitle>
+            <DialogDescription>
+              Expanded view of the profile cover or avatar image.
+            </DialogDescription>
+          </DialogHeader>
+          {imagePreview && (
+            <div className="relative flex max-h-[92dvh] w-full items-center justify-center">
+              <img
+                src={imagePreview.src}
+                alt={imagePreview.alt}
+                className="max-h-[88dvh] max-w-full rounded-lg object-contain shadow-2xl"
+              />
+              <button
+                type="button"
+                aria-label="Close image preview"
+                onClick={() => setImagePreview(null)}
+                className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

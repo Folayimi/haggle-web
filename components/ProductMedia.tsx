@@ -41,13 +41,7 @@ import {
 // ============================================
 // TYPES
 // ============================================
-type FixedSlotId =
-  | "front"
-  | "back"
-  | "left"
-  | "right"
-  | "accessories"
-  | "packaging";
+type FixedSlotId = "cover";
 type SlotId = FixedSlotId | string; // allow dynamic "moreX"
 
 type ConnectionStatus = "idle" | "scanning" | "connected" | "uploading";
@@ -92,25 +86,15 @@ export interface ProductMediaRef {
 // CONSTANTS
 // ============================================
 const FIXED_SLOTS: Slot[] = [
-  { id: "front", label: "Front", starred: true, isFixed: true },
-  { id: "back", label: "Back", starred: false, isFixed: true },
-  { id: "left", label: "Left", starred: false, isFixed: true },
-  { id: "right", label: "Right", starred: false, isFixed: true },
-  { id: "accessories", label: "Accessories", starred: false, isFixed: true },
-  { id: "packaging", label: "Packaging", starred: false, isFixed: true },
+  { id: "cover", label: "Cover", starred: true, isFixed: true },
 ];
 
 const SERVICE_SLOTS: Slot[] = [
   { id: "cover", label: "Cover", starred: true, isFixed: true },
-  { id: "sample1", label: "Sample 1", starred: true, isFixed: true },
-  { id: "sample2", label: "Sample 2", starred: true, isFixed: true },
-  { id: "sample3", label: "Sample 3", isFixed: true },
-  { id: "sample4", label: "Sample 4", isFixed: true },
-  { id: "sample5", label: "Sample 5", isFixed: true },
 ];
 
 const ROTATING_TIPS = [
-  { icon: "📸", text: "Add 4+ high-quality photos" },
+  { icon: "📸", text: "Add more photos if they help showcase the product." },
   { icon: "⚡", text: "Respond within 1 hour" },
   { icon: "📦", text: "Show packaging in photos" },
   { icon: "🔍", text: "Mention defects honestly" },

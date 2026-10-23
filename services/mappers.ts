@@ -256,20 +256,62 @@ interface BackendUser {
   username?: string;
   business_name?: string;
   avatar_url?: string;
+  cover_image_url?: string;
+  bio?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  location?: string;
   is_verified?: boolean;
+  profile?: {
+    full_name?: string;
+    username?: string;
+    business_name?: string;
+    avatar_url?: string;
+    cover_image_url?: string;
+    bio?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    location?: string;
+    is_verified?: boolean;
+  };
 }
 
 export function mapUserToSeller(user: BackendUser) {
+  const isVerified = Boolean(user.is_verified ?? user.profile?.is_verified);
+
   // NOTE: followers, rating, response_time, and trust pills aren't modeled
   // on the backend yet (Section 22/23 territory, deferred post-MVP).
   // Honest placeholders here -- never invent numbers.
   return {
     id: user.id,
-    name: user.full_name ?? user.username ?? "Seller",
-    businessName: user.business_name ?? "",
-    avatarUrl: user.avatar_url ?? "/placeholder-avatar.jpg",
-    badge: user.is_verified ? "Verified seller" : "New seller",
-    trustPills: user.is_verified ? ["Phone verified"] : [],
+    name:
+      user.full_name ??
+      user.profile?.full_name ??
+      user.username ??
+      user.profile?.username ??
+      "Seller",
+    username: user.username ?? user.profile?.username ?? "",
+    businessName: user.business_name ?? user.profile?.business_name ?? "",
+    avatarUrl:
+      user.avatar_url ?? user.profile?.avatar_url ?? "/placeholder-avatar.jpg",
+    coverImageUrl: user.cover_image_url ?? user.profile?.cover_image_url ?? "",
+    bio: user.bio ?? user.profile?.bio ?? "",
+    location:
+      [
+        user.city ?? user.profile?.city,
+        user.state ?? user.profile?.state,
+        user.country ?? user.profile?.country,
+      ]
+        .filter(Boolean)
+        .join(", ") ||
+      user.location ||
+      user.profile?.location ||
+      "",
+    isVerified,
+    badge: isVerified ? "Verified seller" : "Haggle seller",
+    trustPills: isVerified ? ["Verified seller"] : [],
     followers: "—",
     rating: "—",
     responseTime: "—",

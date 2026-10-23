@@ -1,15 +1,18 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
   Activity,
   ArrowUp,
+  BadgeCheck,
   BriefcaseBusiness,
   ChevronLeft,
   Layers3,
   Megaphone,
   MapPin,
+  Package,
   Radio,
   ShoppingBag,
   Sparkles,
@@ -707,9 +710,53 @@ const MarketPage = () => {
           </div>
 
           {selectedProductId || selectedServiceId ? (
-            <aside className="max-h-[40vh] w-full shrink-0 space-y-5 overflow-y-auto bg-background-elevated/50 rounded-xl p-3 pb-20 xl:max-h-full xl:w-[360px]">
-              <section className="rounded-xl border border-border bg-background-elevated p-5">
-                <h2 className="text-lg font-semibold">Seller information</h2>
+            <aside className="max-h-[40vh] w-full shrink-0 overflow-x-hidden overflow-y-auto rounded-xl bg-[#101010] pb-20 xl:max-h-full xl:w-[360px]">
+              <section className="relative isolate min-h-[280px] overflow-hidden bg-[#14252b] text-white">
+                {selectedSeller?.coverImageUrl ? (
+                  <Image
+                    src={selectedSeller.coverImageUrl}
+                    alt=""
+                    fill
+                    unoptimized
+                    sizes="(min-width: 1280px) 360px, 100vw"
+                    className="z-0 object-cover"
+                  />
+                ) : (
+                  <div className="absolute inset-0 z-0 bg-gradient-to-br from-primary/80 via-[#17333c] to-secondary/70" />
+                )}
+                <div className="absolute inset-0 z-10 bg-gradient-to-t from-black via-black/45 to-black/10" />
+                <div className="relative z-20 flex min-h-[280px] flex-col justify-between p-5">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="rounded-full border border-white/20 bg-black/25 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] backdrop-blur">
+                      Haggle seller
+                    </span>
+                    {selectedSeller?.isVerified && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-white/15 px-2.5 py-1 text-[10px] font-semibold backdrop-blur">
+                        <BadgeCheck className="h-3.5 w-3.5 text-emerald-300" />
+                        Verified
+                      </span>
+                    )}
+                  </div>
+                  <div>
+                    <h2 className="line-clamp-2 text-3xl font-bold leading-tight">
+                      {selectedSeller?.businessName || selectedSeller?.name || "Seller on Haggle"}
+                    </h2>
+                    {selectedSeller?.bio && (
+                      <p className="mt-3 line-clamp-3 max-w-sm text-sm leading-5 text-white/80">
+                        {selectedSeller.bio}
+                      </p>
+                    )}
+                    {selectedSeller?.location && (
+                      <p className="mt-3 flex items-center gap-1.5 text-xs text-white/75">
+                        <MapPin className="h-3.5 w-3.5" />
+                        {selectedSeller.location}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </section>
+              <section className="bg-[#1c1c1c] px-4 py-5 text-white">
+                <h2 className="mb-4 text-sm font-bold tracking-wide">About the seller</h2>
                 {sellerLoading && (
                   <MarketSellerSkeleton />
                 )}
@@ -720,38 +767,40 @@ const MarketPage = () => {
                 )}
                 {selectedSeller && (
                   <>
-                    <div className="mt-5 flex items-center gap-3">
+                    <div className="relative mb-4 h-40 w-full overflow-hidden rounded-xl bg-gradient-to-br from-primary/30 via-[#293840] to-secondary/30">
                       {selectedSeller.avatarUrl !== "/placeholder-avatar.jpg" ? (
                         <Image
                           src={selectedSeller.avatarUrl}
-                          alt=""
-                          width={56}
-                          height={56}
+                          alt={`${selectedSeller.name} profile`}
+                          fill
                           unoptimized
-                          className="h-14 w-14 rounded-full object-cover"
+                          sizes="(min-width: 1280px) 328px, calc(100vw - 2rem)"
+                          className="object-cover"
                         />
                       ) : (
-                        <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full bg-primary/10 text-lg font-semibold text-primary">
+                        <div className="flex h-full w-full items-center justify-center text-6xl font-bold text-white/70">
                           {selectedSeller.name.slice(0, 1).toUpperCase()}
                         </div>
                       )}
-                      <div className="min-w-0">
-                        <p className="truncate font-semibold">
-                          {selectedSeller.businessName || selectedSeller.name}
-                        </p>
-                        {selectedSeller.businessName && (
-                          <p className="truncate text-sm text-muted">
-                            {selectedSeller.name}
-                          </p>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="flex items-center gap-1 truncate text-lg font-bold">
+                        {selectedSeller.name}
+                        {selectedSeller.isVerified && (
+                          <BadgeCheck className="h-4 w-4 shrink-0 fill-emerald-300 text-[#1c1c1c]" />
                         )}
-                        <p className="mt-1 text-xs text-primary">
-                          {selectedSeller.badge}
-                        </p>
-                      </div>
+                      </p>
+                      {selectedSeller.businessName && (
+                        <p className="truncate text-sm text-white/60">{selectedSeller.businessName}</p>
+                      )}
+                      <p className="mt-1 text-xs text-emerald-300">{selectedSeller.badge}</p>
                     </div>
 
+                    {selectedSeller.username && (
+                      <p className="mt-2 text-xs text-white/55">@{selectedSeller.username}</p>
+                    )}
                     <div className="mt-5 grid grid-cols-3 gap-2">
-                      <div className="rounded-lg bg-background p-3 text-center">
+                      <div className="rounded-lg bg-white/10 p-3 text-center">
                         <p className="font-semibold">
                           {
                             products.filter(
@@ -763,9 +812,9 @@ const MarketPage = () => {
                                 ).length
                           }
                         </p>
-                        <p className="mt-1 text-xs text-muted">Listings</p>
+                        <p className="mt-1 text-xs text-white/55">Listings</p>
                       </div>
-                      <div className="rounded-lg bg-background p-3 text-center">
+                      <div className="rounded-lg bg-white/10 p-3 text-center">
                         <p className="font-semibold">
                           {products
                             .filter(
@@ -776,30 +825,38 @@ const MarketPage = () => {
                               (total, product) =>
                                 total + (product.saveCount ?? 0),
                               0,
-                            )}
+                            ) +
+                            serviceListings
+                              .filter((service) => service.seller_id === selectedSeller.id)
+                              .reduce((total, service) => total + (service.save_count ?? 0), 0)}
                         </p>
-                        <p className="mt-1 text-xs text-muted">Likes</p>
+                        <p className="mt-1 text-xs text-white/55">Saves</p>
                       </div>
-                      <div className="rounded-lg bg-background p-3 text-center">
-                        <p className="font-semibold">{selectedSeller.rating}</p>
-                        <p className="mt-1 text-xs text-muted">Rating</p>
+                      <div className="rounded-lg bg-white/10 p-3 text-center">
+                        <p className="font-semibold">
+                          {selectedSeller.isVerified ? "Yes" : "—"}
+                        </p>
+                        <p className="mt-1 text-xs text-white/55">Verified</p>
                       </div>
                     </div>
 
-                    {selectedSeller.rating === "—" && (
-                      <p className="mt-3 text-xs text-muted">
-                        Seller ratings are not available yet.
-                      </p>
+                    {selectedSeller.username && (
+                      <Link
+                        href={`/profile/${encodeURIComponent(selectedSeller.username)}`}
+                        className="mt-4 inline-flex w-full items-center justify-center rounded-full border border-white/25 px-4 py-2 text-sm font-semibold transition hover:border-white hover:bg-white/10"
+                      >
+                        Visit seller profile
+                      </Link>
                     )}
                   </>
                 )}
               </section>
 
               {(sellerLoading || selectedSeller) && (
-                <section className="rounded-xl border border-border bg-background-elevated p-5">
-                  <h2 className="text-lg font-semibold">Seller activity</h2>
-                  <p className="mt-1 text-sm text-muted">
-                    Published listings from this provider
+                <section className="rounded-2xl border border-border/60 bg-background-elevated p-4">
+                  <h2 className="text-base font-bold">More from this seller</h2>
+                  <p className="mt-1 text-xs text-muted">
+                    More to discover from this shop
                   </p>
                   {sellerLoading ? (
                     <MarketSellerActivitySkeleton />
@@ -819,15 +876,9 @@ const MarketPage = () => {
                             onClick={() => handleProductSelect(product)}
                             className="flex w-full items-center gap-3 rounded-lg bg-background p-2 text-left transition hover:bg-background-elevated"
                           >
-                            {product.imageUrl && (
-                              <Image
-                                src={product.imageUrl}
-                                alt=""
-                                width={56}
-                                height={56}
-                                className="h-14 w-14 rounded-md object-cover"
-                              />
-                            )}
+                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
+                              <Package className="h-5 w-5" />
+                            </span>
                             <span className="min-w-0">
                               <span className="block truncate text-sm font-medium">
                                 {product.name}
@@ -852,13 +903,9 @@ const MarketPage = () => {
                             onClick={() => handleServiceSelect(service)}
                             className="flex w-full items-center gap-3 rounded-lg bg-background p-2 text-left transition hover:bg-background-elevated"
                           >
-                            <Image
-                              src={service.imageUrl}
-                              alt=""
-                              width={56}
-                              height={56}
-                              className="h-14 w-14 rounded-md object-cover"
-                            />
+                            <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-secondary/10 text-secondary">
+                              <BriefcaseBusiness className="h-5 w-5" />
+                            </span>
                             <span className="min-w-0">
                               <span className="block truncate text-sm font-medium">
                                 {service.name}
