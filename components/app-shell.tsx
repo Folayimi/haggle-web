@@ -100,11 +100,14 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       <div className="flex h-full overflow-y-auto flex-1 flex-col">
         <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur xl:hidden">
           <div className="flex items-center justify-between px-4 py-4">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted">
-                Haggle
-              </p>
+            <div className="flex items-center gap-3">
+              <img src="/haggle.png" alt="Haggle" className="h-9 w-9 object-contain" />
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.28em] text-muted">
+                  Haggle
+                </p>
               <p className="text-lg font-semibold">Marketplace live</p>
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <button

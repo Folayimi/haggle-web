@@ -59,10 +59,7 @@ const LoginPage = ({
       <div className="bg-white rounded-3xl shadow-xl p-8 md:p-10 transition-all duration-300">
         {/* Logo */}
         <div className="flex justify-center mb-8">
-          <div className="flex items-center gap-1 text-2xl font-bold text-gray-800">
-            <span>Haggle</span>
-            <span className="text-primary text-3xl">.</span>
-          </div>
+          <img src="/haggle.png" alt="Haggle" className="h-12 w-auto object-contain" />
         </div>
 
         {/* Welcome text */}

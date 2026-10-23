@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useHaggleStore } from "@/lib/app-store";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 const SideNav = ({ userData }: { userData: any }) => {
   const [tab, setTab] = useState("home");
@@ -29,7 +29,22 @@ const SideNav = ({ userData }: { userData: any }) => {
   );
   const theme = useHaggleStore((state) => state.theme);
   const toggleTheme = useHaggleStore((state) => state.toggleTheme);
+  const clearUserData = useHaggleStore((state) => state.clearUserData);
   const pathname = usePathname();
+  const router = useRouter();
+
+  const handleLogout = () => {
+    [
+      "haggleAccessToken",
+      "haggleRefreshToken",
+      "haggleMediaAccessToken",
+      "haggleAuthToken",
+      "haggleAuthResetToken",
+      "activateAuth",
+    ].forEach((key) => localStorage.removeItem(key));
+    clearUserData();
+    router.replace("/for-you");
+  };
 
   // Base nav items (without profile)
   const baseNavItems = [
@@ -109,9 +124,11 @@ const SideNav = ({ userData }: { userData: any }) => {
           ${collapsed ? "justify-center px-2" : ""}
         `}
       >
-        <div className="w-10 h-10 rounded-xl bg-primary flex items-center justify-center flex-shrink-0 shadow-sm">
-          <span className="text-white font-bold text-lg">H</span>
-        </div>
+        <img
+          src="/haggle.png"
+          alt="Haggle"
+          className="w-10 h-10 rounded-xl object-contain flex-shrink-0 shadow-sm"
+        />
         <div
           className={`
             overflow-hidden transition-all duration-300
@@ -285,6 +302,9 @@ const SideNav = ({ userData }: { userData: any }) => {
 
           {/* Logout */}
           <button
+            type="button"
+            onClick={handleLogout}
+            aria-label="Logout"
             className={`
               flex items-center gap-3 px-3 py-2.5 rounded-xl w-full
               transition-all duration-200

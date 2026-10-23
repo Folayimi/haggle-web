@@ -13,6 +13,10 @@ export const metadata: Metadata = {
   title: "Haggle | Live Negotiation Marketplace",
   description:
     "Discover live sessions, reserve drops, message trusted sellers, and bargain in real time on Haggle.",
+  icons: {
+    icon: "/haggle.png",
+    apple: "/haggle.png",
+  },
   openGraph: {
     title: "Haggle | Live Negotiation Marketplace",
     description:
