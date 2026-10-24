@@ -28,6 +28,7 @@ import {
   MarketSellerSkeleton,
 } from "@/components/market/common/MarketSkeletons";
 import { useMarketDiscovery } from "@/components/market/hooks/useMarketDiscovery";
+import { useListingFeed } from "@/components/market/hooks/useListingFeed";
 import { FilterChips } from "@/components/market/search/FilterChips";
 import { MarketSearch } from "@/components/market/search/MarketSearch";
 import { FeaturedCollections } from "@/components/market/sections/FeaturedCollections";
@@ -61,6 +62,9 @@ import {
 } from "@/services/mappers";
 import type { BackendCategory, BackendListing } from "@/services/mappers";
 import { getUserById } from "@/services/users";
+import { getCatalogErrorStatus } from "@/services/catalog";
+import { trackListingInteraction } from "@/services/catalog";
+import { notifyError } from "@/services/toastify";
 import type { MarketService, SellerProduct } from "@/types";
 
 interface BroadcastButtonProps {
@@ -126,6 +130,7 @@ const MarketPage = () => {
   const [selectedService, setSelectedService] = useState<MarketService | null>(
     null,
   );
+  const [showAllReviews, setShowAllReviews] = useState(false);
   const [selectedSeller, setSelectedSeller] = useState<
     ReturnType<typeof mapUserToSeller> | null
   >(null);
@@ -139,17 +144,20 @@ const MarketPage = () => {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [products, setProducts] = useState<SellerProduct[]>([]);
   const [serviceListings, setServiceListings] = useState<BackendListing[]>([]);
-  const [servicesLoading, setServicesLoading] = useState(true);
-  const [servicesError, setServicesError] = useState(false);
   const [publishedCategories, setPublishedCategories] = useState<
     BackendCategory[]
   >([]);
-  const [productsLoading, setProductsLoading] = useState(true);
-  const [productsError, setProductsError] = useState(false);
   const categories = [
     { id: "All", name: "All categories" },
     ...publishedCategories.map(({ id, name }) => ({ id, name })),
   ];
+  const categoryFilter = selectedCategory === "All" ? undefined : selectedCategory;
+  const latestProductFeed = useListingFeed("latest", "product", categoryFilter);
+  const latestServiceFeed = useListingFeed("latest", "service", categoryFilter);
+  const trendingProductFeed = useListingFeed("trending", "product", categoryFilter);
+  const trendingServiceFeed = useListingFeed("trending", "service", categoryFilter);
+  const recommendationProductFeed = useListingFeed("recommendations", "product", categoryFilter);
+  const recommendationServiceFeed = useListingFeed("recommendations", "service", categoryFilter);
   const categoryNames = useMemo(
     () =>
       new Map(
@@ -157,45 +165,51 @@ const MarketPage = () => {
       ),
     [publishedCategories],
   );
-  const services = useMemo<MarketService[]>(
-    () =>
-      serviceListings.map((listing) =>
-        mapListingToService(
-          listing,
-          categoryNames.get(listing.category_id) ?? listing.category_id,
-        ),
-      ),
-    [serviceListings, categoryNames],
+  const latestProducts = useMemo(
+    () => latestProductFeed.listings.map(mapListingToProduct),
+    [latestProductFeed.listings],
+  );
+  const latestServices = useMemo(
+    () => latestServiceFeed.listings.map((listing) => mapListingToService(listing, categoryNames.get(listing.category_id) ?? listing.category_id)),
+    [latestServiceFeed.listings, categoryNames],
+  );
+  const trendingProducts = useMemo(
+    () => trendingProductFeed.listings.map(mapListingToProduct),
+    [trendingProductFeed.listings],
+  );
+  const trendingServices = useMemo(
+    () => trendingServiceFeed.listings.map((listing) => mapListingToService(listing, categoryNames.get(listing.category_id) ?? listing.category_id)),
+    [trendingServiceFeed.listings, categoryNames],
+  );
+  const recommendedProducts = useMemo(
+    () => recommendationProductFeed.listings.map(mapListingToProduct),
+    [recommendationProductFeed.listings],
+  );
+  const recommendedServices = useMemo(
+    () => recommendationServiceFeed.listings.map((listing) => mapListingToService(listing, categoryNames.get(listing.category_id) ?? listing.category_id)),
+    [recommendationServiceFeed.listings, categoryNames],
   );
   const discovery = useMarketDiscovery({
-    products,
-    services,
     sellers,
     liveSessions,
     negotiations,
+    latestProducts,
+    latestServices,
+    trendingProducts,
+    recommendedProducts,
+    trendingServices,
+    recommendedServices,
   });
 
   const query = searchQuery.trim().toLowerCase();
+  const matchesService = (service: MarketService) =>
+    !query || `${service.name} ${service.category}`.toLowerCase().includes(query);
   const matchesProduct = (product: (typeof products)[number]) =>
     (selectedCategory === "All" || product.category === selectedCategory) &&
     (!query ||
       `${product.name} ${categoryNames.get(product.category) ?? ""}`
         .toLowerCase()
         .includes(query));
-  const filteredServices = services.filter(
-    (service) =>
-      !query ||
-      `${service.name} ${service.category}`.toLowerCase().includes(query),
-  );
-  const filteredServicesByCategory = filteredServices.filter(
-    (service) =>
-      selectedCategory === "All" ||
-      serviceListings.some(
-        (listing) =>
-          listing.id === service.id &&
-          listing.category_id === selectedCategory,
-      ),
-  );
   const handleSectionsScroll = () => {
     const container = sectionsContainerRef.current;
     if (!container) return;
@@ -207,6 +221,10 @@ const MarketPage = () => {
     );
   };
   const handleProductSelect = (product: SellerProduct) => {
+    if (localStorage.getItem("haggleAccessToken")) {
+      void trackListingInteraction(product.id, "tap").catch(() => notifyError("Could not record this interaction."));
+    }
+    setShowAllReviews(false);
     setSelectedServiceId(null);
     setSelectedService(null);
     setServiceDetailLoading(false);
@@ -222,6 +240,10 @@ const MarketPage = () => {
     setShowBackToTop(false);
   };
   const handleServiceSelect = (service: MarketService) => {
+    if (localStorage.getItem("haggleAccessToken")) {
+      void trackListingInteraction(service.id, "tap").catch(() => notifyError("Could not record this interaction."));
+    }
+    setShowAllReviews(false);
     setSelectedProductId(null);
     setSelectedProduct(null);
     setProductDetailLoading(false);
@@ -237,6 +259,7 @@ const MarketPage = () => {
     setShowBackToTop(false);
   };
   const handleBackToListings = () => {
+    setShowAllReviews(false);
     setSelectedProductId(null);
     setSelectedProduct(null);
     setSelectedServiceId(null);
@@ -259,6 +282,12 @@ const MarketPage = () => {
     setShowBackToTop(false);
   };
   const handleBackToMarket = () => {
+    if (showAllReviews) {
+      setShowAllReviews(false);
+      sectionsContainerRef.current?.scrollTo({ top: 0 });
+      return;
+    }
+
     if (selectedProductId || selectedServiceId) {
       handleBackToListings();
       return;
@@ -272,8 +301,6 @@ const MarketPage = () => {
   useEffect(() => {
     let cancelled = false;
     const loadProducts = async () => {
-      setProductsLoading(true);
-      setProductsError(false);
       try {
         const listings = await getAllListings("product");
         if (cancelled) return;
@@ -288,11 +315,7 @@ const MarketPage = () => {
         );
 
         console.log("Loaded products:", listings);
-      } catch {
-        if (!cancelled) setProductsError(true);
-      } finally {
-        if (!cancelled) setProductsLoading(false);
-      }
+      } catch {}
     };
 
     void loadProducts();
@@ -304,8 +327,6 @@ const MarketPage = () => {
   useEffect(() => {
     let cancelled = false;
     const loadServices = async () => {
-      setServicesLoading(true);
-      setServicesError(false);
       try {
         const listings = await getAllListings("services");
         if (cancelled) return;
@@ -316,11 +337,7 @@ const MarketPage = () => {
               listing.status?.toLowerCase() === "published",
           ),
         );
-      } catch {
-        if (!cancelled) setServicesError(true);
-      } finally {
-        if (!cancelled) setServicesLoading(false);
-      }
+      } catch {}
     };
 
     void loadServices();
@@ -434,7 +451,9 @@ const MarketPage = () => {
               type="button"
               onClick={handleBackToMarket}
               aria-label={
-                selectedProductId || selectedServiceId
+                showAllReviews
+                  ? "Back to product or service details"
+                  : selectedProductId || selectedServiceId
                   ? "Back to marketplace"
                   : "Back to marketplace sections"
               }
@@ -487,6 +506,8 @@ const MarketPage = () => {
                   <MarketProductDetail
                     key={selectedProduct.id}
                     product={selectedProduct}
+                    showAllReviews={showAllReviews}
+                    onShowAllReviewsChange={setShowAllReviews}
                   />
                 ) : serviceDetailError || !selectedService ? (
                   <div role="alert" className="py-12 text-center">
@@ -505,9 +526,11 @@ const MarketPage = () => {
                   <MarketServiceDetail
                     key={selectedService.id}
                     service={selectedService}
+                    showAllReviews={showAllReviews}
+                    onShowAllReviewsChange={setShowAllReviews}
                   />
                 )
-              ) : productsLoading ? (
+              ) : !selectedMarketView && latestProductFeed.loading && trendingProductFeed.loading ? (
                 <MarketLoadingSkeleton
                   view={
                     selectedMarketView === "collections"
@@ -522,21 +545,16 @@ const MarketPage = () => {
                   }
                 />
               ) : selectedMarketView === "trending" ? (
-                <MarketBrowseView
-                  type="products"
-                  title="Trending"
-                  description="Products people are viewing, negotiating, and buying."
-                  items={discovery.trending.filter(matchesProduct)}
-                  onProductSelect={handleProductSelect}
-                />
+                <div className="space-y-8">
+                  <MarketBrowseView type="products" title="Trending products" description="Products ordered by the marketplace trending feed." items={discovery.trending.filter(matchesProduct)} onProductSelect={handleProductSelect} isLoading={trendingProductFeed.loading} error={trendingProductFeed.error ? "Trending products could not be loaded." : undefined} hasMore={trendingProductFeed.hasMore} isLoadingMore={trendingProductFeed.loadingMore} onLoadMore={() => void trendingProductFeed.loadMore()} />
+                  <MarketBrowseView type="services" title="Trending services" description="Services ordered by the marketplace trending feed." items={discovery.trendingServices.filter(matchesService)} onServiceSelect={handleServiceSelect} isLoading={trendingServiceFeed.loading} error={trendingServiceFeed.error ? "Trending services could not be loaded." : undefined} hasMore={trendingServiceFeed.hasMore} isLoadingMore={trendingServiceFeed.loadingMore} onLoadMore={() => void trendingServiceFeed.loadMore()} />
+                </div>
               ) : selectedMarketView === "recommended" ? (
-                <MarketBrowseView
-                  type="products"
-                  title="Recommended for you"
-                  description="More products curated for your interests."
-                  items={discovery.recommended.filter(matchesProduct)}
-                  onProductSelect={handleProductSelect}
-                />
+                <div className="space-y-8">
+                  {[recommendationProductFeed.error, recommendationServiceFeed.error].some((error) => getCatalogErrorStatus(error) === 401) && <p role="status" className="rounded-xl bg-background p-4 text-sm text-muted"><Link href="/login" className="font-semibold text-primary hover:underline">Sign in</Link> to see personalized recommendations.</p>}
+                  <MarketBrowseView type="products" title="Recommended products" description="Listings selected by the marketplace recommendation feed." items={discovery.recommended.filter(matchesProduct)} onProductSelect={handleProductSelect} isLoading={recommendationProductFeed.loading} error={recommendationProductFeed.error && getCatalogErrorStatus(recommendationProductFeed.error) !== 401 ? "Recommended products could not be loaded." : undefined} hasMore={recommendationProductFeed.hasMore} isLoadingMore={recommendationProductFeed.loadingMore} onLoadMore={() => void recommendationProductFeed.loadMore()} />
+                  <MarketBrowseView type="services" title="Recommended services" description="Listings selected by the marketplace recommendation feed." items={discovery.recommendedServices.filter(matchesService)} onServiceSelect={handleServiceSelect} isLoading={recommendationServiceFeed.loading} error={recommendationServiceFeed.error && getCatalogErrorStatus(recommendationServiceFeed.error) !== 401 ? "Recommended services could not be loaded." : undefined} hasMore={recommendationServiceFeed.hasMore} isLoadingMore={recommendationServiceFeed.loadingMore} onLoadMore={() => void recommendationServiceFeed.loadMore()} />
+                </div>
               ) : selectedMarketView === "collections" ? (
                 <MarketBrowseView
                   type="collections"
@@ -545,32 +563,23 @@ const MarketPage = () => {
                   items={featuredCollections}
                 />
               ) : selectedMarketView === "latest" ? (
-                <MarketBrowseView
-                  type="products"
-                  title="Latest Listings"
-                  description="Browse all recently added products."
-                  items={discovery.latest.filter(matchesProduct)}
-                  onProductSelect={handleProductSelect}
-                />
+                <div className="space-y-8">
+                  <MarketBrowseView type="products" title="Latest products" description="Browse recently added products." items={discovery.latest.filter(matchesProduct)} onProductSelect={handleProductSelect} isLoading={latestProductFeed.loading} error={latestProductFeed.error ? "Latest products could not be loaded." : undefined} hasMore={latestProductFeed.hasMore} isLoadingMore={latestProductFeed.loadingMore} onLoadMore={() => void latestProductFeed.loadMore()} />
+                  <MarketBrowseView type="services" title="Latest services" description="Browse recently added services." items={discovery.latestServices.filter(matchesService)} onServiceSelect={handleServiceSelect} isLoading={latestServiceFeed.loading} error={latestServiceFeed.error ? "Latest services could not be loaded." : undefined} hasMore={latestServiceFeed.hasMore} isLoadingMore={latestServiceFeed.loadingMore} onLoadMore={() => void latestServiceFeed.loadMore()} />
+                </div>
               ) : selectedMarketView === "services" ? (
                 <>
-                  {servicesError && (
-                    <p role="alert" className="text-sm text-danger">
-                      Professional services could not be loaded. Please try
-                      again shortly.
-                    </p>
-                  )}
-                  {servicesLoading && (
-                    <p role="status" className="text-sm text-muted">
-                      Loading professional services...
-                    </p>
-                  )}
                   <MarketBrowseView
                     type="services"
                     title="Professional Services"
                     description="Browse trusted professionals and services."
-                    items={filteredServicesByCategory}
+                    items={discovery.latestServices.filter(matchesService)}
                     onServiceSelect={handleServiceSelect}
+                    isLoading={latestServiceFeed.loading}
+                    error={latestServiceFeed.error ? "Professional services could not be loaded." : undefined}
+                    hasMore={latestServiceFeed.hasMore}
+                    isLoadingMore={latestServiceFeed.loadingMore}
+                    onLoadMore={() => void latestServiceFeed.loadMore()}
                   />
                 </>
               ) : selectedMarketView === "live" ? (
@@ -618,16 +627,6 @@ const MarketPage = () => {
                 />
               </nav>
 
-              {productsError && (
-                <p role="alert" className="text-sm text-danger">
-                  Products could not be loaded. Please try again shortly.
-                </p>
-              )}
-              {!productsLoading && !productsError && products.length === 0 && (
-                <p className="text-sm text-muted">
-                  No published products found.
-                </p>
-              )}
               <div id="market-trending" className="scroll-mt-4">
                 <TrendingNearYou
                   products={discovery.trending.filter(matchesProduct)}
@@ -637,26 +636,8 @@ const MarketPage = () => {
                 />
               </div>
               <div id="market-services" className="scroll-mt-4">
-                {servicesError && (
-                  <p role="alert" className="mb-4 text-sm text-danger">
-                    Professional services could not be loaded. Please try
-                    again shortly.
-                  </p>
-                )}
-                {servicesLoading && (
-                  <p role="status" className="mb-4 text-sm text-muted">
-                    Loading professional services...
-                  </p>
-                )}
-                {!servicesLoading &&
-                  !servicesError &&
-                  filteredServicesByCategory.length === 0 && (
-                    <p className="mb-4 text-sm text-muted">
-                      No published professional services found.
-                    </p>
-                  )}
                 <ServiceFeed
-                  services={filteredServicesByCategory}
+                  services={discovery.latestServices.filter(matchesService)}
                   onServiceSelect={handleServiceSelect}
                   onViewAll={() => openMarketView("services")}
                 />
@@ -895,7 +876,7 @@ const MarketPage = () => {
                             </span>
                           </button>
                         ))}
-                      {services
+                      {discovery.latestServices
                         .filter(
                           (service) =>
                             service.sellerId === selectedSeller.id &&
@@ -927,7 +908,7 @@ const MarketPage = () => {
                           product.sellerId === selectedSeller.id &&
                           product.id !== selectedProductId,
                       ) &&
-                        !services.some(
+                        !discovery.latestServices.some(
                           (service) =>
                             service.sellerId === selectedSeller.id &&
                             service.id !== selectedServiceId,

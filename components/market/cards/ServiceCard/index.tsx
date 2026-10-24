@@ -1,11 +1,11 @@
 "use client";
 
 import Link from "next/link";
-import { Heart } from "lucide-react";
+import { Heart, Star } from "lucide-react";
 
 import { CardImage } from "@/components/market/common/CardImage";
 import { ActionButton } from "@/components/market/common/ActionButton";
-import { useHaggleStore } from "@/lib/app-store";
+import { useListingSave } from "@/components/market/hooks/useListingSave";
 import { formatPrice } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { MarketService } from "@/types";
@@ -16,9 +16,7 @@ export interface ServiceCardProps {
 }
 
 export default function ServiceCard({ service, onSelect }: ServiceCardProps) {
-  const savedIds = useHaggleStore((state) => state.savedItemIds);
-  const toggleSavedItem = useHaggleStore((state) => state.toggleSavedItem);
-  const saved = savedIds.includes(service.id);
+  const { saved, pending, toggle } = useListingSave(service.id);
   const price =
     typeof service.price === "string"
       ? Number(service.price.replace(/[^\d.-]/g, ""))
@@ -46,7 +44,8 @@ export default function ServiceCard({ service, onSelect }: ServiceCardProps) {
           </span>
           <button
             type="button"
-            onClick={() => toggleSavedItem(service.id)}
+            onClick={() => void toggle()}
+            disabled={pending}
             aria-label={saved ? "Remove service from favorites" : "Add service to favorites"}
             aria-pressed={saved}
             className={cn(
@@ -80,6 +79,8 @@ export default function ServiceCard({ service, onSelect }: ServiceCardProps) {
             </h2>
           )}
           <p className="mt-0.5 line-clamp-1 text-xs leading-4 text-muted">{service.description}</p>
+          {service.recommendationReason && <p className="mt-1 text-[11px] font-medium text-primary">{recommendationLabel(service.recommendationReason)}</p>}
+          {!!service.ratingSummary?.count && <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted"><Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />{service.ratingSummary.average.toFixed(1)} ({service.ratingSummary.count})</p>}
         </div>
         <ActionButton asChild variant="secondary" size="sm" className="shrink-0">
           <Link href={`/services/${service.id}/book`}>Request Service</Link>
@@ -87,4 +88,14 @@ export default function ServiceCard({ service, onSelect }: ServiceCardProps) {
       </div>
     </article>
   );
+}
+
+function recommendationLabel(reason: NonNullable<MarketService["recommendationReason"]>) {
+  const labels = {
+    based_on_category: "Based on this category",
+    based_on_followed_seller: "From a seller you follow",
+    recently_listed: "Recently listed",
+    trending: "Trending",
+  };
+  return labels[reason];
 }

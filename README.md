@@ -48,6 +48,35 @@ Important note:
 
 - `onboarding_view.dart` is still a placeholder in Flutter. For the web app, replace that placeholder with a polished landing/onboarding gateway that introduces the product and routes users into auth or the app.
 
+## Recently Implemented Marketplace Behavior
+
+The current web implementation includes the following product and service detail behavior:
+
+- Product posting renders the `Size` requirement as a multi-select control. It offers XS, S, M, L, XL, XXL, XXXL, One Size, and numeric sizes 28 through 46. Chosen sizes appear as removable capsules.
+- The posting form stores chosen sizes as a comma-separated value inside the existing pipe-delimited listing tags string, for example `size:XS, M`. This keeps the current backend tags format.
+- Product detail maps the saved Size tag into separate available-size buttons. Buyers can select one size at a time. That selection currently changes the button state only; it is not yet passed into the negotiation flow.
+- Structured product tags render with their labels, such as `Brand: Nike` and `Condition: Good`. The Size tag is not repeated as a comma-separated feature badge; it appears in the size selector. Unstructured tags remain plain feature badges.
+- The product detail cover image uses a fixed responsive height: 320px by default, 380px at the small breakpoint, and 420px on large screens.
+- Product and service details show a rating summary, review count, and up to three review previews below the gallery. **Show more** replaces the detail content in the main market panel with the full review list. The existing market header back control returns to the selected detail, and from there it returns to the marketplace. The reviews view has no separate back button.
+- Review summaries and reviews load from the catalog API for products and services. The normalized `ListingReviewData` shape (`rating`, `reviewCount`, `reviews`, and `isSample`) is retained; live API data sets `isSample` to `false`. Reviewers can create, edit, and delete their review, and the full review view supports pagination and uses the marketplace header back control.
+- The market uses the catalog's latest, trending, and authenticated recommendation feeds for products and services. Feed order comes from the backend; category filtering is sent with the request, search stays in the existing UI, and browse views support load-more pagination.
+- Product and service favorite buttons call the catalog save/unsave endpoints and update the existing persisted saved-item state only after a successful response. The frontend does not invent a saved-list response shape.
+- Listing detail requests continue through the existing authenticated API client, which carries the configured `/api/v1` base URL and bearer token. Catalog requests do not send the store's `x-user-id` header; the API identifies the user from the token.
+- Authenticated listing selections and completed product-video watches are sent as idempotent interaction events. Listing views come from the normal detail request and backend `view_count`; the UI does not emit separate view events or locally increment counts.
+- Listing owners see per-listing engagement metrics on product or service details, with 7, 30, or 90 day windows. The backend remains responsible for authorizing access.
+
+Relevant implementation files:
+
+- Product creation: `appPages/PostProductPage.tsx`
+- Product detail: `components/market/sections/MarketProductDetail.tsx`
+- Service detail: `components/market/sections/MarketServiceDetail.tsx`
+- Shared review views: `components/market/sections/ListingReviews.tsx`
+- Review data boundary and hook: `services/listing-reviews.ts`, `components/market/hooks/useListingReviews.ts`
+- Catalog API contracts: `services/catalog.ts`
+- Discovery and save hooks: `components/market/hooks/useListingFeed.ts`, `components/market/hooks/useListingSave.ts`
+- Owner metrics: `components/market/sections/ListingAnalytics.tsx`
+- Product tag normalization: `services/mappers.ts`, `types/product.ts`
+
 ## Non-Negotiable Product Requirements
 
 The web app must keep these behaviors:
@@ -218,6 +247,9 @@ For each screen, follow the modern e‑commerce enhancements described below.
 - Sticky header on scroll: simplified CTA “Offer $X” always visible.
 - Offer section: show last 5 offers (anonymized) to build transparency. Example: “User *** made an offer of $45 2 mins ago”.
 - Seller section: response time, acceptance rate, “Similar products from this seller”.
+- Available sizes from the listing's `size:` tag are displayed as individually selectable buttons. Render keyed attributes with their labels (for example, `Brand: Nike`) and omit the combined Size tag from generic feature badges.
+- Keep the lead product image at a bounded responsive height so it does not stretch alongside long descriptions.
+- Below the product images, show the rating, total review count, and the first three reviews. “Show more” replaces the main market detail panel with the full review list. The market header back control returns to product details.
 - **Modern e‑commerce flow:** Add a “Bundle & save” suggestion – other products from same seller that could be combined for a better offer.
 - After making an offer, show pending status and a “Chat with seller” shortcut.
 
@@ -227,6 +259,7 @@ For each screen, follow the modern e‑commerce enhancements described below.
 
 **How:**
 - Show portfolio gallery, average response time, and “Completed X projects”.
+- Below the service gallery, show the rating, total review count, and the first three reviews. “Show more” replaces the main market detail panel with the full review list. Use the market header back control to return to service details.
 - Use a step‑by‑step breakdown: what’s included, what’s extra, typical turnaround.
 - Instead of “Make offer”, use “Propose budget” with a slider and a message field.
 - **E‑commerce twist:** Show “Similar services you might need” as cross‑sell.
@@ -292,6 +325,7 @@ For each screen, follow the modern e‑commerce enhancements described below.
 
 **How:**
 - Pricing step: allow “Minimum acceptable offer” (hidden from buyers) and “Auto‑counter offer” rules (e.g., counter 5% below asking).
+- Render the Size requirement as a multi-select dropdown with removable selected-size capsules. Serialize selected sizes as comma-separated text in the existing tags string so the backend format stays compatible.
 - Media: drag‑drop upload with priority order. AI alt‑text suggestion.
 - After publish, show a success screen with “Share on social” and “Schedule live” CTAs.
 

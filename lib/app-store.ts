@@ -16,6 +16,7 @@ type HaggleStore = {
   toggleTheme: () => void;
   toggleReservation: (liveId: string) => void;
   toggleSavedItem: (itemId: string) => void;
+  setSavedItem: (itemId: string, saved: boolean) => void;
   addRecentSearch: (query: string) => void;
   removeRecentSearch: (query: string) => void;
   setActiveConversationId: (conversationId: string) => void;
@@ -46,7 +47,7 @@ export const useHaggleStore = create<HaggleStore>()(
       // ====== EXISTING STATE ======
       theme: "light",
       reservedLiveIds: ["live-wholesale", "live-tech"],
-      savedItemIds: ["product-vase", "live-luxe"],
+      savedItemIds: [],
       recentSearches: ["ceramic drop", "studio lighting", "bridal glam"],
       activeConversationId: "conversation-maria",
 
@@ -67,6 +68,14 @@ export const useHaggleStore = create<HaggleStore>()(
           savedItemIds: state.savedItemIds.includes(itemId)
             ? state.savedItemIds.filter((item) => item !== itemId)
             : [...state.savedItemIds, itemId],
+        })),
+      setSavedItem: (itemId, saved) =>
+        set((state) => ({
+          savedItemIds: saved
+            ? state.savedItemIds.includes(itemId)
+              ? state.savedItemIds
+              : [...state.savedItemIds, itemId]
+            : state.savedItemIds.filter((item) => item !== itemId),
         })),
       addRecentSearch: (query) =>
         set((state) => {

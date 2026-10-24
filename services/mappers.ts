@@ -32,11 +32,32 @@ export interface BackendListing {
   negotiation_note?: string | null;
   tags: string | string[] | null;
   save_count?: number;
+  view_count?: number;
+  share_count?: number;
+  seller?: BackendListingSeller | null;
+  rating_summary?: BackendRatingSummary | null;
+  trending_score?: number;
+  recommendation_reason?:
+    | "based_on_category"
+    | "based_on_followed_seller"
+    | "recently_listed"
+    | "trending";
+  recommendation_score?: number;
   created_at: string;
   thumbnail_url?: string | null;
   cover_media_id?: string | null;
   medias?: BackendListingMedia[];
   media?: BackendListingMedia[];
+}
+
+export interface BackendListingSeller {
+  full_name: string;
+  avatar_url: string | null;
+}
+
+export interface BackendRatingSummary {
+  average: number;
+  count: number;
 }
 
 export interface BackendCategory {
@@ -121,6 +142,38 @@ export function mapListingToProduct(listing: BackendListing): SellerProduct {
   const rawTags = Array.isArray(listing.tags)
     ? listing.tags
     : (listing.tags ?? "").split("|");
+  const availableSizes = rawTags.flatMap((tag) => {
+    const separator = tag.indexOf(":");
+    if (
+      separator < 0 ||
+      tag.slice(0, separator).trim().toLowerCase() !== "size"
+    ) {
+      return [];
+    }
+    return tag
+      .slice(separator + 1)
+      .split(",")
+      .map((size) => size.trim())
+      .filter(Boolean);
+  });
+  const attributes = rawTags.flatMap((tag) => {
+    const separator = tag.indexOf(":");
+    if (separator < 0) return [];
+
+    const key = tag.slice(0, separator).trim();
+    const value = tag.slice(separator + 1).trim();
+    if (!key || key.toLowerCase() === "size" || !value) return [];
+
+    return [
+      {
+        label: key
+          .split(/[-_\s]+/)
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" "),
+        value,
+      },
+    ];
+  });
   const tags = rawTags
     .map((tag) => {
       const separator = tag.indexOf(":");
@@ -154,10 +207,22 @@ export function mapListingToProduct(listing: BackendListing): SellerProduct {
         : inventoryCount <= 10
           ? `Only ${inventoryCount} left in stock`
           : "In stock",
-    features: tags,
+    availableSizes,
+    attributes,
+    features: rawTags
+      .filter((tag) => !tag.includes(":"))
+      .map((tag) => tag.trim())
+      .filter(Boolean),
     negotiationNote: listing.negotiation_note ?? "",
     tags,
     saveCount: listing.save_count ?? 0,
+    viewCount: listing.view_count ?? 0,
+    shareCount: listing.share_count ?? 0,
+    sellerSummary: listing.seller ?? null,
+    ratingSummary: listing.rating_summary ?? null,
+    trendingScore: listing.trending_score,
+    recommendationReason: listing.recommendation_reason,
+    recommendationScore: listing.recommendation_score,
     negotiationCount: 0,
     createdAt: listing.created_at,
   };
@@ -210,6 +275,14 @@ export function mapListingToService(
           : workPlace ?? "",
     workAddress: listing.work_address ?? "",
     negotiationNote: listing.negotiation_note ?? "",
+    viewCount: listing.view_count ?? 0,
+    saveCount: listing.save_count ?? 0,
+    shareCount: listing.share_count ?? 0,
+    sellerSummary: listing.seller ?? null,
+    ratingSummary: listing.rating_summary ?? null,
+    trendingScore: listing.trending_score,
+    recommendationReason: listing.recommendation_reason,
+    recommendationScore: listing.recommendation_score,
     gallery: listingMedia
       .map((media) => resolveListingMediaUrl(media.url))
       .filter((url) => url !== (thumbnailUrl ? resolveListingMediaUrl(thumbnailUrl) : "")),

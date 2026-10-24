@@ -5,7 +5,11 @@ import Link from "next/link";
 import { Clock3, MapPin, MessageCircle, Users } from "lucide-react";
 
 import { formatPrice } from "@/lib/formatters";
+import { useHaggleStore } from "@/lib/app-store";
+import { ListingAnalytics } from "@/components/market/sections/ListingAnalytics";
+import { useListingReviews } from "@/components/market/hooks/useListingReviews";
 import type { MarketService } from "@/types";
+import { AllReviewsView, ReviewPreview } from "./ListingReviews";
 
 function ServiceFact({
   label,
@@ -29,7 +33,17 @@ function ServiceFact({
   );
 }
 
-export function MarketServiceDetail({ service }: { service: MarketService }) {
+export function MarketServiceDetail({
+  service,
+  showAllReviews,
+  onShowAllReviewsChange,
+}: {
+  service: MarketService;
+  showAllReviews: boolean;
+  onShowAllReviewsChange: (show: boolean) => void;
+}) {
+  const reviews = useListingReviews(service.id, service.sellerId);
+  const userData = useHaggleStore((state) => state.userData);
   const price =
     service.price === "" ? Number.NaN : Number(String(service.price).replace(/[^\d.-]/g, ""));
   const gallery = Array.from(
@@ -41,6 +55,26 @@ export function MarketServiceDetail({ service }: { service: MarketService }) {
       aria-labelledby="selected-service-title"
       className="space-y-6 rounded-2xl bg-background p-4 sm:p-6"
     >
+      {showAllReviews ? (
+        <AllReviewsView
+          title={service.name}
+          rating={reviews.reviewData?.rating}
+          reviewCount={reviews.reviewData?.reviewCount}
+          reviews={reviews.reviewData?.reviews}
+          myReview={reviews.myReview}
+          isOwner={reviews.isOwner}
+          isAuthenticated={reviews.isAuthenticated}
+          isLoading={reviews.isLoading}
+          isLoadingMore={reviews.isLoadingMore}
+          hasMore={reviews.reviewData?.hasMore ?? false}
+          error={reviews.error}
+          personalError={reviews.myReviewError}
+          onLoadMore={() => void reviews.loadMore()}
+          onSaveReview={reviews.saveReview}
+          onDeleteReview={reviews.removeReview}
+        />
+      ) : (
+        <>
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)]">
         <div className="space-y-3">
           <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-background-elevated">
@@ -95,6 +129,7 @@ export function MarketServiceDetail({ service }: { service: MarketService }) {
                 ? `Starting at ${formatPrice(price, service.priceCurrency)}`
                 : "Price unavailable"}
             </p>
+            {typeof service.viewCount === "number" && <p className="mt-1 text-xs text-muted">{service.viewCount.toLocaleString()} views</p>}
             <p className="mt-1 text-sm font-medium text-foreground">
               {service.negotiable ? "Negotiable" : "Fixed price"}
             </p>
@@ -125,6 +160,19 @@ export function MarketServiceDetail({ service }: { service: MarketService }) {
           </div>
         </div>
       </div>
+
+      <ReviewPreview
+        rating={reviews.reviewData?.rating}
+        reviewCount={reviews.reviewData?.reviewCount}
+        reviews={reviews.reviewData?.reviews}
+        isLoading={reviews.isLoading}
+        error={reviews.error}
+        canWriteReview={reviews.canReview}
+        hasOwnReview={Boolean(reviews.myReview)}
+        onShowAll={() => onShowAllReviewsChange(true)}
+      />
+
+      {userData?.id && userData.id === service.sellerId && <ListingAnalytics listingId={service.id} />}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,0.55fr)]">
         <div>
@@ -169,6 +217,9 @@ export function MarketServiceDetail({ service }: { service: MarketService }) {
           </Link>
         </div>
       </div>
+
+        </>
+      )}
     </section>
   );
 }

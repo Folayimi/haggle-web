@@ -257,6 +257,116 @@ function GlassySelect({
   );
 }
 
+const PRODUCT_SIZES = [
+  "XS",
+  "S",
+  "M",
+  "L",
+  "XL",
+  "XXL",
+  "XXXL",
+  "One Size",
+  ...Array.from({ length: 19 }, (_, index) => String(index + 28)),
+];
+
+function SizeMultiSelect({
+  value,
+  onChange,
+  error,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  error?: string;
+}) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedSizes = value
+    .split(",")
+    .map((size) => size.trim())
+    .filter(Boolean);
+
+  const toggleSize = (size: string) => {
+    const nextSizes = selectedSizes.includes(size)
+      ? selectedSizes.filter((selectedSize) => selectedSize !== size)
+      : [...selectedSizes, size];
+    onChange(nextSizes.join(", "));
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <div className="flex items-center gap-2">
+        <span className="text-base font-medium text-foreground/80">Size</span>
+      </div>
+      <div
+        className={cn(
+          "rounded-xl border border-border/60 bg-background-elevated/40 p-2.5 shadow-sm transition-all focus-within:border-primary/50 focus-within:ring-1 focus-within:ring-primary/30",
+          error && "border-danger/50 focus-within:border-danger/50 focus-within:ring-danger/30",
+        )}
+      >
+        <div className="flex min-h-9 flex-wrap items-center gap-2">
+          {selectedSizes.map((size) => (
+            <span
+              key={size}
+              className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-primary/10 py-1 pl-3 pr-1.5 text-xs font-medium text-foreground"
+            >
+              {size}
+              <button
+                type="button"
+                aria-label={`Remove size ${size}`}
+                onClick={() => toggleSize(size)}
+                className="flex h-5 w-5 items-center justify-center rounded-full text-muted/70 transition hover:bg-primary/15 hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+              >
+                <X className="h-3 w-3" />
+              </button>
+            </span>
+          ))}
+          {selectedSizes.length === 0 && (
+            <span className="px-1 text-sm text-muted/50">Select available sizes</span>
+          )}
+          <button
+            type="button"
+            aria-expanded={isOpen}
+            aria-controls="product-size-options"
+            onClick={() => setIsOpen((open) => !open)}
+            className="ml-auto inline-flex items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-foreground/70 transition hover:bg-foreground/5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+          >
+            {isOpen ? "Done" : "Choose sizes"}
+            <ChevronDown
+              className={cn("h-3.5 w-3.5 transition-transform", isOpen && "rotate-180")}
+            />
+          </button>
+        </div>
+        {isOpen && (
+          <div
+            id="product-size-options"
+            className="mt-2 grid max-h-48 grid-cols-3 gap-1 overflow-y-auto border-t border-border/50 pt-2 sm:grid-cols-4"
+          >
+            {PRODUCT_SIZES.map((size) => {
+              const isSelected = selectedSizes.includes(size);
+              return (
+                <button
+                  key={size}
+                  type="button"
+                  aria-pressed={isSelected}
+                  onClick={() => toggleSize(size)}
+                  className={cn(
+                    "rounded-lg px-3 py-2 text-sm transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+                    isSelected
+                      ? "bg-primary/15 font-semibold text-foreground"
+                      : "text-foreground/70 hover:bg-foreground/5",
+                  )}
+                >
+                  {size}
+                </button>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      {error && <p className="text-xs text-danger">{error}</p>}
+    </div>
+  );
+}
+
 // ============================================
 // TAB COMPONENT
 // ============================================
@@ -1329,7 +1439,15 @@ const PostProductPage = () => {
 
                               return (
                                 <React.Fragment key={item.name}>
-                                  {item.type === "select" ? (
+                                  {item.name.toLowerCase() === "size" ? (
+                                    <SizeMultiSelect
+                                      value={currentValue}
+                                      onChange={(value) =>
+                                        handleTagChange(item.name, value)
+                                      }
+                                      error={validationErrors[item.name]}
+                                    />
+                                  ) : item.type === "select" ? (
                                     <GlassySelect
                                       label={item.name}
                                       options={item?.options ?? []}

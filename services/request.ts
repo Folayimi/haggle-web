@@ -60,7 +60,6 @@ const processQueue = (error: any = null, token: string | null = null) => {
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("haggleAccessToken");
-    console.log("accessToken...", token);
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
@@ -69,7 +68,10 @@ apiClient.interceptors.request.use(
     // conversations, and other authenticated routes rely on this header
     // via getRequestUserId() on the backend, not just /users/me.
     const userData = useHaggleStore.getState().userData; // 👈 Get userData from store
-    if (userData?.id) {
+    const isCatalogRequest = /^\/?catalog(?:\/|$)/.test(
+      config.url ?? "",
+    );
+    if (userData?.id && !isCatalogRequest) {
       config.headers["x-user-id"] = userData.id;
     }
 
@@ -85,7 +87,6 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response) => {
-    console.log("checking....");
     // Any status code within 2xx triggers this.
     // You can return just response.data to simplify your API calls.
     return response;
@@ -124,8 +125,6 @@ apiClient.interceptors.response.use(
         localStorage.setItem("haggleAccessToken", newAccessToken);
         localStorage.setItem("haggleRefreshToken", newRefreshToken);
         localStorage.setItem("haggleMediaAccessToken", newMediaAccessToken);
-
-        console.log("new tokens: ", response.data.tokens);
 
         // Update the auth header for the current request
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;

@@ -18,12 +18,19 @@ type MarketBrowseViewProps =
       description: string;
       items: SellerProduct[];
       onProductSelect: (product: SellerProduct) => void;
+      isLoading?: boolean;
+      error?: string;
+      hasMore?: boolean;
+      isLoadingMore?: boolean;
+      onLoadMore?: () => void;
     }
   | {
       type: "collections";
       title: string;
       description: string;
       items: FeaturedCollection[];
+      isLoading?: boolean;
+      error?: string;
     }
   | {
       type: "services";
@@ -31,12 +38,19 @@ type MarketBrowseViewProps =
       description: string;
       items: MarketService[];
       onServiceSelect?: (service: MarketService) => void;
+      isLoading?: boolean;
+      error?: string;
+      hasMore?: boolean;
+      isLoadingMore?: boolean;
+      onLoadMore?: () => void;
     }
   | {
       type: "live";
       title: string;
       description: string;
       items: SellerLiveSession[];
+      isLoading?: boolean;
+      error?: string;
     };
 
 export function MarketBrowseView(props: MarketBrowseViewProps) {
@@ -52,7 +66,11 @@ export function MarketBrowseView(props: MarketBrowseViewProps) {
         <p className="mt-1 text-sm text-muted">{props.description}</p>
       </header>
 
-      {props.items.length === 0 ? (
+      {props.isLoading && props.items.length === 0 ? (
+        <p role="status" className="rounded-xl bg-background p-8 text-center text-sm text-muted">Loading listings...</p>
+      ) : props.error ? (
+        <p role="alert" className="rounded-xl bg-background p-8 text-center text-sm text-danger">{props.error}</p>
+      ) : props.items.length === 0 ? (
         <p className="rounded-xl bg-background p-8 text-center text-sm text-muted">
           Nothing to show here yet.
         </p>
@@ -88,6 +106,16 @@ export function MarketBrowseView(props: MarketBrowseViewProps) {
               <LiveSessionCard key={session.id} session={session} />
             ))}
         </div>
+      )}
+      {(props.type === "products" || props.type === "services") && props.hasMore && (
+        <button
+          type="button"
+          onClick={props.onLoadMore}
+          disabled={props.isLoadingMore}
+          className="mx-auto block rounded-lg border border-border px-4 py-2 text-sm font-semibold disabled:opacity-60"
+        >
+          {props.isLoadingMore ? "Loading..." : "Load more"}
+        </button>
       )}
     </section>
   );

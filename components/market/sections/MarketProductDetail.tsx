@@ -13,6 +13,11 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { getProductCover } from "@/components/market/data/market";
+import { useListingReviews } from "@/components/market/hooks/useListingReviews";
+import { useListingSave } from "@/components/market/hooks/useListingSave";
+import { ListingAnalytics } from "@/components/market/sections/ListingAnalytics";
+import { trackListingInteraction } from "@/services/catalog";
+import { notifyError } from "@/services/toastify";
 import {
   Dialog,
   DialogClose,
@@ -20,15 +25,24 @@ import {
   DialogDescription,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useHaggleStore } from "@/lib/app-store";
 import { formatPrice } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
+import { useHaggleStore } from "@/lib/app-store";
 import type { Media, SellerProduct } from "@/types";
+import { AllReviewsView, ReviewPreview } from "./ListingReviews";
 
-export function MarketProductDetail({ product }: { product: SellerProduct }) {
-  const savedIds = useHaggleStore((state) => state.savedItemIds);
-  const toggleSavedItem = useHaggleStore((state) => state.toggleSavedItem);
-  const saved = savedIds.includes(product.id);
+export function MarketProductDetail({
+  product,
+  showAllReviews,
+  onShowAllReviewsChange,
+}: {
+  product: SellerProduct;
+  showAllReviews: boolean;
+  onShowAllReviewsChange: (show: boolean) => void;
+}) {
+  const { saved, pending: savePending, toggle: toggleSaved } = useListingSave(product.id);
+  const userData = useHaggleStore((state) => state.userData);
+  const reviews = useListingReviews(product.id, product.sellerId);
   const coverUrl = product.imageUrl ?? getProductCover(product);
   const mediaItems = useMemo(() => {
     const result: Media[] = [];
@@ -50,6 +64,7 @@ export function MarketProductDetail({ product }: { product: SellerProduct }) {
     coverUrl ?? product.images?.[0]?.url ?? "",
   );
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const [selectedSize, setSelectedSize] = useState("");
   const activeMedia = product.images?.find(
     (media) => media.url === activeMediaUrl,
   );
@@ -96,14 +111,40 @@ export function MarketProductDetail({ product }: { product: SellerProduct }) {
 
   return (
     <section aria-labelledby="selected-product-title" className="space-y-6">
+      {showAllReviews ? (
+        <AllReviewsView
+          title={product.name}
+          rating={reviews.reviewData?.rating}
+          reviewCount={reviews.reviewData?.reviewCount}
+          reviews={reviews.reviewData?.reviews}
+          myReview={reviews.myReview}
+          isOwner={reviews.isOwner}
+          isAuthenticated={reviews.isAuthenticated}
+          isLoading={reviews.isLoading}
+          isLoadingMore={reviews.isLoadingMore}
+          hasMore={reviews.reviewData?.hasMore ?? false}
+          error={reviews.error}
+          personalError={reviews.myReviewError}
+          onLoadMore={() => void reviews.loadMore()}
+          onSaveReview={reviews.saveReview}
+          onDeleteReview={reviews.removeReview}
+        />
+      ) : (
+        <>
       <div className="grid gap-6 rounded-2xl bg-background p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
-        <div className="relative aspect-[4/3] overflow-hidden rounded-xl bg-background-elevated lg:aspect-auto lg:min-h-[380px]">
+        <div className="relative h-[320px] overflow-hidden rounded-xl bg-background-elevated sm:h-[380px] lg:h-[420px]">
           {activeMedia?.type === "video" ? (
             <video
               key={activeMedia.url}
               src={activeMedia.url}
               controls
               playsInline
+              onEnded={(event) => {
+                if (localStorage.getItem("haggleAccessToken")) {
+                  const watched = Math.min(3_600_000, Math.round(event.currentTarget.currentTime * 1000));
+                  void trackListingInteraction(product.id, "watch", watched).catch(() => notifyError("Could not record video engagement."));
+                }
+              }}
               className="h-full w-full object-cover"
             />
           ) : (
@@ -132,7 +173,8 @@ export function MarketProductDetail({ product }: { product: SellerProduct }) {
             </p>
             <button
               type="button"
-              onClick={() => toggleSavedItem(product.id)}
+              onClick={() => void toggleSaved()}
+              disabled={savePending}
               aria-label={saved ? "Remove from favorites" : "Add to favorites"}
               aria-pressed={saved}
               className={cn(
@@ -158,6 +200,7 @@ export function MarketProductDetail({ product }: { product: SellerProduct }) {
               ? formatPrice(numericPrice, product.priceCurrency)
               : "Price unavailable"}
           </p>
+          {typeof product.viewCount === "number" && <p className="mt-1 text-xs text-muted">{product.viewCount.toLocaleString()} views</p>}
           <p
             className={cn(
               "mt-2 text-sm font-medium",
@@ -168,6 +211,30 @@ export function MarketProductDetail({ product }: { product: SellerProduct }) {
             {product.stockStatus ?? "Stock status unavailable"}
           </p>
 
+          {product.availableSizes && product.availableSizes.length > 0 && (
+            <fieldset className="mt-5">
+              <legend className="text-sm font-semibold">Available sizes</legend>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {product.availableSizes.map((size) => (
+                  <button
+                    key={size}
+                    type="button"
+                    aria-pressed={selectedSize === size}
+                    onClick={() => setSelectedSize(size)}
+                    className={cn(
+                      "min-w-11 rounded-lg border px-3 py-2 text-sm font-medium transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
+                      selectedSize === size
+                        ? "border-primary bg-primary text-white"
+                        : "border-border bg-background hover:border-primary/50 hover:bg-background-elevated",
+                    )}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </fieldset>
+          )}
+
           <div className="mt-5 min-h-0 flex-1">
             <h2 className="text-sm font-semibold">Description</h2>
             <p className="mt-2 max-h-40 overflow-y-auto whitespace-pre-wrap text-sm leading-6 text-muted">
@@ -175,9 +242,19 @@ export function MarketProductDetail({ product }: { product: SellerProduct }) {
             </p>
           </div>
 
-          {product.features && product.features.length > 0 && (
+          {((product.attributes?.length ?? 0) > 0 ||
+            (product.features?.length ?? 0) > 0) && (
             <div className="mt-4 flex flex-wrap gap-2">
-              {product.features.slice(0, 8).map((feature) => (
+              {product.attributes?.map(({ label, value }) => (
+                <span
+                  key={`${label}-${value}`}
+                  className="rounded-full bg-background-elevated px-3 py-1 text-xs text-muted"
+                >
+                  <span className="font-medium text-foreground/80">{label}:</span>{" "}
+                  {value}
+                </span>
+              ))}
+              {product.features?.map((feature) => (
                 <span
                   key={feature}
                   className="rounded-full bg-background-elevated px-3 py-1 text-xs text-muted"
@@ -244,6 +321,19 @@ export function MarketProductDetail({ product }: { product: SellerProduct }) {
           </div>
         </section>
       )}
+
+      <ReviewPreview
+        rating={reviews.reviewData?.rating}
+        reviewCount={reviews.reviewData?.reviewCount}
+        reviews={reviews.reviewData?.reviews}
+        isLoading={reviews.isLoading}
+        error={reviews.error}
+        canWriteReview={reviews.canReview}
+        hasOwnReview={Boolean(reviews.myReview)}
+        onShowAll={() => onShowAllReviewsChange(true)}
+      />
+
+      {userData?.id && userData.id === product.sellerId && <ListingAnalytics listingId={product.id} />}
 
       <Dialog
         open={viewerIndex !== null}
@@ -319,6 +409,8 @@ export function MarketProductDetail({ product }: { product: SellerProduct }) {
           )}
         </DialogContent>
       </Dialog>
+        </>
+      )}
     </section>
   );
 }

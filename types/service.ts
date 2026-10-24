@@ -31,4 +31,17 @@ export interface MarketService {
   negotiationNote?: string;
 
   gallery?: string[];
+  viewCount?: number;
+  saveCount?: number;
+  shareCount?: number;
+  sellerSummary?: { full_name: string; avatar_url: string | null } | null;
+  ratingSummary?: { average: number; count: number } | null;
+  trendingScore?: number;
+  recommendationReason?:
+    | "based_on_category"
+    | "based_on_followed_seller"
+    | "recently_listed"
+    | "trending";
+  recommendationScore?: number;
+
 }

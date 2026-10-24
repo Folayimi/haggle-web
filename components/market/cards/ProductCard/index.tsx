@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle, Star } from "lucide-react";
 
 import { CardImage } from "@/components/market/common/CardImage";
 import { ActionButton } from "@/components/market/common/ActionButton";
 import { getProductCover } from "@/components/market/data/market";
-import { useHaggleStore } from "@/lib/app-store";
+import { useListingSave } from "@/components/market/hooks/useListingSave";
 import { formatPrice } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { SellerProduct } from "@/types";
@@ -17,9 +17,7 @@ export interface ProductCardProps {
 }
 
 export default function ProductCard({ product, onSelect }: ProductCardProps) {
-  const savedIds = useHaggleStore((state) => state.savedItemIds);
-  const toggleSavedItem = useHaggleStore((state) => state.toggleSavedItem);
-  const saved = savedIds.includes(product.id);
+  const { saved, pending, toggle } = useListingSave(product.id);
   const rawPrice = String(product.price).trim();
   const price =
     typeof product.price === "string"
@@ -60,11 +58,14 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
             <p className="mt-0.5 line-clamp-1 text-xs leading-4 text-muted">
               {product.description}
             </p>
+            {product.recommendationReason && <p className="mt-1 text-[11px] font-medium text-primary">{recommendationLabel(product.recommendationReason)}</p>}
+            {!!product.ratingSummary?.count && <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted"><Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />{product.ratingSummary.average.toFixed(1)} ({product.ratingSummary.count})</p>}
           </div>
         </button>
         <button
           type="button"
-          onClick={() => toggleSavedItem(product.id)}
+          onClick={() => void toggle()}
+          disabled={pending}
           aria-label={saved ? "Remove from favorites" : "Add to favorites"}
           aria-pressed={saved}
           className={cn(
@@ -91,4 +92,14 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
       </div>
     </article>
   );
+}
+
+function recommendationLabel(reason: NonNullable<SellerProduct["recommendationReason"]>) {
+  const labels = {
+    based_on_category: "Based on this category",
+    based_on_followed_seller: "From a seller you follow",
+    recently_listed: "Recently listed",
+    trending: "Trending",
+  };
+  return labels[reason];
 }
