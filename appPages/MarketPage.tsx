@@ -16,8 +16,7 @@ import {
   Radio,
   ShoppingBag,
   Sparkles,
-  Store,
-  Users,
+  X,
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
@@ -27,14 +26,10 @@ import {
   MarketProductDetailSkeleton,
   MarketSellerActivitySkeleton,
   MarketSellerSkeleton,
-  MarketSidebarSkeleton,
 } from "@/components/market/common/MarketSkeletons";
-import ProductCard from "@/components/market/cards/ProductCard";
-import { LiveSessionCard } from "@/components/market/cards/LiveSessionCard";
 import { useMarketDiscovery } from "@/components/market/hooks/useMarketDiscovery";
 import { FilterChips } from "@/components/market/search/FilterChips";
 import { MarketSearch } from "@/components/market/search/MarketSearch";
-import { ContinueNegotiating } from "@/components/market/sections/ContinueNegotiating";
 import { FeaturedCollections } from "@/components/market/sections/FeaturedCollections";
 import { LiveNow } from "@/components/market/sections/LiveNow";
 import { ProductFeed } from "@/components/market/sections/ProductFeed";
@@ -44,6 +39,13 @@ import { TrendingNearYou } from "@/components/market/sections/TrendingNearYou";
 import { MarketProductDetail } from "@/components/market/sections/MarketProductDetail";
 import { MarketServiceDetail } from "@/components/market/sections/MarketServiceDetail";
 import { MarketBrowseView } from "@/components/market/sections/MarketBrowseView";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   featuredCollections,
   liveSessions,
@@ -127,6 +129,7 @@ const MarketPage = () => {
   const [selectedSeller, setSelectedSeller] = useState<
     ReturnType<typeof mapUserToSeller> | null
   >(null);
+  const [sellerProfileOpen, setSellerProfileOpen] = useState(false);
   const [productDetailLoading, setProductDetailLoading] = useState(false);
   const [productDetailError, setProductDetailError] = useState(false);
   const [serviceDetailLoading, setServiceDetailLoading] = useState(false);
@@ -179,7 +182,6 @@ const MarketPage = () => {
       `${product.name} ${categoryNames.get(product.category) ?? ""}`
         .toLowerCase()
         .includes(query));
-  const filteredProducts = products.filter(matchesProduct);
   const filteredServices = services.filter(
     (service) =>
       !query ||
@@ -506,72 +508,72 @@ const MarketPage = () => {
                   />
                 )
               ) : productsLoading ? (
-              <MarketLoadingSkeleton
-                view={
-                  selectedMarketView === "collections"
-                    ? "collections"
-                    : selectedMarketView === "services"
-                      ? "services"
-                      : selectedMarketView === "live"
-                        ? "live"
-                        : selectedMarketView
-                          ? "products"
-                          : "overview"
-                }
-              />
-            ) : selectedMarketView === "trending" ? (
-              <MarketBrowseView
-                type="products"
-                title="Trending"
-                description="Products people are viewing, negotiating, and buying."
-                items={discovery.trending.filter(matchesProduct)}
-                onProductSelect={handleProductSelect}
-              />
-            ) : selectedMarketView === "recommended" ? (
-              <MarketBrowseView
-                type="products"
-                title="Recommended for you"
-                description="More products curated for your interests."
-                items={discovery.recommended.filter(matchesProduct)}
-                onProductSelect={handleProductSelect}
-              />
-            ) : selectedMarketView === "collections" ? (
-              <MarketBrowseView
-                type="collections"
-                title="Featured Collections"
-                description="Explore all curated collections."
-                items={featuredCollections}
-              />
-            ) : selectedMarketView === "latest" ? (
-              <MarketBrowseView
-                type="products"
-                title="Latest Listings"
-                description="Browse all recently added products."
-                items={discovery.latest.filter(matchesProduct)}
-                onProductSelect={handleProductSelect}
-              />
-            ) : selectedMarketView === "services" ? (
-              <>
-                {servicesError && (
-                  <p role="alert" className="text-sm text-danger">
-                    Professional services could not be loaded. Please try
-                    again shortly.
-                  </p>
-                )}
-                {servicesLoading && (
-                  <p role="status" className="text-sm text-muted">
-                    Loading professional services...
-                  </p>
-                )}
-                <MarketBrowseView
-                  type="services"
-                  title="Professional Services"
-                  description="Browse trusted professionals and services."
-                  items={filteredServicesByCategory}
-                  onServiceSelect={handleServiceSelect}
+                <MarketLoadingSkeleton
+                  view={
+                    selectedMarketView === "collections"
+                      ? "collections"
+                      : selectedMarketView === "services"
+                        ? "services"
+                        : selectedMarketView === "live"
+                          ? "live"
+                          : selectedMarketView
+                            ? "products"
+                            : "overview"
+                  }
                 />
-              </>
-            ) : selectedMarketView === "live" ? (
+              ) : selectedMarketView === "trending" ? (
+                <MarketBrowseView
+                  type="products"
+                  title="Trending"
+                  description="Products people are viewing, negotiating, and buying."
+                  items={discovery.trending.filter(matchesProduct)}
+                  onProductSelect={handleProductSelect}
+                />
+              ) : selectedMarketView === "recommended" ? (
+                <MarketBrowseView
+                  type="products"
+                  title="Recommended for you"
+                  description="More products curated for your interests."
+                  items={discovery.recommended.filter(matchesProduct)}
+                  onProductSelect={handleProductSelect}
+                />
+              ) : selectedMarketView === "collections" ? (
+                <MarketBrowseView
+                  type="collections"
+                  title="Featured Collections"
+                  description="Explore all curated collections."
+                  items={featuredCollections}
+                />
+              ) : selectedMarketView === "latest" ? (
+                <MarketBrowseView
+                  type="products"
+                  title="Latest Listings"
+                  description="Browse all recently added products."
+                  items={discovery.latest.filter(matchesProduct)}
+                  onProductSelect={handleProductSelect}
+                />
+              ) : selectedMarketView === "services" ? (
+                <>
+                  {servicesError && (
+                    <p role="alert" className="text-sm text-danger">
+                      Professional services could not be loaded. Please try
+                      again shortly.
+                    </p>
+                  )}
+                  {servicesLoading && (
+                    <p role="status" className="text-sm text-muted">
+                      Loading professional services...
+                    </p>
+                  )}
+                  <MarketBrowseView
+                    type="services"
+                    title="Professional Services"
+                    description="Browse trusted professionals and services."
+                    items={filteredServicesByCategory}
+                    onServiceSelect={handleServiceSelect}
+                  />
+                </>
+              ) : selectedMarketView === "live" ? (
               <MarketBrowseView
                 type="live"
                 title="Happening Live"
@@ -582,7 +584,7 @@ const MarketPage = () => {
               <>
               <nav
                 aria-label="Marketplace sections"
-                className="grid grid-cols-2 gap-2 sm:grid-cols-3"
+                className="flex flex-wrap gap-2"
               >
                 <ActionCard
                   icon={Activity}
@@ -710,22 +712,22 @@ const MarketPage = () => {
           </div>
 
           {selectedProductId || selectedServiceId ? (
-            <aside className="max-h-[40vh] w-full shrink-0 overflow-x-hidden overflow-y-auto rounded-xl bg-[#101010] pb-20 xl:max-h-full xl:w-[360px]">
-              <section className="relative isolate min-h-[280px] overflow-hidden bg-[#14252b] text-white">
+            <aside className="flex max-h-[90vh] w-full shrink-0 flex-col gap-4 overflow-x-hidden overflow-y-auto rounded-xl bg-[#101010] pb-20 xl:max-h-full xl:w-[320px]">
+              <section className="relative isolate min-h-[420px] shrink-0 overflow-hidden bg-[#14252b] text-white xl:min-h-[460px]">
                 {selectedSeller?.coverImageUrl ? (
                   <Image
                     src={selectedSeller.coverImageUrl}
                     alt=""
                     fill
                     unoptimized
-                    sizes="(min-width: 1280px) 360px, 100vw"
+                    sizes="(min-width: 1280px) 320px, 100vw"
                     className="z-0 object-cover"
                   />
                 ) : (
                   <div className="absolute inset-0 z-0 bg-gradient-to-br from-primary/80 via-[#17333c] to-secondary/70" />
                 )}
                 <div className="absolute inset-0 z-10 bg-gradient-to-t from-black via-black/45 to-black/10" />
-                <div className="relative z-20 flex min-h-[280px] flex-col justify-between p-5">
+                <div className="relative z-20 flex min-h-[420px] flex-col justify-between p-5 xl:min-h-[460px]">
                   <div className="flex items-center justify-between gap-2">
                     <span className="rounded-full border border-white/20 bg-black/25 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] backdrop-blur">
                       Haggle seller
@@ -755,105 +757,109 @@ const MarketPage = () => {
                   </div>
                 </div>
               </section>
-              <section className="bg-[#1c1c1c] px-4 py-5 text-white">
-                <h2 className="mb-4 text-sm font-bold tracking-wide">About the seller</h2>
-                {sellerLoading && (
-                  <MarketSellerSkeleton />
+              <section
+                id="seller-info-card"
+                className="min-h-[360px] shrink-0 scroll-mt-4 overflow-hidden rounded-xl bg-[#1c1c1c] text-white"
+              >
+                {sellerLoading && !selectedSeller && (
+                  <div className="p-4 text-white">
+                    <div className="relative flex h-[220px] items-start overflow-hidden rounded-lg bg-gradient-to-br from-primary/30 via-[#293840] to-secondary/30 p-4">
+                      <h2 className="text-sm font-bold">About the seller</h2>
+                    </div>
+                    <MarketSellerSkeleton />
+                  </div>
                 )}
                 {sellerError && (
-                  <p role="alert" className="mt-4 text-sm text-danger">
+                  <p role="alert" className="p-4 text-sm text-danger">
                     Seller information could not be loaded.
                   </p>
                 )}
                 {selectedSeller && (
-                  <>
-                    <div className="relative mb-4 h-40 w-full overflow-hidden rounded-xl bg-gradient-to-br from-primary/30 via-[#293840] to-secondary/30">
-                      {selectedSeller.avatarUrl !== "/placeholder-avatar.jpg" ? (
+                  <div
+                    role="button"
+                    tabIndex={0}
+                    aria-haspopup="dialog"
+                    aria-label={`About ${selectedSeller.name}`}
+                    onClick={() => setSellerProfileOpen(true)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        setSellerProfileOpen(true);
+                      }
+                    }}
+                    className="group block w-full text-left outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary"
+                  >
+                    <div className="relative h-[220px] overflow-hidden bg-gradient-to-br from-primary/30 via-[#293840] to-secondary/30">
+                      {selectedSeller.avatarUrl &&
+                      selectedSeller.avatarUrl !== "/placeholder-avatar.jpg" ? (
                         <Image
                           src={selectedSeller.avatarUrl}
-                          alt={`${selectedSeller.name} profile`}
+                          alt=""
                           fill
                           unoptimized
-                          sizes="(min-width: 1280px) 328px, calc(100vw - 2rem)"
-                          className="object-cover"
+                          sizes="(min-width: 1280px) 320px, 100vw"
+                          className="object-cover transition duration-500 group-hover:scale-[1.03]"
                         />
                       ) : (
                         <div className="flex h-full w-full items-center justify-center text-6xl font-bold text-white/70">
                           {selectedSeller.name.slice(0, 1).toUpperCase()}
                         </div>
                       )}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-transparent to-black/25" />
+                      <h2 className="absolute left-4 top-4 text-sm font-bold drop-shadow">
+                        About the seller
+                      </h2>
                     </div>
-                    <div className="min-w-0">
-                      <p className="flex items-center gap-1 truncate text-lg font-bold">
-                        {selectedSeller.name}
-                        {selectedSeller.isVerified && (
-                          <BadgeCheck className="h-4 w-4 shrink-0 fill-emerald-300 text-[#1c1c1c]" />
-                        )}
+                    <div className="p-4">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <p className="flex items-center gap-1 truncate text-base font-bold">
+                            {selectedSeller.name}
+                            {selectedSeller.isVerified && (
+                              <BadgeCheck className="h-4 w-4 shrink-0 fill-emerald-300 text-[#1c1c1c]" />
+                            )}
+                          </p>
+                          <p className="mt-1 truncate text-sm text-white/60">
+                            {selectedSeller.businessName ||
+                              (selectedSeller.username
+                                ? `@${selectedSeller.username}`
+                                : selectedSeller.badge)}
+                          </p>
+                          <p className="mt-1 truncate text-xs text-white/55">
+                            {[
+                              selectedSeller.followers !== "—"
+                                ? `${selectedSeller.followers} followers`
+                                : "",
+                              selectedSeller.location,
+                            ]
+                              .filter(Boolean)
+                              .join(" · ") || selectedSeller.badge}
+                          </p>
+                        </div>
+                        <span className="shrink-0 rounded-full border border-white/40 px-4 py-2 text-xs font-bold transition group-hover:bg-white group-hover:text-[#1c1c1c]">
+                          View
+                        </span>
+                      </div>
+                      <p className="mt-3 line-clamp-3 text-sm leading-5 text-white/65">
+                        {selectedSeller.bio ||
+                          "Open this seller profile to learn more about their business."}
                       </p>
-                      {selectedSeller.businessName && (
-                        <p className="truncate text-sm text-white/60">{selectedSeller.businessName}</p>
-                      )}
-                      <p className="mt-1 text-xs text-emerald-300">{selectedSeller.badge}</p>
                     </div>
-
-                    {selectedSeller.username && (
-                      <p className="mt-2 text-xs text-white/55">@{selectedSeller.username}</p>
-                    )}
-                    <div className="mt-5 grid grid-cols-3 gap-2">
-                      <div className="rounded-lg bg-white/10 p-3 text-center">
-                        <p className="font-semibold">
-                          {
-                            products.filter(
-                              (product) =>
-                                product.sellerId === selectedSeller.id,
-                            ).length
-                                + serviceListings.filter(
-                                  (service) => service.seller_id === selectedSeller.id,
-                                ).length
-                          }
-                        </p>
-                        <p className="mt-1 text-xs text-white/55">Listings</p>
-                      </div>
-                      <div className="rounded-lg bg-white/10 p-3 text-center">
-                        <p className="font-semibold">
-                          {products
-                            .filter(
-                              (product) =>
-                                product.sellerId === selectedSeller.id,
-                            )
-                            .reduce(
-                              (total, product) =>
-                                total + (product.saveCount ?? 0),
-                              0,
-                            ) +
-                            serviceListings
-                              .filter((service) => service.seller_id === selectedSeller.id)
-                              .reduce((total, service) => total + (service.save_count ?? 0), 0)}
-                        </p>
-                        <p className="mt-1 text-xs text-white/55">Saves</p>
-                      </div>
-                      <div className="rounded-lg bg-white/10 p-3 text-center">
-                        <p className="font-semibold">
-                          {selectedSeller.isVerified ? "Yes" : "—"}
-                        </p>
-                        <p className="mt-1 text-xs text-white/55">Verified</p>
-                      </div>
-                    </div>
-
-                    {selectedSeller.username && (
-                      <Link
-                        href={`/profile/${encodeURIComponent(selectedSeller.username)}`}
-                        className="mt-4 inline-flex w-full items-center justify-center rounded-full border border-white/25 px-4 py-2 text-sm font-semibold transition hover:border-white hover:bg-white/10"
-                      >
-                        Visit seller profile
-                      </Link>
-                    )}
-                  </>
+                  </div>
+                )}
+                {!sellerLoading && !selectedSeller && (
+                  <div className="min-h-40 p-5 text-white">
+                    <h2 className="text-base font-bold">About the seller</h2>
+                    <p className="mt-2 text-sm leading-5 text-white/65">
+                      {sellerError
+                        ? "Seller details are temporarily unavailable. You can still browse this listing."
+                        : "Seller details will appear here when available."}
+                    </p>
+                  </div>
                 )}
               </section>
-
               {(sellerLoading || selectedSeller) && (
-                <section className="rounded-2xl border border-border/60 bg-background-elevated p-4">
+                <section className="shrink-0 rounded-2xl border border-border/60 bg-background-elevated p-4">
                   <h2 className="text-base font-bold">More from this seller</h2>
                   <p className="mt-1 text-xs text-muted">
                     More to discover from this shop
@@ -935,99 +941,137 @@ const MarketPage = () => {
                 </section>
               )}
             </aside>
-          ) : productsLoading ? (
-            <MarketSidebarSkeleton />
-          ) : (
-          <div className="hidden w-[360px] shrink-0 space-y-5 overflow-y-auto bg-background-elevated/50 rounded-xl p-3 pb-20 pt-5 xl:block">
-            <div className="h-[220px] rounded-xl border border-border bg-background-elevated p-5">
-              <h2 className="text-lg font-semibold">Marketplace Activity</h2>
-              <div className="mt-5 grid grid-cols-2 gap-3">
-                <div className="rounded-2xl bg-primary/10 p-4">
-                  <Store className="h-5 w-5 text-primary" />
-                  <p className="mt-3 text-2xl font-bold">
-                    {filteredProducts.length}
-                  </p>
-                  <p className="text-xs text-muted">Listings</p>
-                </div>
-                <div className="rounded-2xl bg-primary/10 p-4">
-                  <Users className="h-5 w-5 text-primary" />
-                  <p className="mt-3 text-2xl font-bold">{sellers.length}</p>
-                  <p className="text-xs text-muted">Sellers</p>
-                </div>
-              </div>
-              <p className="mt-4 flex items-center gap-2 text-sm text-muted">
-                <MapPin className="h-4 w-4 text-primary" />
-                Live marketplace updates
-              </p>
-            </div>
-
-            <div className="h-[200px] overflow-hidden rounded-xl border border-border bg-background-elevated">
-              <ContinueNegotiating
-                negotiations={discovery.negotiations.slice(0, 1)}
-              />
-            </div>
-
-            <div className="h-[280px] overflow-hidden rounded-xl border border-border bg-background-elevated p-4">
-              <h2 className="mb-4 text-lg font-semibold">Suggested Sellers</h2>
-              <div className="grid gap-3">
-                {sellers.slice(0, 3).map((seller) => (
-                  <div
-                    key={seller.id}
-                    className="flex items-center gap-3 rounded-2xl border border-border p-3"
-                  >
-                    <Image
-                      src={seller.avatarUrl}
-                      alt=""
-                      width={40}
-                      height={40}
-                      className="h-10 w-10 rounded-full object-cover"
-                    />
-                    <div className="min-w-0">
-                      <p className="truncate font-semibold">{seller.name}</p>
-                      <p className="text-xs text-muted">
-                        {seller.categories[0]}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="h-[200px] overflow-hidden rounded-xl border border-border bg-background-elevated p-4">
-              <h2 className="mb-4 text-lg font-semibold">Nearby Businesses</h2>
-              <div className="space-y-3">
-                {sellers.slice(3, 5).map((seller) => (
-                  <div
-                    key={seller.id}
-                    className="flex items-center justify-between rounded-2xl bg-background p-3"
-                  >
-                    <span className="truncate font-medium">{seller.name}</span>
-                    <span className="text-xs text-muted">
-                      {/* {seller.hero.location} */}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {filteredProducts[0] && (
-              <div className="rounded-xl border border-border bg-background-elevated">
-                <ProductCard
-                  product={filteredProducts[0]}
-                  onSelect={handleProductSelect}
-                />
-              </div>
-            )}
-
-            {discovery.liveNow[0] && (
-              <div className="h-[200px] overflow-hidden rounded-xl border border-border bg-background-elevated">
-                <LiveSessionCard session={discovery.liveNow[0]} />
-              </div>
-            )}
-          </div>
-          )}
+          ) : null}
         </div>
       </div>
+      <Dialog
+        open={sellerProfileOpen && Boolean(selectedSeller)}
+        onOpenChange={setSellerProfileOpen}
+      >
+        <DialogContent
+          overlayClassName="bg-black/85 supports-backdrop-filter:backdrop-blur-sm"
+          showCloseButton={false}
+          className="flex h-[92dvh] max-h-[92dvh] w-[min(96vw,960px)] max-w-[96vw] flex-col gap-0 overflow-hidden rounded-2xl border-0 bg-[#121212] p-0 text-white ring-1 ring-white/10 sm:max-w-[96vw]"
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>
+              {selectedSeller?.businessName || selectedSeller?.name || "Seller profile"}
+            </DialogTitle>
+            <DialogDescription>
+              Seller image, business details, and profile information.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedSeller && (
+            <div className="min-h-0 flex-1 overflow-y-auto">
+              <div className="relative h-[min(52dvh,480px)] shrink-0 bg-black">
+                {selectedSeller.avatarUrl &&
+                selectedSeller.avatarUrl !== "/placeholder-avatar.jpg" ? (
+                  <Image
+                    src={selectedSeller.avatarUrl}
+                    alt={`${selectedSeller.name} profile`}
+                    fill
+                    unoptimized
+                    sizes="(min-width: 960px) 960px, 96vw"
+                    className="object-contain"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center bg-gradient-to-br from-primary/20 to-secondary/20 text-8xl font-bold text-white/70">
+                    {selectedSeller.name.slice(0, 1).toUpperCase()}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  aria-label="Close seller profile"
+                  onClick={() => setSellerProfileOpen(false)}
+                  className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="grid md:grid-cols-[220px_minmax(0,1fr)]">
+                <aside className="space-y-6 bg-[#171717] p-5 sm:p-7">
+                  {selectedSeller.followers !== "—" && (
+                    <div>
+                      <p className="text-3xl font-bold">
+                        {selectedSeller.followers}
+                      </p>
+                      <p className="mt-1 text-sm text-white/60">Followers</p>
+                    </div>
+                  )}
+                  <div>
+                    <p className="text-3xl font-bold">
+                      {products.filter((product) => product.sellerId === selectedSeller.id).length +
+                        serviceListings.filter((service) => service.seller_id === selectedSeller.id).length}
+                    </p>
+                    <p className="mt-1 text-sm text-white/60">Published listings</p>
+                  </div>
+                  <div>
+                    <p className="text-3xl font-bold">
+                      {products
+                        .filter((product) => product.sellerId === selectedSeller.id)
+                        .reduce((total, product) => total + (product.saveCount ?? 0), 0) +
+                        serviceListings
+                          .filter((service) => service.seller_id === selectedSeller.id)
+                          .reduce((total, service) => total + (service.save_count ?? 0), 0)}
+                    </p>
+                    <p className="mt-1 text-sm text-white/60">Saves on listings</p>
+                  </div>
+                  {selectedSeller.location && (
+                    <div>
+                      <p className="font-semibold">{selectedSeller.location}</p>
+                      <p className="mt-1 text-sm text-white/60">Based in</p>
+                    </div>
+                  )}
+                  {selectedSeller.username && (
+                    <p className="break-all text-sm text-white/65">
+                      @{selectedSeller.username}
+                    </p>
+                  )}
+                </aside>
+                <div className="space-y-5 p-5 sm:p-7">
+                  <div>
+                    <h2 className="flex items-center gap-2 text-2xl font-bold">
+                      {selectedSeller.name}
+                      {selectedSeller.isVerified && (
+                        <BadgeCheck className="h-5 w-5 shrink-0 fill-emerald-300 text-[#121212]" />
+                      )}
+                    </h2>
+                    {selectedSeller.businessName && (
+                      <p className="mt-1 text-white/60">
+                        {selectedSeller.businessName}
+                      </p>
+                    )}
+                  </div>
+                  <p className="whitespace-pre-line text-sm leading-6 text-white/70 sm:text-base sm:leading-7">
+                    {selectedSeller.bio ||
+                      "This seller has not added a business description yet."}
+                  </p>
+                  <div className="rounded-xl bg-white/10 p-4">
+                    <p className="flex items-center gap-2 font-semibold">
+                      <BadgeCheck className="h-5 w-5 text-emerald-300" />
+                      {selectedSeller.isVerified ? "Verified seller" : "Haggle seller"}
+                    </p>
+                    <p className="mt-2 text-sm leading-5 text-white/60">
+                      {selectedSeller.isVerified
+                        ? "This seller has a verified Haggle profile."
+                        : "Seller profile and business details on Haggle."}
+                    </p>
+                  </div>
+                  {selectedSeller.username && (
+                    <Link
+                      href={`/profile/${encodeURIComponent(selectedSeller.username)}`}
+                      onClick={() => setSellerProfileOpen(false)}
+                      className="inline-flex rounded-full border border-white/25 px-5 py-2.5 text-sm font-semibold transition hover:border-white hover:bg-white/10"
+                    >
+                      Visit seller profile
+                    </Link>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </AppShell>
   );
 };

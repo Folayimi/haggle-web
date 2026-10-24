@@ -263,6 +263,8 @@ interface BackendUser {
   country?: string;
   location?: string;
   is_verified?: boolean;
+  followers?: number | string;
+  follower_count?: number | string;
   profile?: {
     full_name?: string;
     username?: string;
@@ -275,14 +277,16 @@ interface BackendUser {
     country?: string;
     location?: string;
     is_verified?: boolean;
+    followers?: number | string;
+    follower_count?: number | string;
   };
 }
 
 export function mapUserToSeller(user: BackendUser) {
   const isVerified = Boolean(user.is_verified ?? user.profile?.is_verified);
 
-  // NOTE: followers, rating, response_time, and trust pills aren't modeled
-  // on the backend yet (Section 22/23 territory, deferred post-MVP).
+  // NOTE: rating, response_time, and trust pills aren't modeled on the
+  // backend yet (Section 22/23 territory, deferred post-MVP).
   // Honest placeholders here -- never invent numbers.
   return {
     id: user.id,
@@ -312,7 +316,12 @@ export function mapUserToSeller(user: BackendUser) {
     isVerified,
     badge: isVerified ? "Verified seller" : "Haggle seller",
     trustPills: isVerified ? ["Verified seller"] : [],
-    followers: "—",
+    followers:
+      user.follower_count ??
+      user.profile?.follower_count ??
+      user.followers ??
+      user.profile?.followers ??
+      "—",
     rating: "—",
     responseTime: "—",
   };

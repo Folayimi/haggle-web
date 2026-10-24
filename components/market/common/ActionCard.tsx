@@ -20,7 +20,7 @@ export function ActionCard({ icon: Icon, title, targetId }: ActionCardProps) {
     <button
       type="button"
       onClick={scrollToSection}
-      className="flex min-w-0 items-center gap-2 overflow-hidden rounded-md border border-border bg-background-elevated text-left transition-colors hover:border-primary/30 hover:bg-surface-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="flex w-[240px] max-w-full shrink-0 items-center gap-2 overflow-hidden rounded-md border border-border bg-background-elevated text-left transition-colors hover:border-primary/30 hover:bg-surface-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
       aria-label={`Go to ${title}`}
     >
       <span className="flex h-12 w-12 shrink-0 items-center justify-center bg-primary/15 text-primary sm:h-14 sm:w-14">
