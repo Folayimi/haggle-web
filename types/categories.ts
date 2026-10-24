@@ -610,9 +610,9 @@ export const PRODUCT_CATEGORIES: Category[] = [
       {
         id: "expiry",
         name: "Expiry Date",
-        type: "text",
+        type: "date",
         required: true,
-        placeholder: "e.g. 12/2025",
+        placeholder: "Select expiry date",
       },
       {
         id: "packaging",

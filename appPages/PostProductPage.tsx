@@ -45,10 +45,13 @@ import {
   createCategory,
   createListing,
   createListingMedia,
+  getAllCategories,
   getCategory,
+  getListing,
   updateListing,
   updateUserProfile,
 } from "@/services/request";
+import { resolveListingMediaUrl } from "@/services/mappers";
 import Image from "next/image";
 import Loader from "@/reusables/loader";
 import { useRouter } from "next/navigation";
@@ -96,6 +99,7 @@ function GlassyField({
   optional = false,
   icon,
   prominent = false,
+  inputType = "text",
   value,
   onChange,
   error,
@@ -107,6 +111,7 @@ function GlassyField({
   optional?: boolean;
   icon?: React.ReactNode;
   prominent?: boolean;
+  inputType?: React.HTMLInputTypeAttribute;
   value?: string;
   onChange?: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -157,7 +162,7 @@ function GlassyField({
         />
       ) : (
         <input
-          type="text"
+          type={inputType}
           placeholder={placeholder}
           value={value}
           required
@@ -751,9 +756,8 @@ function PriceInput({
 // ============================================
 // MAIN PAGE
 // ============================================
-const PostProductPage = () => {
+const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = {}) => {
   const productMediaRef = useRef<ProductMediaRef>(null);
-  const productListingId = useHaggleStore((state) => state.productListingId);
   const setProductListingId = useHaggleStore(
     (state) => state.setProductListingId,
   );
@@ -798,6 +802,11 @@ const PostProductPage = () => {
   );
 
   const [publishing, setPublishing] = useState(false);
+  const [editLoading, setEditLoading] = useState(Boolean(editListingId));
+  const [editError, setEditError] = useState("");
+  const [initialGallery, setInitialGallery] = useState<
+    { mediaId: string; url: string; previewUrl: string }[] | undefined
+  >(undefined);
 
   const tabs: { id: TabId; label: string }[] = [
     { id: "details", label: "Product Details" },
@@ -808,6 +817,77 @@ const PostProductPage = () => {
   const completedCount = Object.values(completed).filter(Boolean).length;
 
   const router = useRouter();
+
+  useEffect(() => {
+    if (!editListingId) return;
+    let active = true;
+    const loadListing = async () => {
+      setEditLoading(true);
+      setEditError("");
+      try {
+        const [listing, categories] = await Promise.all([
+          getListing(editListingId),
+          getAllCategories(),
+        ]);
+        if (listing.listing_type && listing.listing_type.toLowerCase() !== "product") {
+          throw new Error("This listing is not a product.");
+        }
+        const child = categories.find((item) => item.id === listing.category_id);
+        const parent = child?.parent_id
+          ? categories.find((item) => item.id === child.parent_id)
+          : undefined;
+        const selectedCategory = PRODUCT_CATEGORIES.find(
+          (item) => item.id === parent?.slug,
+        );
+        const selectedSubcategory = selectedCategory?.subcategories.find(
+          (item) => item.id === child?.slug,
+        );
+        if (!selectedCategory || !selectedSubcategory) {
+          throw new Error("The listing category is not available in this form.");
+        }
+        if (!active) return;
+        setProductSubcategories(selectedCategory.subcategories);
+        setProductInfo((current) => ({
+          ...current,
+          name: listing.title || "",
+          category: selectedCategory.name,
+          categorySlug: selectedCategory.id,
+          subCategory: selectedSubcategory.name,
+          subCategorySlug: selectedSubcategory.id,
+          description: listing.description || "",
+          startingPrice: listing.starting_amount || "",
+          inventoryCount: Number(listing.inventory_count ?? 0),
+          lowestAcceptablePrice: listing.lowest_amount || "",
+          autoDeclinePrice: listing.auto_decline_amount || "",
+          negotiationNote: listing.negotiation_note || "",
+          location: String(userData?.profile?.city || userData?.profile?.location || ""),
+        }));
+        const style = String(listing.negotiation_style || "").toLowerCase();
+        if (["flexible", "moderate", "firm"].includes(style)) {
+          setNegotiationStyle(style as NegotiationStyle);
+        }
+        setTags(Array.isArray(listing.tags) ? listing.tags.join("|") : listing.tags || "");
+        setSaveType("update");
+        setListingID(listing.id);
+        setProductListingId(listing.id);
+        localStorage.setItem("productListingId", listing.id);
+        const media = [...(listing.medias?.length ? listing.medias : listing.media || [])]
+          .filter((item) => item.media_type.toLowerCase() === "image")
+          .sort((a, b) => Number(Boolean(b.is_cover)) - Number(Boolean(a.is_cover)) || (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        setInitialGallery(media.map((item) => {
+          let previewUrl = item.url;
+          try { previewUrl = resolveListingMediaUrl(item.url); } catch { /* show the stored media path as a fallback */ }
+          return { mediaId: item.id, url: item.url, previewUrl };
+        }));
+      } catch (error) {
+        if (active) setEditError(error instanceof Error ? error.message : "Unable to load this listing.");
+      } finally {
+        if (active) setEditLoading(false);
+      }
+    };
+    void loadListing();
+    return () => { active = false; };
+  }, [editListingId, setProductListingId, userData?.profile?.city, userData?.profile?.location]);
 
   // ============================================
   // VALIDATE A SPECIFIC TAB
@@ -968,7 +1048,7 @@ const PostProductPage = () => {
   // ============================================
   // SAVE DRAFT
   // ============================================
-  const saveDraft = async (status?: string) => {
+  const saveDraft = async (status?: string): Promise<boolean | undefined> => {
     if (imageGallery.length > 0) {
       setCompleted((prev) => ({ ...prev, media: true }));
     } else {
@@ -1062,12 +1142,16 @@ const PostProductPage = () => {
 
         const uploadResults =
           await productMediaRef.current.uploadGalleryImages(listingId);
+        if (uploadResults.some((image) => image.status !== "uploaded")) {
+          throw new Error("One or more product images could not be uploaded.");
+        }
         console.log("📸 Upload results:", uploadResults);
         
-        await updateListing(listingId, {
+        const updateResponse = await updateListing(listingId, {
           ...payload,
           category_id: subCategoryId, // ✅ categoryId is now defined
         });
+        if (!updateResponse) throw new Error("Unable to publish the product.");
       } else {
         // Create new listing
         const listingResponse = await createListing({
@@ -1076,16 +1160,15 @@ const PostProductPage = () => {
         });
         listingId = listingResponse?.data?.id;
         console.log("Real Listing ID:", listingResponse);
-        listingId = listingResponse?.data?.id;
-        localStorage.setItem("productListingId", listingResponse?.data?.id);
 
         // If no listingId, fail early (for create)
-        if (!productListingId && !listingId) {
+        if (!listingId) {
           console.error("❌ Failed to create listing");
           setDraftStatus("idle");
           setPublishing(false);
           return;
         }
+        localStorage.setItem("productListingId", listingId);
 
         // ============================================
         // UPLOAD IMAGES
@@ -1099,6 +1182,9 @@ const PostProductPage = () => {
 
         const uploadResults =
           await productMediaRef.current.uploadGalleryImages(listingId);
+        if (uploadResults.some((image) => image.status !== "uploaded")) {
+          throw new Error("One or more product images could not be uploaded.");
+        }
         console.log("📸 Upload results:", uploadResults);
       }
 
@@ -1118,11 +1204,13 @@ const PostProductPage = () => {
 
       setDraftStatus("saved");
       setTimeout(() => setDraftStatus("idle"), 3000);
+      return true;
     } catch (error) {
       console.error("❌ Failed to save draft:", error);
       // saveDraft();
       setDraftStatus("idle");
       setPublishing(false);
+      return false;
     }
   };
 
@@ -1157,24 +1245,39 @@ const PostProductPage = () => {
       return;
     }
     setPublishing(true);
-    await saveDraft("published");
+    const published = await saveDraft("published");
     setPublishing(false);
-    router.push("/create");
+    if (!published) return;
+    const username = String(
+      userData?.username ||
+        userData?.profile?.username ||
+        userData?.data?.username ||
+        userData?.data?.profile?.username ||
+        "",
+    )
+      .trim()
+      .replace(/^@/, "");
+    router.push(`/profile/${encodeURIComponent(username)}`);
   };
 
   // ============================================
   // EFFECTS
   // ============================================
   useEffect(() => {
+    if (editListingId && !editLoading) return;
     const categoryObj = PRODUCT_CATEGORIES.find(
       (c) => c.name === productInfo.category,
     );
-    const tags = categoryObj?.requiredTags || [];
-    const initialTags = tags
-      .map((tag) => `${tag.name.toLowerCase()}:`)
-      .join("|");
-    setTags(initialTags);
-  }, [productInfo.category]);
+    const required = categoryObj?.requiredTags || [];
+    setTags((current) => {
+      const entries = current.split("|").filter(Boolean);
+      for (const tag of required) {
+        const key = tag.name.toLowerCase();
+        if (!entries.some((entry) => entry.startsWith(`${key}:`))) entries.push(`${key}:`);
+      }
+      return entries.join("|");
+    });
+  }, [editListingId, editLoading, productInfo.category]);
 
   // ============================================
   // RENDER
@@ -1186,13 +1289,16 @@ const PostProductPage = () => {
   return (
     <AppShell>
       {publishing && <Loader type="publishing" />}
+      {editLoading && <Loader type="publishing" />}
+      {editError && <div role="alert" className="mx-auto mt-4 max-w-3xl rounded-xl bg-danger/10 p-4 text-sm text-danger">{editError}</div>}
       <div className="min-h-screen flex flex-col bg-transparent">
         <div className="relative flex-1 mx-auto max-w-7xl w-full px-3 py-4 lg:px-6 flex flex-col">
           {/* HEADER ROW */}
           <div className="sticky top-0 left-0 w-full py-3 px-3 bg-background/20 backdrop-blur rounded-full flex items-center justify-between mb-4 z-30">
             <div className="flex items-center gap-3">
-              <Link
-                href="/create"
+              <button
+                type="button"
+                onClick={() => router.back()}
                 className="
                   rounded-full p-2
                   border border-border/80 bg-background-elevated/30
@@ -1201,13 +1307,13 @@ const PostProductPage = () => {
                 "
               >
                 <ArrowLeft className="h-4 w-4" />
-              </Link>
+              </button>
               <div>
                 <span className="text-xs font-medium uppercase tracking-[0.12em] text-primary/80">
                   Upload Listings
                 </span>
                 <h1 className="text-2xl font-bold text-foreground mt-0.5">
-                  New Product
+                  {editListingId ? "Edit Product" : "New Product"}
                 </h1>
               </div>
             </div>
@@ -1225,8 +1331,9 @@ const PostProductPage = () => {
                 lastSaved={lastSaved}
                 setLastSaved={setLastSaved}
               />
-              <Link
-                href="/create"
+              <button
+                type="button"
+                onClick={() => router.back()}
                 className="
                   rounded-full border border-border/60
                   px-4 py-2 text-sm font-medium text-muted/70
@@ -1235,7 +1342,7 @@ const PostProductPage = () => {
                 "
               >
                 Cancel
-              </Link>
+              </button>
               <button
                 className={`
                   rounded-full px-6 py-2.5 text-sm font-semibold text-white
@@ -1277,6 +1384,7 @@ const PostProductPage = () => {
                 onGalleryChange={(gallery) => {
                   setImageGallery(gallery);
                 }}
+                initialGallery={initialGallery}
               />
             </div>
 
@@ -1465,6 +1573,7 @@ const PostProductPage = () => {
                                       label={item.name}
                                       placeholder={item.placeholder ?? ""}
                                       prominent
+                                      inputType={item.type === "date" ? "date" : "text"}
                                       value={currentValue}
                                       optional={!item?.required}
                                       onChange={(e) =>

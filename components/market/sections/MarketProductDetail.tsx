@@ -132,6 +132,7 @@ export function MarketProductDetail({
       ) : (
         <>
       <div className="grid gap-6 rounded-2xl bg-background p-4 sm:p-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <div className="space-y-3">
         <div className="relative h-[320px] overflow-hidden rounded-xl bg-background-elevated sm:h-[380px] lg:h-[420px]">
           {activeMedia?.type === "video" ? (
             <video
@@ -164,6 +165,14 @@ export function MarketProductDetail({
               />
             </button>
           )}
+        </div>
+        <Link
+          href={`/product-detail?product=${encodeURIComponent(product.id)}`}
+          className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+        >
+          <MessageCircle className="h-4 w-4" aria-hidden="true" />
+          Negotiate
+        </Link>
         </div>
 
         <div className="flex min-w-0 flex-col">
@@ -265,13 +274,6 @@ export function MarketProductDetail({
             </div>
           )}
 
-          <Link
-            href={`/product-detail?product=${encodeURIComponent(product.id)}`}
-            className="mt-6 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
-          >
-            <MessageCircle className="h-4 w-4" aria-hidden="true" />
-            Negotiate
-          </Link>
         </div>
       </div>
 

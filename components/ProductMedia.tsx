@@ -66,7 +66,7 @@ interface Presign {
 export interface GalleryImage {
   mediaId: string;
   slotId: SlotId;
-  file: File;
+  file?: File;
   key: string;
   previewUrl: string;
   status: "pending" | "uploading" | "uploaded" | "error";
@@ -116,8 +116,13 @@ export const ProductMedia = forwardRef<
     onImagesChange?: (images: Record<SlotId, string>) => void;
     onGalleryChange?: (gallery: GalleryImage[]) => void;
     variant?: "product" | "service";
+    initialGallery?: {
+      mediaId: string;
+      url: string;
+      previewUrl?: string;
+    }[];
   }
->(({ onImagesChange, onGalleryChange, variant = "product" }, ref) => {
+>(({ onImagesChange, onGalleryChange, variant = "product", initialGallery }, ref) => {
   const [images, setImages] = useState<Record<SlotId, string>>({});
   const [imageGallery, setImageGallery] = useState<GalleryImage[]>([]);
   const [extraSlots, setExtraSlots] = useState<Slot[]>([]);
@@ -131,6 +136,28 @@ export const ProductMedia = forwardRef<
   const extraCounter = useRef<number>(1);
   const rotatingTips = variant === "service" ? SERVICE_TIPS : ROTATING_TIPS;
   const fixedSlots = variant === "service" ? SERVICE_SLOTS : FIXED_SLOTS;
+
+  useEffect(() => {
+    if (!initialGallery) return;
+    const gallery = initialGallery.map((media, index): GalleryImage => ({
+      mediaId: media.mediaId,
+      slotId: index === 0 ? "cover" : `more${index}`,
+      key: media.url,
+      previewUrl: media.previewUrl || media.url,
+      status: "uploaded",
+    }));
+    setImageGallery(gallery);
+    setImages(
+      Object.fromEntries(gallery.map((media) => [media.slotId, media.previewUrl])),
+    );
+    setExtraSlots(
+      gallery.slice(1).map((media, index) => ({
+        id: media.slotId,
+        label: `Image ${index + 2}`,
+      })),
+    );
+    extraCounter.current = Math.max(1, gallery.length);
+  }, [initialGallery]);
 
   // Rotating seller tips
   useEffect(() => {
@@ -183,6 +210,9 @@ export const ProductMedia = forwardRef<
 
     // Helper to assign a file to a specific slot
     const assignFileToSlot = (slot: Slot, file: File) => {
+      const replacedImage = imageGallery.find((item) => item.slotId === slot.id);
+      if (replacedImage?.key) void deleteUpload({ key: replacedImage.key });
+      if (replacedImage?.mediaId) void deleteListingMedia(replacedImage.mediaId);
       const previewUrl = URL.createObjectURL(file);
       const newGalleryItem: GalleryImage = {
         mediaId: "",
@@ -327,6 +357,7 @@ export const ProductMedia = forwardRef<
 
     for (const item of pendingItems) {
       try {
+        if (!item.file) throw new Error("Choose this image again to upload it.");
         const presign: Presign = await uploadImage(item.file);
         const uploadResponse = await fetch(presign.uploadUrl, {
           method: "PUT",

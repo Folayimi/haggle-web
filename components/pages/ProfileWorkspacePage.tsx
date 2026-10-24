@@ -6,11 +6,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
+  Archive,
   CalendarDays,
   Camera,
   Clock3,
   ImagePlus,
   LoaderCircle,
+  MoreHorizontal,
   MapPin,
   MessageCircle,
   Package,
@@ -18,21 +20,35 @@ import {
   Radio,
   Star,
   Store,
+  Trash2,
   Wrench,
   X,
 } from "lucide-react";
 import { useHaggleStore } from "@/lib/app-store";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   allLiveSessions,
   marketServices,
   sellerProducts,
 } from "@/lib/mock-data";
 import {
+  archiveListing,
+  deleteListing,
   getSellerListings,
   confirmUpload,
   updateUserProfile,
   uploadImage,
 } from "@/services/request";
+import {
+  ArchiveListingError,
+  replaceWithArchivedListing,
+} from "@/services/archive-listing";
+import { notify, notifyError } from "@/services/toastify";
 import type { BackendListing } from "@/services/mappers";
 import {
   Dialog,
@@ -95,6 +111,7 @@ export default function ProfileWorkspacePage({
   const router = useRouter();
   const userData = useHaggleStore((state) => state.userData);
   const setUserData = useHaggleStore((state) => state.setUserData);
+  const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
   const savedItemIds = useHaggleStore((state) => state.savedItemIds);
   const accountProfile = userData?.profile ?? {};
   const accountUsername = String(
@@ -131,6 +148,8 @@ export default function ProfileWorkspacePage({
   const [listings, setListings] = useState<BackendListing[]>([]);
   const [listingsLoading, setListingsLoading] = useState(false);
   const [listingsError, setListingsError] = useState(false);
+  const [listingActionId, setListingActionId] = useState<string | null>(null);
+  const [listingView, setListingView] = useState<"active" | "archived" | "drafts">("active");
 
   useEffect(() => {
     if (!isOwner) return;
@@ -197,10 +216,10 @@ export default function ProfileWorkspacePage({
       .then((result) => {
         if (active) {
           setListings(
-            result.filter(
-              (listing) =>
-                !listing.status || listing.status.toLowerCase() === "published",
-            ),
+            result.filter((listing) => {
+              const status = listing.status?.toLowerCase();
+              return !status || status === "published" || status === "archived" || status === "draft";
+            }),
           );
         }
       })
@@ -431,12 +450,90 @@ export default function ProfileWorkspacePage({
     setEditOpen(true);
   };
 
-  const tabListings =
+  const openListingEditor = (listing: BackendListing) => {
+    const type = listing.listing_type?.toLowerCase();
+    router.push(`/${type === "service" || type === "services" ? "add-service" : "post-product"}/${encodeURIComponent(listing.id)}`);
+  };
+
+  const refreshSellerListings = async () => {
+    if (!sellerId) return;
+    try {
+      const result = await getSellerListings(sellerId);
+      setListings(
+        result.filter((listing) => {
+          const status = listing.status?.toLowerCase();
+          return !status || status === "published" || status === "archived" || status === "draft";
+        }),
+      );
+    } catch {
+      // Keep the current seller view when a follow-up refresh also fails.
+    }
+  };
+
+  const handleListingAction = async (
+    listing: BackendListing,
+    action: "archive" | "delete",
+  ) => {
+    if (listingActionId) return;
+    if (action === "delete" && !window.confirm(`Delete “${listing.title}”? This cannot be undone.`)) return;
+    if (
+      action === "archive" &&
+      !window.confirm(
+        `Archive “${listing.title}”? It will be hidden from public discovery and kept in your archived listings.`,
+      )
+    ) return;
+    setListingActionId(listing.id);
+    try {
+      if (action === "archive") {
+        const archivedListing = await archiveListing(listing.id);
+        setListings((current) =>
+          replaceWithArchivedListing(current, archivedListing),
+        );
+        notify("Listing archived.");
+      } else {
+        await deleteListing(listing.id);
+        notify("Listing deleted.");
+      }
+      if (action === "delete") {
+        setListings((current) => current.filter((item) => item.id !== listing.id));
+      }
+    } catch (error) {
+      if (action === "archive" && error instanceof ArchiveListingError) {
+        if (error.status === 404) {
+          notifyError("This listing is unavailable or no longer belongs to your account.");
+          await refreshSellerListings();
+        } else if (error.status === 401) {
+          setActivateAuth(true);
+          notifyError("Your session has expired. Sign in to archive this listing.");
+        } else {
+          notifyError(error.message || "Unable to archive this listing.");
+        }
+      } else {
+        notifyError(error instanceof Error ? error.message : `Unable to ${action} this listing.`);
+      }
+    } finally {
+      setListingActionId(null);
+    }
+  };
+
+  const allTabListings =
     activeTab === "Products"
       ? products
       : activeTab === "Services"
         ? services
         : [];
+  const tabListings = allTabListings.filter((listing) => {
+    const status = listing.status?.toLowerCase();
+    if (listingView === "archived") return status === "archived";
+    if (listingView === "drafts") return status === "draft";
+    return status !== "archived" && status !== "draft";
+  });
+  const archivedListingsCount = allTabListings.filter(
+    (listing) => listing.status?.toLowerCase() === "archived",
+  ).length;
+  const draftListingsCount = allTabListings.filter(
+    (listing) => listing.status?.toLowerCase() === "draft",
+  ).length;
   const emptyCopy: Record<ProfileTab, string> = {
     Products: isOwner
       ? "Your listed products will appear here."
@@ -1024,6 +1121,39 @@ export default function ProfileWorkspacePage({
             ))}
           </div>
           <div className="min-h-44 py-6" role="tabpanel">
+            {isOwner && (activeTab === "Products" || activeTab === "Services") && (
+              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="inline-flex w-fit rounded-xl border border-border/60 bg-background-elevated/20 p-1" role="group" aria-label="Listing status filter">
+                  <button
+                    type="button"
+                    aria-pressed={listingView === "active"}
+                    onClick={() => setListingView("active")}
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "active" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
+                  >
+                    Active
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={listingView === "drafts"}
+                    onClick={() => setListingView("drafts")}
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "drafts" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
+                  >
+                    Drafts <span className="ml-1 text-xs">{draftListingsCount}</span>
+                  </button>
+                  <button
+                    type="button"
+                    aria-pressed={listingView === "archived"}
+                    onClick={() => setListingView("archived")}
+                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "archived" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
+                  >
+                    Archived <span className="ml-1 text-xs">{archivedListingsCount}</span>
+                  </button>
+                </div>
+                <p className="max-w-xl text-xs text-muted">
+                  Archived listings are hidden from public discovery and remain available here.
+                </p>
+              </div>
+            )}
             {listingsLoading &&
             (activeTab === "Products" || activeTab === "Services") ? (
               <p className="py-10 text-center text-sm text-muted" role="status">
@@ -1069,23 +1199,69 @@ export default function ProfileWorkspacePage({
                 {tabListings.map((item) => (
                   <article
                     key={item.id}
-                    className="overflow-hidden rounded-2xl border border-border/50 bg-background-elevated/20"
+                    role={isOwner ? "link" : undefined}
+                    tabIndex={isOwner ? 0 : undefined}
+                    onClick={isOwner ? () => openListingEditor(item) : undefined}
+                    onKeyDown={isOwner ? (event) => {
+                      if (event.key === "Enter" || event.key === " ") {
+                        event.preventDefault();
+                        openListingEditor(item);
+                      }
+                    } : undefined}
+                    className={`group relative overflow-hidden rounded-2xl border border-border/50 bg-background-elevated/20 ${isOwner ? "cursor-pointer transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" : ""}`}
                   >
-                    {listingImageUrl(item) ? (
-                      <img
-                        src={listingImageUrl(item)}
-                        alt=""
-                        className="h-40 w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-40 items-center justify-center bg-background-elevated/50 text-muted">
-                        {activeTab === "Services" ? (
-                          <Wrench className="h-8 w-8" />
-                        ) : (
-                          <Package className="h-8 w-8" />
-                        )}
-                      </div>
-                    )}
+                    <div className="relative">
+                      {listingImageUrl(item) ? (
+                        <img
+                          src={listingImageUrl(item)}
+                          alt=""
+                          className="h-40 w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-40 items-center justify-center bg-background-elevated/50 text-muted">
+                          {activeTab === "Services" ? <Wrench className="h-8 w-8" /> : <Package className="h-8 w-8" />}
+                        </div>
+                      )}
+                      {(item.inventory_count != null || isOwner) && (
+                        <div className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-2 transition-opacity ${item.status?.toLowerCase() === "archived" ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"}`}>
+                          <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
+                            {item.status?.toLowerCase() === "archived"
+                              ? "Archived"
+                              : item.status?.toLowerCase() === "draft"
+                                ? "Draft"
+                                : item.inventory_count != null
+                                  ? `${item.inventory_count} left`
+                                  : "Service"}
+                          </span>
+                          {isOwner && (
+                            <div className="pointer-events-auto" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  aria-label={`Actions for ${item.title}`}
+                                  onClick={(event) => event.stopPropagation()}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur transition hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                                >
+                                  {listingActionId === item.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-44">
+                                  <DropdownMenuItem onClick={() => openListingEditor(item)}>
+                                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                                  </DropdownMenuItem>
+                                  {item.status?.toLowerCase() !== "archived" && (
+                                    <DropdownMenuItem disabled={listingActionId === item.id} onClick={() => void handleListingAction(item, "archive")}>
+                                      <Archive className="mr-2 h-4 w-4" /> Archive
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem variant="destructive" disabled={listingActionId === item.id} onClick={() => void handleListingAction(item, "delete")}>
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
                     <div className="p-4">
                       <h3 className="font-semibold">{item.title}</h3>
                       <p className="mt-1 line-clamp-2 text-sm text-muted">
@@ -1113,9 +1289,17 @@ export default function ProfileWorkspacePage({
                   <Package className="mx-auto h-7 w-7 text-muted" />
                 )}
                 <p className="mt-3 text-sm font-medium">
-                  {emptyCopy[activeTab]}
+                  {isOwner && (activeTab === "Products" || activeTab === "Services")
+                    ? listingView === "archived"
+                      ? `You have no archived ${activeTab.toLowerCase()}.`
+                      : listingView === "drafts"
+                        ? `You have no draft ${activeTab.toLowerCase()}.`
+                        : allTabListings.length > 0
+                          ? `You have no active ${activeTab.toLowerCase()}.`
+                          : emptyCopy[activeTab]
+                    : emptyCopy[activeTab]}
                 </p>
-                {isOwner && activeTab === "Products" && (
+                {isOwner && listingView === "active" && activeTab === "Products" && (
                   <Link
                     href="/post-product"
                     className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong"
@@ -1123,7 +1307,7 @@ export default function ProfileWorkspacePage({
                     Post a product
                   </Link>
                 )}
-                {isOwner && activeTab === "Services" && (
+                {isOwner && listingView === "active" && activeTab === "Services" && (
                   <Link
                     href="/add-service"
                     className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong"

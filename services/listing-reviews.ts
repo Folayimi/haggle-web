@@ -9,7 +9,10 @@ const reviewCache = new Map<
   string,
   { value: ListingReviewData; expiresAt: number }
 >();
-const summaryCache = new Map<string, { value: { rating: number; reviewCount: number }; expiresAt: number }>();
+const summaryCache = new Map<
+  string,
+  { value: { rating: number; reviewCount: number }; expiresAt: number }
+>();
 
 export async function loadListingReviews(
   listingId: string,
@@ -25,7 +28,10 @@ export async function loadListingReviews(
     cachedSummary && cachedSummary.expiresAt > Date.now()
       ? cachedSummary.value
       : getListingReviewSummary(listingId).then((value) => {
-          summaryCache.set(listingId, { value, expiresAt: Date.now() + REVIEW_CACHE_MS });
+          summaryCache.set(listingId, {
+            value,
+            expiresAt: Date.now() + REVIEW_CACHE_MS,
+          });
           return value;
         }),
     getListingReviewsPage(listingId, page, limit),

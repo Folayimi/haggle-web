@@ -102,7 +102,7 @@ interface BackendNegotiationThread {
   latest_offer?: BackendOffer;
 }
 
-function resolveListingMediaUrl(path: string): string {
+export function resolveListingMediaUrl(path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
 
   const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;

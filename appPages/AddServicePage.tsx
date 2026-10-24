@@ -66,13 +66,16 @@ import { ProductMedia, ProductMediaRef, GalleryImage } from "@/components/Produc
 import {
   createCategory,
   createListing,
+  getAllCategories,
   getCategory,
+  getListing,
   updateListing,
 } from "@/services/request";
 import { notifyError } from "@/services/toastify";
 import { useHaggleStore } from "@/lib/app-store";
 import Loader from "@/reusables/loader";
 import { useRouter } from "next/navigation";
+import { resolveListingMediaUrl } from "@/services/mappers";
 
 // ============================================
 // TYPES
@@ -142,6 +145,7 @@ function GlassyField({
   optional = false,
   icon,
   prominent = false,
+  inputType = "text",
   value,
   onChange,
   helper,
@@ -155,6 +159,7 @@ function GlassyField({
   optional?: boolean;
   icon?: React.ReactNode;
   prominent?: boolean;
+  inputType?: React.HTMLInputTypeAttribute;
   value?: string;
   onChange?: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -206,7 +211,7 @@ function GlassyField({
         />
       ) : (
         <input
-          type="text"
+          type={inputType}
           placeholder={placeholder}
           value={value}
           onChange={onChange}
@@ -1545,8 +1550,9 @@ function StickyHeader({
       "
     >
       <div className="flex items-center gap-3">
-        <Link
-          href="/create"
+        <button
+          type="button"
+          onClick={onCancel}
           className="
             rounded-full p-2
             border border-border/80 bg-background-elevated/30
@@ -1555,7 +1561,7 @@ function StickyHeader({
           "
         >
           <ArrowLeft className="h-4 w-4" />
-        </Link>
+        </button>
         <div>
           <span className="text-xs font-medium uppercase tracking-[0.12em] text-secondary/80">
             Add Service
@@ -1572,8 +1578,9 @@ function StickyHeader({
           saving={saving}
           lastSaved={lastSaved}
         />
-        <Link
-          href="/create"
+        <button
+          type="button"
+          onClick={onCancel}
           className="
             rounded-full border border-border/60
             px-4 py-2 text-sm font-medium text-muted/70
@@ -1582,7 +1589,7 @@ function StickyHeader({
           "
         >
           Cancel
-        </Link>
+        </button>
         <button
           type="button"
           onClick={onNext}
@@ -1607,7 +1614,7 @@ function StickyHeader({
 // ============================================
 // MAIN PAGE
 // ============================================
-const AddServicePage = () => {
+const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {}) => {
   const serviceMediaRef = useRef<ProductMediaRef>(null);
   const userData = useHaggleStore((state) => state.userData);
   const router = useRouter();
@@ -1650,6 +1657,74 @@ const AddServicePage = () => {
   // TAGS STATE - Dynamic service tags as pipe-delimited string
   // ============================================
   const [tags, setTags] = useState("");
+  const [editLoading, setEditLoading] = useState(Boolean(editListingId));
+  const [editError, setEditError] = useState("");
+  const [initialGallery, setInitialGallery] = useState<
+    { mediaId: string; url: string; previewUrl: string }[] | undefined
+  >(undefined);
+
+  useEffect(() => {
+    if (!editListingId) return;
+    let active = true;
+    const loadListing = async () => {
+      setEditLoading(true);
+      setEditError("");
+      try {
+        const [listing, categories] = await Promise.all([
+          getListing(editListingId),
+          getAllCategories(),
+        ]);
+        if (listing.listing_type && listing.listing_type.toLowerCase() !== "service" && listing.listing_type.toLowerCase() !== "services") {
+          throw new Error("This listing is not a service.");
+        }
+        const child = categories.find((item) => item.id === listing.category_id);
+        const parent = child?.parent_id
+          ? categories.find((item) => item.id === child.parent_id)
+          : undefined;
+        const selectedCategory = SERVICE_CATEGORIES.find(
+          (item) => item.id === parent?.slug,
+        );
+        const selectedSubcategory = selectedCategory?.subcategories.find(
+          (item) => item.id === child?.slug,
+        );
+        if (!selectedCategory || !selectedSubcategory) {
+          throw new Error("The service category is not available in this form.");
+        }
+        if (!active) return;
+        setCategory(selectedCategory.name);
+        setServiceSubCategories(selectedCategory.subcategories);
+        setServiceType(selectedSubcategory.name);
+        setServiceName(listing.title || "");
+        setServiceDescription(listing.description || "");
+        setPrice(listing.starting_amount || "");
+        setDeliveryTime(listing.delivery_duration || "");
+        setAddress(listing.work_address || "");
+        setWorkLocation(String(listing.work_place || "").toUpperCase() === "ON_SITE" ? "workshop" : "home");
+        const audience = String(listing.target_audience || "businesses").toLowerCase() as TargetAudience;
+        if (["general", "businesses", "individuals", "creators", "students", "startups", "professionals"].includes(audience)) setTargetAudience(audience);
+        const style = String(listing.negotiation_style || "").toUpperCase();
+        if (["FIXED", "NEGOTIABLE", "COUNTER"].includes(style)) setNegotiationStyle(style as NegotiationStyle);
+        setNegotiationNote(listing.negotiation_note || "");
+        setTags(Array.isArray(listing.tags) ? listing.tags.join("|") : listing.tags || "");
+        setListingId(listing.id);
+        localStorage.setItem("serviceListingId", listing.id);
+        const media = [...(listing.medias?.length ? listing.medias : listing.media || [])]
+          .filter((item) => item.media_type.toLowerCase() === "image")
+          .sort((a, b) => Number(Boolean(b.is_cover)) - Number(Boolean(a.is_cover)) || (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        setInitialGallery(media.map((item) => {
+          let previewUrl = item.url;
+          try { previewUrl = resolveListingMediaUrl(item.url); } catch { /* show the stored media path as a fallback */ }
+          return { mediaId: item.id, url: item.url, previewUrl };
+        }));
+      } catch (error) {
+        if (active) setEditError(error instanceof Error ? error.message : "Unable to load this listing.");
+      } finally {
+        if (active) setEditLoading(false);
+      }
+    };
+    void loadListing();
+    return () => { active = false; };
+  }, [editListingId]);
 
   // ============================================
   // HANDLE TAG CHANGE
@@ -1884,7 +1959,16 @@ const AddServicePage = () => {
     if (!validateTab("tell") || !validateTab("offer")) return;
     if (await saveListing("published")) {
       localStorage.removeItem("serviceListingId");
-      router.push("/create");
+      const username = String(
+        userData?.username ||
+          userData?.profile?.username ||
+          userData?.data?.username ||
+          userData?.data?.profile?.username ||
+          "",
+      )
+        .trim()
+        .replace(/^@/, "");
+      router.push(`/profile/${encodeURIComponent(username)}`);
     }
   };
 
@@ -1916,16 +2000,19 @@ const AddServicePage = () => {
   return (
     <AppShell>
       {publishing && <Loader type="publishing" />}
+      {editLoading && <Loader type="publishing" />}
+      {editError && <div role="alert" className="mx-auto mt-4 max-w-3xl rounded-xl bg-danger/10 p-4 text-sm text-danger">{editError}</div>}
       <div className="min-h-screen flex flex-col">
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 lg:px-6 flex flex-col">
           {/* STICKY HEADER */}
           <StickyHeader
             activeTab={activeTab}
-            title="New Service"
+            title={editListingId ? "Edit Service" : "New Service"}
             onNext={handleNext}
             onSave={() => {
               if (validateTab("tell")) void saveListing("draft");
             }}
+            onCancel={() => router.back()}
             saving={saving}
             lastSaved={lastSaved}
           />
@@ -1943,6 +2030,7 @@ const AddServicePage = () => {
                 ref={serviceMediaRef}
                 variant="service"
                 onGalleryChange={setImageGallery}
+                initialGallery={initialGallery}
               />
             </div>
 
@@ -2105,6 +2193,7 @@ const AddServicePage = () => {
                                     label={tag.name}
                                     placeholder={tag.placeholder ?? ""}
                                     prominent
+                                    inputType={tag.type === "date" ? "date" : "text"}
                                     value={getTagValue(tag.name)}
                                     optional={!tag.required}
                                     error={validationErrors[tag.name]}

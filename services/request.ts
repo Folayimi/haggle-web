@@ -5,6 +5,8 @@ import { PassThrough } from "stream";
 import { Dispatch, SetStateAction } from "react";
 import { useHaggleStore } from "@/lib/app-store";
 import type { BackendCategory, BackendListing } from "./mappers";
+import { archiveListingRequest } from "./archive-listing";
+import { setBearerAuthorizationHeader } from "./auth-headers";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -50,7 +52,10 @@ const processQueue = (error: any = null, token: string | null = null) => {
       prom.reject(error);
     } else {
       // Retry the original request with the new token
-      prom.config.headers.Authorization = `Bearer ${token}`;
+      prom.config.headers = setBearerAuthorizationHeader(
+        prom.config.headers,
+        token,
+      );
       prom.resolve(apiClient(prom.config));
     }
   });
@@ -61,16 +66,14 @@ apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("haggleAccessToken");
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers = setBearerAuthorizationHeader(config.headers, token);
     }
 
     // 2. 👇 Attach the current user's id on every request — offers,
     // conversations, and other authenticated routes rely on this header
     // via getRequestUserId() on the backend, not just /users/me.
     const userData = useHaggleStore.getState().userData; // 👈 Get userData from store
-    const isCatalogRequest = /^\/?catalog(?:\/|$)/.test(
-      config.url ?? "",
-    );
+    const isCatalogRequest = /^\/?catalog(?:\/|$)/.test(config.url ?? "");
     if (userData?.id && !isCatalogRequest) {
       config.headers["x-user-id"] = userData.id;
     }
@@ -596,7 +599,9 @@ export const getSellerListings = async (
     }>(`/catalog/listings/seller/${encodeURIComponent(sellerId)}`);
 
     if (response.data.success !== true || !Array.isArray(response.data.data)) {
-      throw new Error(response.data.message || "Invalid seller listings response");
+      throw new Error(
+        response.data.message || "Invalid seller listings response",
+      );
     }
 
     return response.data.data;
@@ -650,6 +655,18 @@ export const updateListing = async (id: any, data: any) => {
 
   return result;
 };
+
+export const deleteListing = async (id: string) => {
+  const response = await apiClient.delete(
+    `/catalog/listings/${encodeURIComponent(id)}`,
+  );
+  return response.data;
+};
+
+export const archiveListing = async (
+  id: string,
+): Promise<BackendListing & { status: "archived" }> =>
+  archiveListingRequest<BackendListing>((url) => apiClient.patch(url), id);
 
 export const createListingMedia = async (data: any, id: string) => {
   let result: any = "";
