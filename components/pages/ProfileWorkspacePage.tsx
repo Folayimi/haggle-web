@@ -31,6 +31,7 @@ import {
 import { useHaggleStore } from "@/lib/app-store";
 import ProductCard from "@/components/market/cards/ProductCard";
 import ServiceCard from "@/components/market/cards/ServiceCard";
+import { ProfileListingCardsSkeleton } from "@/components/market/common/MarketSkeletons";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -1388,9 +1389,9 @@ export default function ProfileWorkspacePage({
               )}
             {listingsLoading &&
             (activeTab === "Products" || activeTab === "Services") ? (
-              <p className="py-10 text-center text-sm text-muted" role="status">
-                Loading your {activeTab.toLowerCase()} from the catalog...
-              </p>
+              <ProfileListingCardsSkeleton
+                label={`your ${activeTab.toLowerCase()} from the catalog`}
+              />
             ) : listingsError &&
               (activeTab === "Products" || activeTab === "Services") ? (
               <p className="py-10 text-center text-sm text-muted" role="alert">
@@ -1402,9 +1403,7 @@ export default function ProfileWorkspacePage({
                 Favorites are only visible on your own profile.
               </p>
             ) : activeTab === "Favorites" && favoritesLoading ? (
-              <p className="py-10 text-center text-sm text-muted" role="status">
-                Loading your favorites...
-              </p>
+              <ProfileListingCardsSkeleton label="your favorites" />
             ) : activeTab === "Favorites" && favoritesError ? (
               <div className="py-10 text-center text-sm text-muted" role="alert">
                 <p>Your favorites could not be loaded.</p>

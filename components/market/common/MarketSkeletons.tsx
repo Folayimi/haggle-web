@@ -19,6 +19,31 @@ function ProductCardSkeleton() {
   );
 }
 
+export function ProfileListingCardsSkeleton({
+  label,
+}: {
+  label: string;
+}) {
+  return (
+    <div
+      role="status"
+      aria-label={`Loading ${label}`}
+      aria-busy="true"
+      className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+    >
+      <span className="sr-only">Loading {label}...</span>
+      {Array.from({ length: 4 }, (_, index) => (
+        <div key={index} className="min-w-0">
+          <SkeletonBlock className="aspect-[4/3] w-full rounded-xl" />
+          <SkeletonBlock className="mt-3 h-4 w-3/4" />
+          <SkeletonBlock className="mt-2 h-3 w-full" />
+          <SkeletonBlock className="mt-2 h-3 w-2/3" />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 function CarouselSectionSkeleton({ cards = 3 }: { cards?: number }) {
   return (
     <section className="space-y-4">

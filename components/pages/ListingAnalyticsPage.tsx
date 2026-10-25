@@ -141,15 +141,25 @@ export function ListingAnalyticsPage({
                     </div>
                   )}
                 </div>
+              ) : loading ? (
+                <div className="h-16 w-16 shrink-0 animate-pulse rounded-xl bg-primary/10 sm:h-20 sm:w-20" />
               ) : null}
               <div className="min-w-0">
                 <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
                   <BarChart3 className="h-3.5 w-3.5" />
                   Listing analytics
                 </div>
-                <h1 className="max-w-3xl truncate text-2xl font-bold sm:text-3xl">
-                  {listing?.title || (loading ? "Loading listing…" : "Listing performance")}
-                </h1>
+                {listing ? (
+                  <h1 className="max-w-3xl truncate text-2xl font-bold sm:text-3xl">
+                    {listing.title}
+                  </h1>
+                ) : loading ? (
+                  <div className="h-8 w-64 max-w-full animate-pulse rounded bg-primary/10 sm:h-9" />
+                ) : (
+                  <h1 className="max-w-3xl truncate text-2xl font-bold sm:text-3xl">
+                    Listing performance
+                  </h1>
+                )}
                 {listing && (
                   <p className="mt-2 text-sm capitalize text-muted">
                     {listing.listing_type || "Listing"}
@@ -176,9 +186,38 @@ export function ListingAnalyticsPage({
           </header>
 
           {loading ? (
-            <p role="status" className="rounded-2xl border border-border/60 bg-background-elevated/20 p-10 text-center text-sm text-muted">
-              Loading analytics…
-            </p>
+            <div role="status" aria-label="Loading listing analytics" aria-busy="true" className="space-y-5">
+              <span className="sr-only">Loading listing analytics...</span>
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <div key={index} className="rounded-2xl border border-border/60 bg-background-elevated/20 p-4 sm:p-5">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="h-4 w-28 animate-pulse rounded bg-primary/10" />
+                      <div className="h-9 w-9 animate-pulse rounded-xl bg-primary/10" />
+                    </div>
+                    <div className="mt-4 h-9 w-24 animate-pulse rounded bg-primary/10" />
+                    <div className="mt-2 h-3 w-32 animate-pulse rounded bg-primary/10" />
+                  </div>
+                ))}
+              </div>
+              <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(280px,0.8fr)]">
+                <div className="space-y-6 rounded-2xl border border-border/60 bg-background-elevated/20 p-5 sm:p-6">
+                  <div className="h-6 w-48 animate-pulse rounded bg-primary/10" />
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <div key={index}>
+                      <div className="mb-2 h-4 w-full animate-pulse rounded bg-primary/10" />
+                      <div className="h-2.5 w-full animate-pulse rounded-full bg-primary/10" />
+                    </div>
+                  ))}
+                </div>
+                <div className="space-y-5 rounded-2xl border border-border/60 bg-background-elevated/20 p-5 sm:p-6">
+                  <div className="h-6 w-44 animate-pulse rounded bg-primary/10" />
+                  {Array.from({ length: 5 }, (_, index) => (
+                    <div key={index} className="h-8 w-full animate-pulse rounded bg-primary/10" />
+                  ))}
+                </div>
+              </div>
+            </div>
           ) : error ? (
             <section role="alert" className="rounded-2xl border border-danger/20 bg-danger/5 p-8 text-center">
               <p className="text-sm text-danger">{error}</p>

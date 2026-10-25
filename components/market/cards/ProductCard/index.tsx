@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Heart, MessageCircle, Star } from "lucide-react";
 
@@ -53,10 +54,21 @@ export default function ProductCard({
             />
           </div>
         </button>
+        {product.sellerSummary?.avatar_url && (
+          <div className="absolute left-3 top-3 z-10 h-9 w-9 overflow-hidden rounded-full border border-white/70 shadow-sm">
+            <Image
+              src={product.sellerSummary.avatar_url}
+              alt={`${product.sellerSummary.full_name || "Seller"} profile`}
+              width={36}
+              height={36}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        )}
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 flex items-center justify-between gap-2 sm:bottom-3 sm:left-3 sm:right-3">
           <p className="min-w-0 truncate rounded-md bg-black/65 px-2.5 py-1 text-sm font-bold tracking-tight text-white shadow-sm backdrop-blur-sm">
             {Number.isFinite(price)
-              ? formatPrice(price, product.priceCurrency)
+              ? `~${formatPrice(price, product.priceCurrency)}`
               : "Price unavailable"}
           </p>
           <ActionButton asChild size="sm" className="market-card-action shrink-0">

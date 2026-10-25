@@ -18,7 +18,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { useHaggleStore } from "@/lib/app-store";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 interface SideNavUser {
   username?: string;
@@ -53,6 +53,7 @@ const SideNav = ({ userData }: { userData: SideNavUser | null }) => {
   const clearUserData = useHaggleStore((state) => state.clearUserData);
   const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
   const pathname = usePathname();
+  const router = useRouter();
   const isAuthenticated = Boolean(userData);
   const username =
     userData?.username ??
@@ -68,6 +69,9 @@ const SideNav = ({ userData }: { userData: SideNavUser | null }) => {
     localStorage.removeItem("haggleMediaAccessToken");
     localStorage.setItem("activateAuth", "false");
     clearUserData();
+    if (pathname === "/profile" || pathname.startsWith("/profile/")) {
+      router.replace("/for-you");
+    }
   };
 
   // Base nav items (without profile)

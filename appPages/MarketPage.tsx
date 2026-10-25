@@ -144,6 +144,7 @@ const MarketPage = ({
   const userData = useHaggleStore((state) => state.userData);
   const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
   const sectionsContainerRef = useRef<HTMLDivElement>(null);
+  const previousSectionsScrollTop = useRef(0);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [selectedMarketView, setSelectedMarketView] = useState<
@@ -181,6 +182,7 @@ const MarketPage = ({
   const [sellerLoading, setSellerLoading] = useState(false);
   const [sellerError, setSellerError] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [showSectionShortcuts, setShowSectionShortcuts] = useState(true);
   const [products, setProducts] = useState<SellerProduct[]>([]);
   const [serviceListings, setServiceListings] = useState<BackendListing[]>([]);
   const [publishedCategories, setPublishedCategories] = useState<
@@ -252,6 +254,14 @@ const MarketPage = ({
   const handleSectionsScroll = () => {
     const container = sectionsContainerRef.current;
     if (!container) return;
+
+    const scrollDelta = container.scrollTop - previousSectionsScrollTop.current;
+    if (container.scrollTop <= 0 || scrollDelta < -4) {
+      setShowSectionShortcuts(true);
+    } else if (scrollDelta > 4) {
+      setShowSectionShortcuts(false);
+    }
+    previousSectionsScrollTop.current = container.scrollTop;
 
     const scrollableDistance = container.scrollHeight - container.clientHeight;
     setShowBackToTop(
@@ -562,7 +572,7 @@ const MarketPage = ({
             <div
               ref={sectionsContainerRef}
               onScroll={handleSectionsScroll}
-              className="h-full min-w-0 space-y-8 overflow-y-auto bg-background-elevated/50 rounded-xl p-5 pb-24 pr-1 xl:pb-20"
+              className="h-full min-w-0 space-y-8 overflow-y-auto overflow-x-hidden bg-background-elevated/50 rounded-xl p-5 pb-24 pr-1 xl:pb-20"
             >
               {selectedProductId || selectedServiceId ? (
                 productDetailLoading || serviceDetailLoading ? (
@@ -683,7 +693,12 @@ const MarketPage = ({
               <>
               <nav
                 aria-label="Marketplace sections"
-                className="sticky top-0 z-30 -mx-5 -mt-5 grid grid-cols-6 gap-1 border-b border-border/60 bg-background/95 px-3 py-2 shadow-sm backdrop-blur-md sm:gap-2 sm:px-5"
+                className={cn(
+                  "sticky -top-5 z-30 -mx-5 -mt-5 grid grid-cols-6 gap-1 border-b border-border/60 bg-background/95 px-3 py-2 shadow-sm backdrop-blur-md transition-transform duration-200 sm:gap-2 sm:px-5",
+                  showSectionShortcuts
+                    ? "translate-y-0"
+                    : "-translate-y-full focus-within:translate-y-0",
+                )}
               >
                 <ActionCard
                   title="Recommended For You"

@@ -1,5 +1,6 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
 import { Heart, MessageCircle, Star } from "lucide-react";
 
@@ -45,10 +46,23 @@ export default function ServiceCard({
             className="h-full w-full [&_img]:h-full"
           />
         </button>
-        <div className="absolute inset-x-4 top-4 z-10 flex items-center justify-between gap-2">
-          <span className="max-w-[70%] truncate rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur sm:px-3 sm:text-xs">
-            {service.category}
-          </span>
+        <div className="absolute inset-x-3 top-3 z-10 flex items-center justify-between gap-2">
+          <div className="flex min-w-0 items-center gap-2">
+            {service.sellerSummary?.avatar_url && (
+              <div className="h-9 w-9 shrink-0 overflow-hidden rounded-full border border-white/70 shadow-sm">
+                <Image
+                  src={service.sellerSummary.avatar_url}
+                  alt={`${service.sellerSummary.full_name || "Seller"} profile`}
+                  width={36}
+                  height={36}
+                  className="h-full w-full object-cover"
+                />
+              </div>
+            )}
+            <span className="max-w-[70%] truncate rounded-full bg-black/55 px-2.5 py-1 text-[10px] font-semibold text-white backdrop-blur sm:px-3 sm:text-xs">
+              {service.category}
+            </span>
+          </div>
           <button
             type="button"
             onClick={() => {
@@ -72,7 +86,7 @@ export default function ServiceCard({
 
         <div className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 flex items-center justify-between gap-2 sm:bottom-3 sm:left-3 sm:right-3">
           <p className="min-w-0 truncate rounded-md bg-black/65 px-2.5 py-1 text-sm font-bold text-white shadow-sm backdrop-blur-sm">
-            {Number.isFinite(price) ? formatPrice(price) : "Price unavailable"}
+            {Number.isFinite(price) ? `~${formatPrice(price)}` : "Price unavailable"}
             <span className="ml-1 text-[10px] font-medium text-white/70">starting</span>
           </p>
           <ActionButton
