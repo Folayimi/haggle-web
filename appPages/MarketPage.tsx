@@ -65,7 +65,7 @@ import type { BackendCategory, BackendListing } from "@/services/mappers";
 import { getUserById } from "@/services/users";
 import { getCatalogErrorStatus } from "@/services/catalog";
 import { trackListingInteraction } from "@/services/catalog";
-import { notifyError } from "@/services/toastify";
+import { notifyApiError } from "@/services/toastify";
 import type { MarketService, SellerProduct } from "@/types";
 
 interface BroadcastButtonProps {
@@ -263,7 +263,7 @@ const MarketPage = ({
   };
   const handleProductSelect = (product: SellerProduct) => {
     if (localStorage.getItem("haggleAccessToken")) {
-      void trackListingInteraction(product.id, "tap").catch(() => notifyError("Could not record this interaction."));
+      void trackListingInteraction(product.id, "tap").catch((error) => notifyApiError(error, "Could not record this interaction."));
     }
     setShowAllReviews(false);
     setSelectedServiceId(null);
@@ -283,7 +283,7 @@ const MarketPage = ({
   };
   const handleServiceSelect = (service: MarketService) => {
     if (localStorage.getItem("haggleAccessToken")) {
-      void trackListingInteraction(service.id, "tap").catch(() => notifyError("Could not record this interaction."));
+      void trackListingInteraction(service.id, "tap").catch((error) => notifyApiError(error, "Could not record this interaction."));
     }
     setShowAllReviews(false);
     setSelectedProductId(null);
@@ -677,6 +677,16 @@ const MarketPage = ({
                 className="flex flex-wrap gap-2"
               >
                 <ActionCard
+                  icon={Sparkles}
+                  title="Recommended For You"
+                  targetId="market-recommended"
+                />
+                <ActionCard
+                  icon={ShoppingBag}
+                  title="Latest Listings"
+                  targetId="market-latest"
+                />
+                <ActionCard
                   icon={Activity}
                   title="Trending"
                   targetId="market-trending"
@@ -687,19 +697,9 @@ const MarketPage = ({
                   targetId="market-services"
                 />
                 <ActionCard
-                  icon={ShoppingBag}
-                  title="Latest Listings"
-                  targetId="market-latest"
-                />
-                <ActionCard
                   icon={Radio}
                   title="Happening Live"
                   targetId="market-live"
-                />
-                <ActionCard
-                  icon={Sparkles}
-                  title="Recommended (For You)"
-                  targetId="market-recommended"
                 />
                 <ActionCard
                   icon={Layers3}
@@ -708,6 +708,20 @@ const MarketPage = ({
                 />
               </nav>
 
+              <div id="market-recommended" className="scroll-mt-4">
+                <Recommended
+                  products={discovery.recommended.filter(matchesProduct)}
+                  onProductSelect={handleProductSelect}
+                  onViewAll={() => openMarketView("recommended")}
+                />
+              </div>
+              <div id="market-latest" className="scroll-mt-4">
+                <ProductFeed
+                  products={discovery.latest.filter(matchesProduct)}
+                  onProductSelect={handleProductSelect}
+                  onViewAll={() => openMarketView("latest")}
+                />
+              </div>
               <div id="market-trending" className="scroll-mt-4">
                 <TrendingNearYou
                   products={discovery.trending.filter(matchesProduct)}
@@ -723,24 +737,10 @@ const MarketPage = ({
                   onViewAll={() => openMarketView("services")}
                 />
               </div>
-              <div id="market-latest" className="scroll-mt-4">
-                <ProductFeed
-                  products={discovery.latest.filter(matchesProduct)}
-                  onProductSelect={handleProductSelect}
-                  onViewAll={() => openMarketView("latest")}
-                />
-              </div>
               <div id="market-live" className="scroll-mt-4">
                 <LiveNow
                   sessions={discovery.liveNow}
                   onViewAll={() => openMarketView("live")}
-                />
-              </div>
-              <div id="market-recommended" className="scroll-mt-4">
-                <Recommended
-                  products={discovery.recommended.filter(matchesProduct)}
-                  onProductSelect={handleProductSelect}
-                  onViewAll={() => openMarketView("recommended")}
                 />
               </div>
               <div id="market-collections" className="scroll-mt-4">

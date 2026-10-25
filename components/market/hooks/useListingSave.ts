@@ -4,7 +4,7 @@ import { useCallback, useState } from "react";
 
 import { useHaggleStore } from "@/lib/app-store";
 import { getCatalogErrorStatus, saveListing, unsaveListing } from "@/services/catalog";
-import { notifyError } from "@/services/toastify";
+import { notifyApiError } from "@/services/toastify";
 
 export function useListingSave(listingId: string) {
   const saved = useHaggleStore((state) => state.savedItemIds.includes(listingId));
@@ -16,7 +16,6 @@ export function useListingSave(listingId: string) {
     if (pending) return;
     if (!localStorage.getItem("haggleAccessToken")) {
       setActivateAuth(true);
-      notifyError("Sign in to save listings.");
       return;
     }
     setPending(true);
@@ -31,7 +30,7 @@ export function useListingSave(listingId: string) {
     } catch (error) {
       const status = getCatalogErrorStatus(error);
       if (status === 401) setActivateAuth(true);
-      notifyError(status === 401
+      notifyApiError(error, status === 401
         ? "Sign in to save listings."
         : status === 403
           ? "You do not have permission to save this listing."

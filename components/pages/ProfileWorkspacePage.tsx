@@ -52,11 +52,10 @@ import {
   replaceWithArchivedListing,
 } from "@/services/archive-listing";
 import {
-  getCatalogErrorStatus,
   getSavedListings,
   unsaveListing,
 } from "@/services/catalog";
-import { notify, notifyError } from "@/services/toastify";
+import { notify, notifyApiError } from "@/services/toastify";
 import {
   mapListingToProduct,
   mapListingToService,
@@ -128,7 +127,6 @@ export default function ProfileWorkspacePage({
   const router = useRouter();
   const userData = useHaggleStore((state) => state.userData);
   const setUserData = useHaggleStore((state) => state.setUserData);
-  const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
   const setSavedItem = useHaggleStore((state) => state.setSavedItem);
   const accountProfile = userData?.profile ?? {};
   const accountUsername = String(
@@ -359,11 +357,7 @@ export default function ProfileWorkspacePage({
       .catch((error: unknown) => {
         if (!active) return;
         setFavoritesError(true);
-        if (getCatalogErrorStatus(error) === 401) {
-          setActivateAuth(true);
-        } else {
-          notifyError("Your favorites could not be loaded. Please try again.");
-        }
+        notifyApiError(error, "Your favorites could not be loaded. Please try again.");
       })
       .finally(() => {
         if (active) setFavoritesLoading(false);
@@ -377,7 +371,6 @@ export default function ProfileWorkspacePage({
     favoritesPage,
     favoritesRetry,
     isOwner,
-    setActivateAuth,
     setSavedItem,
   ]);
 
@@ -397,11 +390,7 @@ export default function ProfileWorkspacePage({
       }
       notify("Listing removed from favorites.");
     } catch (error: unknown) {
-      if (getCatalogErrorStatus(error) === 401) {
-        setActivateAuth(true);
-      } else {
-        notifyError("This listing could not be removed from favorites.");
-      }
+      notifyApiError(error, "This listing could not be removed from favorites.");
     } finally {
       setFavoriteActionId(null);
     }
@@ -717,21 +706,23 @@ export default function ProfileWorkspacePage({
       if (action === "archive" && error instanceof ArchiveListingError) {
         if (error.status === 404) {
           setListingConfirmation(null);
-          notifyError(
+          notifyApiError(
+            error,
             "This listing is unavailable or no longer belongs to your account.",
           );
           await refreshSellerListings();
         } else if (error.status === 401) {
           setListingConfirmation(null);
-          setActivateAuth(true);
-          notifyError(
+          notifyApiError(
+            error,
             "Your session has expired. Sign in to archive this listing.",
           );
         } else {
-          notifyError(error.message || "Unable to archive this listing.");
+          notifyApiError(error, error.message || "Unable to archive this listing.");
         }
       } else {
-        notifyError(
+        notifyApiError(
+          error,
           error instanceof Error
             ? error.message
             : `Unable to ${action} this listing.`,

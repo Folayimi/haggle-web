@@ -1,6 +1,6 @@
 // services/conversations.ts
 import apiClient from "./client";
-import { notifyError } from "./toastify";
+import { notifyApiError } from "./toastify";
 import { Conversation, Message } from "@/types";
 
 export const listConversations = async (): Promise<Conversation[]> => {
@@ -11,7 +11,7 @@ export const listConversations = async (): Promise<Conversation[]> => {
       result = response?.data ?? [];
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error ?? "Failed to load conversations");
+      notifyApiError(err, err?.response?.data?.error ?? "Failed to load conversations");
       throw err;
     });
   return result;
@@ -30,7 +30,7 @@ export const createConversation = async (data: {
       result = response?.data ?? null;
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error ?? "Failed to start conversation");
+      notifyApiError(err, err?.response?.data?.error ?? "Failed to start conversation");
       throw err;
     });
   return result;
@@ -44,7 +44,7 @@ export const listMessages = async (conversationId: string): Promise<Message[]> =
       result = response?.data ?? [];
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error ?? "Failed to load messages");
+      notifyApiError(err, err?.response?.data?.error ?? "Failed to load messages");
       throw err;
     });
   return result;
@@ -65,7 +65,7 @@ export const sendMessage = async (
       result = response?.data ?? null;
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error ?? "Failed to send message");
+      notifyApiError(err, err?.response?.data?.error ?? "Failed to send message");
       throw err;
     });
   return result;

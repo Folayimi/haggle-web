@@ -54,9 +54,9 @@ const LoginPage = ({
   };
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full">
       {loading && <Loader type={"login"} />}
-      <div className="bg-white rounded-3xl shadow-xl p-8 md:p-10 transition-all duration-300">
+      <div className="w-full transition-all duration-300">
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <div className="flex items-center gap-1 text-2xl font-bold text-gray-800">

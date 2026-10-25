@@ -33,7 +33,6 @@ import { cn } from "@/lib/utils";
 import { createConversation, sendMessage } from "@/services/conversations";
 import { mapListingToService } from "@/services/mappers";
 import { getSellerListings } from "@/services/request";
-import { notifyError } from "@/services/toastify";
 import type { MarketService } from "@/types";
 import { AllReviewsView, ReviewPreview } from "./ListingReviews";
 
@@ -157,7 +156,6 @@ export function MarketServiceDetail({
     }
     if (!userData?.id) {
       setActivateAuth(true);
-      notifyError("Sign in to request a service quote.");
       return;
     }
 

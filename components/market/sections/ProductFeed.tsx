@@ -1,11 +1,10 @@
 "use client";
 
-import { useState } from "react";
 import { motion } from "framer-motion";
 
 import ProductCard from "@/components/market/cards/ProductCard";
-import { MarketSection } from "../common/MarketSection";
-import { SectionActionButton } from "../common/SectionHeader";
+import { Carousel } from "../common/Carousel";
+import { SectionActionButton, SectionHeader } from "../common/SectionHeader";
 
 import { SellerProduct } from "@/types";
 
@@ -14,71 +13,40 @@ interface ProductFeedProps {
   onProductSelect?: (product: SellerProduct) => void;
   onViewAll?: () => void;
 }
-const INITIAL_PRODUCTS = 12;
 
 export function ProductFeed({
   products,
   onProductSelect,
   onViewAll,
 }: ProductFeedProps) {
-  const [visible, setVisible] = useState(INITIAL_PRODUCTS);
-
-  const visibleProducts = products.slice(0, visible);
+  if (!products.length) return null;
 
   return (
-    <MarketSection
-      title="Latest Listings"
-      subtitle="Fresh products added by sellers."
-      action={
-        onViewAll ? (
-          <SectionActionButton label="See all" onClick={onViewAll} />
-        ) : undefined
-      }
-    >
-      <div
-        className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(min(100%,260px),280px))] justify-start gap-x-4 gap-y-6"
+    <section className="space-y-5">
+      <SectionHeader
+        title="Latest Listings"
+        subtitle="Fresh products added by sellers."
+        action={
+          onViewAll ? (
+            <SectionActionButton label="See all" onClick={onViewAll} />
+          ) : undefined
+        }
+      />
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.35 }}
       >
-        {visibleProducts.map((product, index) => (
-          <motion.div
-            key={product.id}
-            className="min-w-0"
-            initial={{
-              opacity: 0,
-              y: 20,
-            }}
-            whileInView={{
-              opacity: 1,
-              y: 0,
-            }}
-            transition={{
-              delay: index * 0.03,
-            }}
-            viewport={{
-              once: true,
-            }}
-          >
+        <Carousel
+          items={products}
+          itemWidth={280}
+          gap={12}
+          renderItem={(product) => (
             <ProductCard product={product} onSelect={onProductSelect} />
-          </motion.div>
-        ))}
-      </div>
-
-      {visible < products.length && (
-        <div className="flex justify-center pt-8">
-          <button
-            onClick={() => setVisible(visible + INITIAL_PRODUCTS)}
-            className="
-              rounded-full
-              bg-primary
-              px-8
-              py-3
-              font-semibold
-              text-white
-            "
-          >
-            Load More
-          </button>
-        </div>
-      )}
-    </MarketSection>
+          )}
+        />
+      </motion.div>
+    </section>
   );
 }

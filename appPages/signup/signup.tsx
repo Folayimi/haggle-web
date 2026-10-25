@@ -103,14 +103,14 @@ const SignupPage = ({
   };
 
   return (
-    <div className="w-full max-w-md">
+    <div className="w-full">
       {/* Loading overlay */}
       {(loading || resending) && (
         <Loader
           type={resending ? "resending" : step === 2 ? "signup" : "verify"}
         />
       )}
-      <div className="bg-white rounded-3xl shadow-xl p-8 md:p-10 transition-all duration-300">
+      <div className="w-full transition-all duration-300">
         {/* Logo */}
         <div className="flex justify-center mb-6">
           <div className="flex items-center gap-1 text-2xl font-bold text-gray-800">

@@ -75,7 +75,7 @@ import {
   getListing,
   updateListing,
 } from "@/services/request";
-import { notifyError } from "@/services/toastify";
+import { notifyApiError } from "@/services/toastify";
 import { useHaggleStore } from "@/lib/app-store";
 import Loader from "@/reusables/loader";
 import { useRouter } from "next/navigation";
@@ -1962,7 +1962,8 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
       return true;
     } catch (error) {
       console.error("Failed to save service listing:", error);
-      notifyError(
+      notifyApiError(
+        error,
         error instanceof Error ? error.message : "Unable to save service.",
       );
       return false;

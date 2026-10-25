@@ -19,7 +19,7 @@ import { useListingSave } from "@/components/market/hooks/useListingSave";
 import { trackListingInteraction } from "@/services/catalog";
 import { getSellerListings } from "@/services/request";
 import { mapListingToProduct } from "@/services/mappers";
-import { notifyError } from "@/services/toastify";
+import { notifyApiError } from "@/services/toastify";
 import {
   Dialog,
   DialogClose,
@@ -185,8 +185,8 @@ export function MarketProductDetail({
                           product.id,
                           "watch",
                           watched,
-                        ).catch(() =>
-                          notifyError("Could not record video engagement."),
+                        ).catch((error) =>
+                          notifyApiError(error, "Could not record video engagement."),
                         );
                       }
                     }}

@@ -20,8 +20,29 @@ import Link from "next/link";
 import { useHaggleStore } from "@/lib/app-store";
 import { usePathname } from "next/navigation";
 
-const SideNav = ({ userData }: { userData: any }) => {
-  const [tab, setTab] = useState("home");
+interface SideNavUser {
+  username?: string;
+  data?: {
+    username?: string;
+    profile?: {
+      full_name?: string;
+      username?: string;
+    };
+  };
+  user?: {
+    username?: string;
+    profile?: {
+      full_name?: string;
+      username?: string;
+    };
+  };
+  profile?: {
+    full_name?: string;
+    username?: string;
+  };
+}
+
+const SideNav = ({ userData }: { userData: SideNavUser | null }) => {
   const [collapsed, setCollapsed] = useState(
     typeof window !== "undefined"
       ? localStorage.getItem("sideNavCollapsed") === "true"
@@ -29,7 +50,25 @@ const SideNav = ({ userData }: { userData: any }) => {
   );
   const theme = useHaggleStore((state) => state.theme);
   const toggleTheme = useHaggleStore((state) => state.toggleTheme);
+  const clearUserData = useHaggleStore((state) => state.clearUserData);
+  const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
   const pathname = usePathname();
+  const isAuthenticated = Boolean(userData);
+  const username =
+    userData?.username ??
+    userData?.profile?.username ??
+    userData?.data?.username ??
+    userData?.data?.profile?.username ??
+    userData?.user?.username ??
+    userData?.user?.profile?.username;
+
+  const handleLogout = () => {
+    localStorage.removeItem("haggleAccessToken");
+    localStorage.removeItem("haggleRefreshToken");
+    localStorage.removeItem("haggleMediaAccessToken");
+    localStorage.setItem("activateAuth", "false");
+    clearUserData();
+  };
 
   // Base nav items (without profile)
   const baseNavItems = [
@@ -47,9 +86,13 @@ const SideNav = ({ userData }: { userData: any }) => {
   // Profile nav item
   const profileNavItem = {
     id: "profile",
-    label: userData?.profile?.full_name || "Profile",
+    label:
+      userData?.profile?.full_name ??
+      userData?.data?.profile?.full_name ??
+      userData?.user?.profile?.full_name ??
+      "Profile",
     icon: User,
-    path: `/profile/${userData?.username || userData?.profile?.username || ""}`,
+    path: username ? `/profile/${encodeURIComponent(username)}` : null,
   };
 
   // Combine: all nav items including profile at the end
@@ -132,12 +175,39 @@ const SideNav = ({ userData }: { userData: any }) => {
         <div className="flex flex-col gap-1">
           {navItems.map((item) => {
             const Icon = item.icon;
-            const active = isActive(item.path);
+            const active = item.path ? isActive(item.path) : false;
+            const handleProfileClick = (
+              event: React.MouseEvent<HTMLButtonElement>,
+            ) => {
+              if (
+                item.id === "profile" &&
+                (!item.path ||
+                  !localStorage.getItem("haggleAccessToken") ||
+                  !localStorage.getItem("haggleRefreshToken"))
+              ) {
+                event.preventDefault();
+                setActivateAuth(true);
+              }
+            };
 
             return (
-              <Link href={item.path} key={item.id}>
+              <Link
+                href={item.path ?? "#"}
+                key={item.id}
+                onClick={(event) => {
+                  if (
+                    item.id === "profile" &&
+                    (!item.path ||
+                      !localStorage.getItem("haggleAccessToken") ||
+                      !localStorage.getItem("haggleRefreshToken"))
+                  ) {
+                    event.preventDefault();
+                    setActivateAuth(true);
+                  }
+                }}
+              >
                 <button
-                  onClick={() => setTab(item.id)}
+                  onClick={handleProfileClick}
                   className={`
                     group relative flex items-center gap-3 px-3 py-2.5 rounded-xl w-full
                     transition-all duration-200
@@ -283,27 +353,30 @@ const SideNav = ({ userData }: { userData: any }) => {
             </span>
           </button>
 
-          {/* Logout */}
-          <button
-            className={`
-              flex items-center gap-3 px-3 py-2.5 rounded-xl w-full
-              transition-all duration-200
-              text-danger/70 hover:bg-danger/10 hover:text-danger
-              ${collapsed ? "justify-center px-0" : ""}
-            `}
-          >
-            <div className="flex items-center justify-center w-8 h-8 rounded-lg">
-              <LogOut size={18} />
-            </div>
-            <span
+          {isAuthenticated && (
+            <button
+              type="button"
+              onClick={handleLogout}
               className={`
-                font-medium text-sm transition-all duration-300
-                ${collapsed ? "w-0 opacity-0 absolute" : "w-auto opacity-100"}
+                flex items-center gap-3 px-3 py-2.5 rounded-xl w-full
+                transition-all duration-200
+                text-danger/70 hover:bg-danger/10 hover:text-danger
+                ${collapsed ? "justify-center px-0" : ""}
               `}
             >
-              Logout
-            </span>
-          </button>
+              <div className="flex items-center justify-center w-8 h-8 rounded-lg">
+                <LogOut size={18} />
+              </div>
+              <span
+                className={`
+                  font-medium text-sm transition-all duration-300
+                  ${collapsed ? "w-0 opacity-0 absolute" : "w-auto opacity-100"}
+                `}
+              >
+                Logout
+              </span>
+            </button>
+          )}
         </div>
       </div>
     </aside>

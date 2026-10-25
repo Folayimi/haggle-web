@@ -1,6 +1,6 @@
 // services/negotiation.ts
 import apiClient from "./client";
-import { notifyError } from "./toastify";
+import { notifyApiError } from "./toastify";
 
 export const createOffer = async (data: {
   listing_id: string;
@@ -16,7 +16,7 @@ export const createOffer = async (data: {
       result = response?.data;
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error ?? "Failed to make offer");
+      notifyApiError(err, err?.response?.data?.error ?? "Failed to make offer");
       throw err;
     });
   return result;
@@ -33,7 +33,7 @@ export const counterOffer = async (
       result = response?.data;
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error ?? "Failed to send counter offer");
+      notifyApiError(err, err?.response?.data?.error ?? "Failed to send counter offer");
       throw err;
     });
   return result;
@@ -47,7 +47,7 @@ export const acceptOffer = async (offerId: string) => {
       result = response?.data;
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error ?? "Failed to accept offer");
+      notifyApiError(err, err?.response?.data?.error ?? "Failed to accept offer");
       throw err;
     });
   return result;
@@ -61,7 +61,7 @@ export const rejectOffer = async (offerId: string) => {
       result = response?.data;
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error ?? "Failed to reject offer");
+      notifyApiError(err, err?.response?.data?.error ?? "Failed to reject offer");
       throw err;
     });
   return result;

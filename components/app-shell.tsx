@@ -42,7 +42,7 @@ const mainNav = [
   { href: "/market", label: "Market", icon: Search },
   { href: "/create", label: "Create", icon: Plus },
   { href: "/messages", label: "Messages", icon: MessageSquare },
-  { href: "/profile", label: "Profile", icon: User },
+  { href: null, label: "Profile", icon: User },
 ];
 
 export function AppShell({ children }: { children: React.ReactNode }) {
@@ -53,8 +53,19 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const toggleTheme = useHaggleStore((state) => state.toggleTheme);
   const userData = useHaggleStore((state) => state.userData);
   const setUserData = useHaggleStore((state) => state.setUserData);
+  const clearUserData = useHaggleStore((state) => state.clearUserData);
   const activateAuth = useHaggleStore((state) => state.activateAuth);
   const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
+  const username =
+    userData?.username ??
+    userData?.profile?.username ??
+    userData?.data?.username ??
+    userData?.data?.profile?.username ??
+    userData?.user?.username ??
+    userData?.user?.profile?.username;
+  const profileHref = username
+    ? `/profile/${encodeURIComponent(username)}`
+    : null;
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(`${href}/`);
@@ -81,10 +92,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         setUserData(user); // ✅ Update Zustand
       } catch (error) {
         console.error("Failed to fetch user profile:", error);
+        clearUserData();
         setActivateAuth(true);
       }
     } else {
-      setActivateAuth(true);
+      setUserData(null);
     }
   };
 
@@ -95,7 +107,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex h-screen text-foreground w-full z-50">
-      {activateAuth && <AuthPopUp setActivateAuth={setActivateAuth} />}
+      {activateAuth && (
+        <AuthPopUp setActivateAuth={setActivateAuth} initialView="login" />
+      )}
       <SideNav userData={userData} />
       <div className="flex h-full overflow-y-auto flex-1 flex-col">
         <header className="sticky top-0 z-40 border-b border-border bg-background/85 backdrop-blur xl:hidden">
@@ -132,12 +146,27 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           <div className="mx-auto flex max-w-2xl items-center justify-between gap-2">
             {mainNav.map((item) => {
               const Icon = item.icon;
-              const active = isActive(item.href);
+              const href = item.href ?? profileHref;
+              const active = href ? isActive(href) : false;
+              const handleProfileClick = (
+                event: React.MouseEvent<HTMLAnchorElement>,
+              ) => {
+                if (
+                  item.label === "Profile" &&
+                  (!href ||
+                    !localStorage.getItem("haggleAccessToken") ||
+                    !localStorage.getItem("haggleRefreshToken"))
+                ) {
+                  event.preventDefault();
+                  setActivateAuth(true);
+                }
+              };
 
               return (
                 <Link
-                  key={item.href}
-                  href={item.href}
+                  key={item.href ?? item.label}
+                  href={href ?? "#"}
+                  onClick={handleProfileClick}
                   className={cn(
                     "flex min-w-0 flex-1 flex-col items-center gap-1 rounded-2xl px-2 py-2 text-[11px] font-semibold",
                     active ? "bg-primary text-white" : "text-muted",
