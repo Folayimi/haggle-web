@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Heart, Star } from "lucide-react";
+import { Heart, MessageCircle, Star } from "lucide-react";
 
 import { CardImage } from "@/components/market/common/CardImage";
 import { ActionButton } from "@/components/market/common/ActionButton";
@@ -70,36 +70,45 @@ export default function ServiceCard({
           </button>
         </div>
 
-        <p className="absolute bottom-2 left-2 z-10 rounded-md bg-black/55 px-2.5 py-1 text-sm font-bold text-white shadow-sm backdrop-blur-sm sm:bottom-3 sm:left-3">
-          {Number.isFinite(price) ? formatPrice(price) : "Price unavailable"}
-          <span className="ml-1 text-[10px] font-medium text-white/70">starting</span>
-        </p>
+        <div className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 flex items-center justify-between gap-2 sm:bottom-3 sm:left-3 sm:right-3">
+          <p className="min-w-0 truncate rounded-md bg-black/65 px-2.5 py-1 text-sm font-bold text-white shadow-sm backdrop-blur-sm">
+            {Number.isFinite(price) ? formatPrice(price) : "Price unavailable"}
+            <span className="ml-1 text-[10px] font-medium text-white/70">starting</span>
+          </p>
+          <ActionButton
+            asChild
+            variant="secondary"
+            size="sm"
+            className="market-card-action shrink-0"
+          >
+            <Link
+              href={`/service-detail/${encodeURIComponent(service.id)}`}
+              className="pointer-events-auto"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Negotiate
+            </Link>
+          </ActionButton>
+        </div>
       </div>
 
-      <div className="flex items-start justify-between gap-3 pt-2.5">
-        <div className="min-w-0">
-          {onSelect ? (
-            <button
-              type="button"
-              onClick={() => onSelect(service)}
-              className="line-clamp-1 text-sm font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-            >
-              {service.name}
-            </button>
-          ) : (
-            <h2 className="line-clamp-1 text-sm font-semibold text-foreground">
-              {service.name}
-            </h2>
-          )}
-          <p className="mt-0.5 line-clamp-1 text-xs leading-4 text-muted">{service.description}</p>
-          {service.recommendationReason && <p className="mt-1 text-[11px] font-medium text-primary">{recommendationLabel(service.recommendationReason)}</p>}
-          {!!service.ratingSummary?.count && <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted"><Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />{service.ratingSummary.average.toFixed(1)} ({service.ratingSummary.count})</p>}
-        </div>
-        <ActionButton asChild variant="secondary" size="sm" className="shrink-0">
-          <Link href={`/service-detail/${encodeURIComponent(service.id)}`}>
-            View details
-          </Link>
-        </ActionButton>
+      <div className="min-w-0 pt-2.5">
+        {onSelect ? (
+          <button
+            type="button"
+            onClick={() => onSelect(service)}
+            className="line-clamp-1 text-sm font-semibold text-foreground hover:text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          >
+            {service.name}
+          </button>
+        ) : (
+          <h2 className="line-clamp-1 text-sm font-semibold text-foreground">
+            {service.name}
+          </h2>
+        )}
+        <p className="mt-0.5 line-clamp-1 text-xs leading-4 text-muted">{service.description}</p>
+        {service.recommendationReason && <p className="mt-1 text-[11px] font-medium text-primary">{recommendationLabel(service.recommendationReason)}</p>}
+        {!!service.ratingSummary?.count && <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted"><Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />{service.ratingSummary.average.toFixed(1)} ({service.ratingSummary.count})</p>}
       </div>
     </article>
   );

@@ -51,24 +51,24 @@ export default function ProductCard({
               alt={product.name}
               className="h-full w-full [&_img]:h-full"
             />
-            <p className="absolute bottom-2 left-2 z-10 rounded-md bg-black/55 px-2.5 py-1 text-sm font-bold tracking-tight text-white shadow-sm backdrop-blur-sm sm:bottom-3 sm:left-3">
-              {Number.isFinite(price)
-                ? formatPrice(price, product.priceCurrency)
-                : "Price unavailable"}
-            </p>
-          </div>
-
-          <div className="min-w-0 pt-2.5">
-            <h3 className="line-clamp-1 text-sm font-semibold leading-snug text-foreground">
-              {product.name}
-            </h3>
-            <p className="mt-0.5 line-clamp-1 text-xs leading-4 text-muted">
-              {product.description}
-            </p>
-            {product.recommendationReason && <p className="mt-1 text-[11px] font-medium text-primary">{recommendationLabel(product.recommendationReason)}</p>}
-            {!!product.ratingSummary?.count && <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted"><Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />{product.ratingSummary.average.toFixed(1)} ({product.ratingSummary.count})</p>}
           </div>
         </button>
+        <div className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 flex items-center justify-between gap-2 sm:bottom-3 sm:left-3 sm:right-3">
+          <p className="min-w-0 truncate rounded-md bg-black/65 px-2.5 py-1 text-sm font-bold tracking-tight text-white shadow-sm backdrop-blur-sm">
+            {Number.isFinite(price)
+              ? formatPrice(price, product.priceCurrency)
+              : "Price unavailable"}
+          </p>
+          <ActionButton asChild size="sm" className="market-card-action shrink-0">
+            <Link
+              href={`/product-detail/${encodeURIComponent(product.id)}`}
+              className="pointer-events-auto"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Negotiate
+            </Link>
+          </ActionButton>
+        </div>
         <button
           type="button"
           onClick={() => {
@@ -93,20 +93,24 @@ export default function ProductCard({
         </button>
       </div>
 
-      <div className="flex justify-end pt-2">
-        <ActionButton
-          asChild
-          size="sm"
-          className="market-card-action shrink-0"
-        >
-          <Link
-            href={`/product-detail/${encodeURIComponent(product.id)}`}
-          >
-            <MessageCircle className="h-4 w-4" />
-            Negotiate
-          </Link>
-        </ActionButton>
-      </div>
+      <button
+        type="button"
+        onClick={() => onSelect?.(product)}
+        disabled={!onSelect}
+        className={cn(
+          "block w-full min-w-0 rounded-xl pt-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-default",
+          onSelect && "cursor-pointer",
+        )}
+      >
+        <h3 className="line-clamp-1 text-sm font-semibold leading-snug text-foreground">
+          {product.name}
+        </h3>
+        <p className="mt-0.5 line-clamp-1 text-xs leading-4 text-muted">
+          {product.description}
+        </p>
+        {product.recommendationReason && <p className="mt-1 text-[11px] font-medium text-primary">{recommendationLabel(product.recommendationReason)}</p>}
+        {!!product.ratingSummary?.count && <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted"><Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />{product.ratingSummary.average.toFixed(1)} ({product.ratingSummary.count})</p>}
+      </button>
     </article>
   );
 }
