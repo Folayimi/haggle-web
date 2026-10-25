@@ -7,9 +7,11 @@ import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
   Archive,
+  BarChart3,
   CalendarDays,
   Camera,
   Clock3,
+  Eye,
   ImagePlus,
   LoaderCircle,
   MoreHorizontal,
@@ -149,6 +151,10 @@ export default function ProfileWorkspacePage({
   const [listingsLoading, setListingsLoading] = useState(false);
   const [listingsError, setListingsError] = useState(false);
   const [listingActionId, setListingActionId] = useState<string | null>(null);
+  const [listingConfirmation, setListingConfirmation] = useState<{
+    listing: BackendListing;
+    action: "archive" | "delete";
+  } | null>(null);
   const [listingView, setListingView] = useState<"active" | "archived" | "drafts">("active");
 
   useEffect(() => {
@@ -475,13 +481,6 @@ export default function ProfileWorkspacePage({
     action: "archive" | "delete",
   ) => {
     if (listingActionId) return;
-    if (action === "delete" && !window.confirm(`Delete “${listing.title}”? This cannot be undone.`)) return;
-    if (
-      action === "archive" &&
-      !window.confirm(
-        `Archive “${listing.title}”? It will be hidden from public discovery and kept in your archived listings.`,
-      )
-    ) return;
     setListingActionId(listing.id);
     try {
       if (action === "archive") {
@@ -493,16 +492,17 @@ export default function ProfileWorkspacePage({
       } else {
         await deleteListing(listing.id);
         notify("Listing deleted.");
-      }
-      if (action === "delete") {
         setListings((current) => current.filter((item) => item.id !== listing.id));
       }
+      setListingConfirmation(null);
     } catch (error) {
       if (action === "archive" && error instanceof ArchiveListingError) {
         if (error.status === 404) {
+          setListingConfirmation(null);
           notifyError("This listing is unavailable or no longer belongs to your account.");
           await refreshSellerListings();
         } else if (error.status === 401) {
+          setListingConfirmation(null);
           setActivateAuth(true);
           notifyError("Your session has expired. Sign in to archive this listing.");
         } else {
@@ -1248,11 +1248,11 @@ export default function ProfileWorkspacePage({
                                     <Pencil className="mr-2 h-4 w-4" /> Edit
                                   </DropdownMenuItem>
                                   {item.status?.toLowerCase() !== "archived" && (
-                                    <DropdownMenuItem disabled={listingActionId === item.id} onClick={() => void handleListingAction(item, "archive")}>
+                                    <DropdownMenuItem disabled={listingActionId === item.id} onClick={() => setListingConfirmation({ listing: item, action: "archive" })}>
                                       <Archive className="mr-2 h-4 w-4" /> Archive
                                     </DropdownMenuItem>
                                   )}
-                                  <DropdownMenuItem variant="destructive" disabled={listingActionId === item.id} onClick={() => void handleListingAction(item, "delete")}>
+                                  <DropdownMenuItem variant="destructive" disabled={listingActionId === item.id} onClick={() => setListingConfirmation({ listing: item, action: "delete" })}>
                                     <Trash2 className="mr-2 h-4 w-4" /> Delete
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -1262,7 +1262,7 @@ export default function ProfileWorkspacePage({
                         </div>
                       )}
                     </div>
-                    <div className="p-4">
+                    <div className="p-4 pb-12">
                       <h3 className="font-semibold">{item.title}</h3>
                       <p className="mt-1 line-clamp-2 text-sm text-muted">
                         {item.description}
@@ -1274,6 +1274,28 @@ export default function ProfileWorkspacePage({
                         </p>
                       )}
                     </div>
+                    {isOwner && (
+                      <>
+                        <span
+                          aria-label={`${item.view_count ?? 0} views`}
+                          className="absolute bottom-3 left-3 z-10 inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/95 px-2.5 py-1.5 text-xs font-medium text-muted opacity-100 shadow-sm backdrop-blur transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                        >
+                          <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                          {Number(item.view_count ?? 0).toLocaleString()}
+                        </span>
+                        <div className="absolute bottom-3 right-3 z-10 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                          <button
+                            type="button"
+                            aria-label={`View analytics for ${item.title}`}
+                            onClick={() => router.push(`/listing-analytics/${encodeURIComponent(item.id)}`)}
+                            className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-background/95 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur transition hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          >
+                            <BarChart3 className="h-3.5 w-3.5" />
+                            View analytics
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </article>
                 ))}
               </div>
@@ -1335,6 +1357,84 @@ export default function ProfileWorkspacePage({
           </div>
         </section>
       </div>
+      <Dialog
+        open={Boolean(listingConfirmation)}
+        onOpenChange={(open) => {
+          if (!open && !listingActionId) setListingConfirmation(null);
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="w-[calc(100vw-2rem)] max-w-md gap-0 overflow-hidden rounded-2xl border border-border/70 border-t-4 border-t-primary p-0 shadow-xl shadow-primary/10"
+        >
+          {listingConfirmation && (
+            <>
+              <DialogHeader className="border-b border-border/60 bg-primary/[0.03] px-6 py-6">
+                <div className="flex items-start gap-4">
+                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${listingConfirmation.action === "delete" ? "bg-danger/10 text-danger" : "bg-primary/10 text-primary"}`}>
+                    {listingConfirmation.action === "archive" ? (
+                      <Archive className="h-5 w-5" />
+                    ) : (
+                      <Trash2 className="h-5 w-5" />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <DialogTitle className="text-lg font-bold">
+                      {listingConfirmation.action === "archive"
+                        ? "Archive this listing?"
+                        : "Delete this listing?"}
+                    </DialogTitle>
+                    <DialogDescription className="leading-relaxed">
+                      {listingConfirmation.action === "archive" ? (
+                        <>
+                          <span className="font-medium text-foreground">
+                            {listingConfirmation.listing.title}
+                          </span>{" "}
+                          will be hidden from public discovery and kept in your
+                          archived listings. You can still manage it later.
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-medium text-foreground">
+                            {listingConfirmation.listing.title}
+                          </span>{" "}
+                          will be permanently deleted. This action cannot be undone.
+                        </>
+                      )}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+              <DialogFooter className="mx-0 mb-0 border-0 bg-transparent px-6 pb-7 pt-5">
+                <button
+                  type="button"
+                  disabled={Boolean(listingActionId)}
+                  onClick={() => setListingConfirmation(null)}
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-border/70 px-4 text-sm font-semibold text-foreground transition hover:bg-background-elevated disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(listingActionId)}
+                  onClick={() =>
+                    void handleListingAction(
+                      listingConfirmation.listing,
+                      listingConfirmation.action,
+                    )
+                  }
+                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${listingConfirmation.action === "delete" ? "bg-danger hover:bg-danger/90" : "bg-primary hover:bg-primary-strong"}`}
+                >
+                  {listingActionId ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  {listingActionId ? "Processing..." : "Proceed"}
+                </button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
       <Dialog
         open={Boolean(imagePreview)}
         onOpenChange={(open) => {

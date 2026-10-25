@@ -13,10 +13,12 @@ import {
 import { useEffect, useMemo, useState } from "react";
 
 import { getProductCover } from "@/components/market/data/market";
+import ProductCard from "@/components/market/cards/ProductCard";
 import { useListingReviews } from "@/components/market/hooks/useListingReviews";
 import { useListingSave } from "@/components/market/hooks/useListingSave";
-import { ListingAnalytics } from "@/components/market/sections/ListingAnalytics";
 import { trackListingInteraction } from "@/services/catalog";
+import { getSellerListings } from "@/services/request";
+import { mapListingToProduct } from "@/services/mappers";
 import { notifyError } from "@/services/toastify";
 import {
   Dialog,
@@ -27,22 +29,24 @@ import {
 } from "@/components/ui/dialog";
 import { formatPrice } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
-import { useHaggleStore } from "@/lib/app-store";
 import type { Media, SellerProduct } from "@/types";
 import { AllReviewsView, ReviewPreview } from "./ListingReviews";
 
 export function MarketProductDetail({
   product,
+  onProductSelect,
   showAllReviews,
   onShowAllReviewsChange,
 }: {
   product: SellerProduct;
+  onProductSelect: (product: SellerProduct) => void;
   showAllReviews: boolean;
   onShowAllReviewsChange: (show: boolean) => void;
 }) {
   const { saved, pending: savePending, toggle: toggleSaved } = useListingSave(product.id);
-  const userData = useHaggleStore((state) => state.userData);
   const reviews = useListingReviews(product.id, product.sellerId);
+  const [sellerProducts, setSellerProducts] = useState<SellerProduct[]>([]);
+  const [sellerProductsLoading, setSellerProductsLoading] = useState(true);
   const coverUrl = product.imageUrl ?? getProductCover(product);
   const mediaItems = useMemo(() => {
     const result: Media[] = [];
@@ -91,6 +95,33 @@ export function MarketProductDetail({
     typeof product.price === "number"
       ? product.price
       : Number(String(product.price).replace(/[^\d.-]/g, ""));
+
+  useEffect(() => {
+    let cancelled = false;
+    setSellerProductsLoading(true);
+    void getSellerListings(product.sellerId)
+      .then((listings) => {
+        if (cancelled) return;
+        const otherProducts = listings
+          .filter(
+            (listing) =>
+              listing.id !== product.id &&
+              listing.listing_type?.toLowerCase() === "product" &&
+              listing.status?.toLowerCase() === "published",
+          )
+          .map(mapListingToProduct);
+        setSellerProducts(otherProducts.slice(0, 4));
+      })
+      .catch(() => {
+        if (!cancelled) setSellerProducts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setSellerProductsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [product.id, product.sellerId]);
 
   useEffect(() => {
     if (viewerIndex === null || mediaItems.length < 2) return;
@@ -167,7 +198,7 @@ export function MarketProductDetail({
           )}
         </div>
         <Link
-          href={`/product-detail?product=${encodeURIComponent(product.id)}`}
+          href={`/product-detail/${encodeURIComponent(product.id)}`}
           className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
         >
           <MessageCircle className="h-4 w-4" aria-hidden="true" />
@@ -335,7 +366,47 @@ export function MarketProductDetail({
         onShowAll={() => onShowAllReviewsChange(true)}
       />
 
-      {userData?.id && userData.id === product.sellerId && <ListingAnalytics listingId={product.id} />}
+      {!showAllReviews && (
+        <section
+          aria-labelledby="more-from-seller-title"
+          className="rounded-2xl bg-background p-4 sm:p-6"
+        >
+          <div className="mb-5">
+            <h2 id="more-from-seller-title" className="text-lg font-bold">
+              More products by this seller
+            </h2>
+            <p className="mt-1 text-sm text-muted">
+              Explore other products from the same seller.
+            </p>
+          </div>
+          {sellerProductsLoading ? (
+            <div role="status" className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <span className="sr-only">Loading more products from this seller</span>
+              {Array.from({ length: 4 }, (_, index) => (
+                <div key={index} className="animate-pulse">
+                  <div className="aspect-[4/3] rounded-xl bg-primary/10" />
+                  <div className="mt-3 h-4 w-3/4 rounded bg-primary/10" />
+                  <div className="mt-2 h-3 w-full rounded bg-primary/10" />
+                </div>
+              ))}
+            </div>
+          ) : sellerProducts.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              {sellerProducts.map((sellerProduct) => (
+                <ProductCard
+                  key={sellerProduct.id}
+                  product={sellerProduct}
+                  onSelect={onProductSelect}
+                />
+              ))}
+            </div>
+          ) : (
+            <p className="rounded-xl border border-dashed border-border/60 px-4 py-6 text-center text-sm text-muted">
+              This seller has no other published products yet.
+            </p>
+          )}
+        </section>
+      )}
 
       <Dialog
         open={viewerIndex !== null}

@@ -83,7 +83,7 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
       <div className="flex justify-end pt-2">
         <ActionButton asChild size="sm" className="shrink-0">
           <Link
-            href={`/product-detail?product=${encodeURIComponent(product.id)}`}
+            href={`/product-detail/${encodeURIComponent(product.id)}`}
           >
             <MessageCircle className="h-4 w-4" />
             Negotiate

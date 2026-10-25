@@ -5,8 +5,6 @@ import Link from "next/link";
 import { Clock3, MapPin, MessageCircle, Users } from "lucide-react";
 
 import { formatPrice } from "@/lib/formatters";
-import { useHaggleStore } from "@/lib/app-store";
-import { ListingAnalytics } from "@/components/market/sections/ListingAnalytics";
 import { useListingReviews } from "@/components/market/hooks/useListingReviews";
 import type { MarketService } from "@/types";
 import { AllReviewsView, ReviewPreview } from "./ListingReviews";
@@ -43,7 +41,6 @@ export function MarketServiceDetail({
   onShowAllReviewsChange: (show: boolean) => void;
 }) {
   const reviews = useListingReviews(service.id, service.sellerId);
-  const userData = useHaggleStore((state) => state.userData);
   const price =
     service.price === "" ? Number.NaN : Number(String(service.price).replace(/[^\d.-]/g, ""));
   const gallery = Array.from(
@@ -171,8 +168,6 @@ export function MarketServiceDetail({
         hasOwnReview={Boolean(reviews.myReview)}
         onShowAll={() => onShowAllReviewsChange(true)}
       />
-
-      {userData?.id && userData.id === service.sellerId && <ListingAnalytics listingId={service.id} />}
 
       <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(240px,0.55fr)]">
         <div>
