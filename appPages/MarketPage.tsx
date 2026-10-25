@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 
 import { AppShell } from "@/components/app-shell";
+import { useHaggleStore } from "@/lib/app-store";
 import { ActionCard } from "@/components/market/common/ActionCard";
 import {
   MarketLoadingSkeleton,
@@ -145,6 +146,8 @@ const MarketPage = ({
   initialServiceId?: string;
 } = {}) => {
   const router = useRouter();
+  const userData = useHaggleStore((state) => state.userData);
+  const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
   const sectionsContainerRef = useRef<HTMLDivElement>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
@@ -540,7 +543,18 @@ const MarketPage = ({
           <div className="flex w-[600px] items-center">
             <MarketSearch value={searchQuery} onChange={setSearchQuery} />
           </div>
-          <BroadcastButton size="sm" className="shrink-0" />
+          <div className="flex shrink-0 items-center gap-2">
+            {!userData && (
+              <button
+                type="button"
+                onClick={() => setActivateAuth(true)}
+                className="rounded-full border border-border bg-background px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-background-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+              >
+                Sign in
+              </button>
+            )}
+            <BroadcastButton size="sm" className="shrink-0" />
+          </div>
         </header>
 
         <div
