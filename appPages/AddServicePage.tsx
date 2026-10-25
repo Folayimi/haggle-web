@@ -61,7 +61,11 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
-import { SERVICE_CATEGORIES, type Subcategory } from "@/types/categories";
+import {
+  getApplicableCategoryTags,
+  SERVICE_CATEGORIES,
+  type Subcategory,
+} from "@/types/categories";
 import { ProductMedia, ProductMediaRef, GalleryImage } from "@/components/ProductMedia";
 import {
   createCategory,
@@ -1616,6 +1620,7 @@ function StickyHeader({
 // ============================================
 const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {}) => {
   const serviceMediaRef = useRef<ProductMediaRef>(null);
+  const saveInProgressRef = useRef(false);
   const userData = useHaggleStore((state) => state.userData);
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("tell");
@@ -1705,7 +1710,30 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
         const style = String(listing.negotiation_style || "").toUpperCase();
         if (["FIXED", "NEGOTIABLE", "COUNTER"].includes(style)) setNegotiationStyle(style as NegotiationStyle);
         setNegotiationNote(listing.negotiation_note || "");
-        setTags(Array.isArray(listing.tags) ? listing.tags.join("|") : listing.tags || "");
+        const applicableTags = getApplicableCategoryTags(
+          selectedCategory,
+          selectedSubcategory.id,
+        ).filter(
+          (tag) =>
+            !["delivery time", "location"].includes(tag.name.toLowerCase()),
+        );
+        const tagEntries = (
+          Array.isArray(listing.tags) ? listing.tags.join("|") : listing.tags || ""
+        )
+          .split("|")
+          .filter(Boolean)
+          .filter((entry) =>
+            applicableTags.some((tag) =>
+              entry.startsWith(`${tag.name.toLowerCase()}:`),
+            ),
+          );
+        for (const tag of applicableTags.filter((item) => item.required)) {
+          const key = tag.name.toLowerCase();
+          if (!tagEntries.some((entry) => entry.startsWith(`${key}:`))) {
+            tagEntries.push(`${key}:`);
+          }
+        }
+        setTags(tagEntries.join("|"));
         setListingId(listing.id);
         localStorage.setItem("serviceListingId", listing.id);
         const media = [...(listing.medias?.length ? listing.medias : listing.media || [])]
@@ -1759,8 +1787,11 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
   // INITIALIZE TAGS WHEN CATEGORY CHANGES
   // ============================================
   const selectedCategory = SERVICE_CATEGORIES.find((c) => c.name === category);
+  const selectedSubcategory = selectedCategory?.subcategories.find(
+    (item) => item.name === serviceType,
+  );
   const requiredTags =
-    selectedCategory?.requiredTags.filter(
+    getApplicableCategoryTags(selectedCategory, selectedSubcategory?.id).filter(
       (tag) =>
         !["delivery time", "location"].includes(tag.name.toLowerCase()),
     ) ?? [];
@@ -1804,6 +1835,7 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
   };
 
   const handleTabChange = (tab: TabId) => {
+    if (saveInProgressRef.current) return;
     const currentIndex = tabs.findIndex((item) => item.id === activeTab);
     const targetIndex = tabs.findIndex((item) => item.id === tab);
     if (targetIndex > currentIndex + 1) return;
@@ -1858,6 +1890,8 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
   };
 
   const saveListing = async (status: "draft" | "published" = "draft") => {
+    if (saveInProgressRef.current) return false;
+    saveInProgressRef.current = true;
     setSaving(true);
     setPublishing(status === "published");
     try {
@@ -1933,12 +1967,14 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
       );
       return false;
     } finally {
+      saveInProgressRef.current = false;
       setSaving(false);
       setPublishing(false);
     }
   };
 
   const handleNext = async () => {
+    if (saveInProgressRef.current) return;
     if (activeTab === "tell") {
       if (!validateTab("tell")) return;
       if (await saveListing()) {
@@ -1996,12 +2032,18 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
   const detailsConfidence = getDetailsConfidence();
   const pricingConfidence = getPricingConfidence();
   const mediaConfidence = getMediaConfidence();
+  const isSaving = saving || publishing;
 
   return (
     <AppShell>
       {publishing && <Loader type="publishing" />}
       {editLoading && <Loader type="publishing" />}
       {editError && <div role="alert" className="mx-auto mt-4 max-w-3xl rounded-xl bg-danger/10 p-4 text-sm text-danger">{editError}</div>}
+      <fieldset
+        disabled={isSaving || editLoading}
+        aria-busy={isSaving || editLoading}
+        className="contents"
+      >
       <div className="min-h-screen flex flex-col">
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 lg:px-6 flex flex-col">
           {/* STICKY HEADER */}
@@ -2129,16 +2171,18 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
                             setServiceSubCategories(
                               selected?.subcategories ?? [],
                             );
+                            const applicableTags = getApplicableCategoryTags(selected)
+                              .filter(
+                                (tag) =>
+                                  !["delivery time", "location"].includes(
+                                    tag.name.toLowerCase(),
+                                  ),
+                              );
                             setTags(
-                              selected?.requiredTags
-                                .filter(
-                                  (tag) =>
-                                    !["delivery time", "location"].includes(
-                                      tag.name.toLowerCase(),
-                                    ),
-                                )
+                              applicableTags
+                                .filter((tag) => tag.required)
                                 .map((tag) => `${tag.name.toLowerCase()}:`)
-                                .join("|") ?? "",
+                                .join("|"),
                             );
                             setValidationErrors((prev) => {
                               const next = { ...prev };
@@ -2156,6 +2200,43 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
                           error={validationErrors.serviceType}
                           onChange={(value) => {
                             setServiceType(value);
+                            const subcategory = selectedCategory?.subcategories.find(
+                              (item) => item.name === value,
+                            );
+                            const applicableTags = getApplicableCategoryTags(
+                              selectedCategory,
+                              subcategory?.id,
+                            ).filter(
+                              (tag) =>
+                                !["delivery time", "location"].includes(
+                                  tag.name.toLowerCase(),
+                                ),
+                            );
+                            setTags((current) => {
+                              const entries = current
+                                .split("|")
+                                .filter(Boolean)
+                                .filter((entry) =>
+                                  applicableTags.some((tag) =>
+                                    entry.startsWith(
+                                      `${tag.name.toLowerCase()}:`,
+                                    ),
+                                  ),
+                                );
+                              for (const tag of applicableTags.filter(
+                                (item) => item.required,
+                              )) {
+                                const key = tag.name.toLowerCase();
+                                if (
+                                  !entries.some((entry) =>
+                                    entry.startsWith(`${key}:`),
+                                  )
+                                ) {
+                                  entries.push(`${key}:`);
+                                }
+                              }
+                              return entries.join("|");
+                            });
                             setValidationErrors((prev) => {
                               const next = { ...prev };
                               delete next.serviceType;
@@ -2372,6 +2453,18 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
           </div>
         </div>
       </div>
+      </fieldset>
+      {isSaving && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/30 backdrop-blur-[1px]"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="rounded-full bg-background-elevated px-5 py-3 text-sm font-medium text-foreground shadow-lg">
+            {publishing ? "Publishing service…" : "Saving service…"}
+          </span>
+        </div>
+      )}
     </AppShell>
   );
 };

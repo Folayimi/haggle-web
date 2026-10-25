@@ -26,6 +26,18 @@ export interface ListingFeedResult {
   limit: number;
 }
 
+export interface SavedListing extends BackendListing {
+  saved_at: string;
+}
+
+export interface SavedListingPage {
+  listings: SavedListing[];
+  page: number;
+  limit: number;
+  total: number;
+  totalPages: number;
+}
+
 export interface ListingAnalytics {
   total_views: number;
   views: number;
@@ -62,6 +74,67 @@ function validatePage(page: number, limit: number) {
   if (!Number.isInteger(limit) || limit < 1 || limit > 50) {
     throw new Error("Page size must be an integer from 1 to 50.");
   }
+}
+
+function getCatalogAuthConfig() {
+  const accessToken =
+    typeof window === "undefined"
+      ? null
+      : window.localStorage.getItem("haggleAccessToken");
+  return accessToken
+    ? { headers: { Authorization: `Bearer ${accessToken}` } }
+    : {};
+}
+
+export async function getSavedListings(
+  page = 1,
+  limit = 20,
+): Promise<SavedListingPage> {
+  validatePage(page, limit);
+  const response = await apiClient.get<{
+    success: boolean;
+    message?: string;
+    data: SavedListing[];
+    pagination: {
+      page: number;
+      limit: number;
+      total: number;
+      totalPages: number;
+    };
+  }>("/catalog/listings/saved", {
+    params: { page, limit },
+    ...getCatalogAuthConfig(),
+  });
+  const payload = response.data;
+  if (
+    payload.success !== true ||
+    !Array.isArray(payload.data) ||
+    !payload.pagination ||
+    !Number.isInteger(payload.pagination.page) ||
+    payload.pagination.page < 1 ||
+    !Number.isInteger(payload.pagination.limit) ||
+    payload.pagination.limit < 1 ||
+    payload.pagination.limit > 50 ||
+    !Number.isInteger(payload.pagination.total) ||
+    payload.pagination.total < 0 ||
+    !Number.isInteger(payload.pagination.totalPages) ||
+    payload.pagination.totalPages < 0 ||
+    payload.data.some(
+      (listing) =>
+        !listing ||
+        typeof listing.id !== "string" ||
+        typeof listing.saved_at !== "string",
+    )
+  ) {
+    throw new Error(payload.message || "Invalid saved listings response.");
+  }
+  return {
+    listings: payload.data,
+    page: payload.pagination.page,
+    limit: payload.pagination.limit,
+    total: payload.pagination.total,
+    totalPages: payload.pagination.totalPages,
+  };
 }
 
 export async function getListing(listingId: string): Promise<BackendListing> {
@@ -279,6 +352,8 @@ export async function saveListing(listingId: string): Promise<unknown> {
   // The documented contract does not define this endpoint's response body.
   const response = await apiClient.post(
     `/catalog/listings/${encodeURIComponent(listingId)}/save`,
+    undefined,
+    getCatalogAuthConfig(),
   );
   return response.data;
 }
@@ -286,7 +361,10 @@ export async function saveListing(listingId: string): Promise<unknown> {
 export async function unsaveListing(listingId: string): Promise<boolean> {
   const response = await apiClient.delete<{
     removed: boolean;
-  }>(`/catalog/listings/${encodeURIComponent(listingId)}/unsave`);
+  }>(
+    `/catalog/listings/${encodeURIComponent(listingId)}/unsave`,
+    getCatalogAuthConfig(),
+  );
   if (typeof response.data.removed !== "boolean") {
     throw new Error("Invalid unsave response.");
   }

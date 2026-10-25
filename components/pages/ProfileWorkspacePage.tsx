@@ -8,6 +8,7 @@ import {
   BadgeCheck,
   Archive,
   BarChart3,
+  CheckCircle2,
   CalendarDays,
   Camera,
   Clock3,
@@ -27,6 +28,8 @@ import {
   X,
 } from "lucide-react";
 import { useHaggleStore } from "@/lib/app-store";
+import ProductCard from "@/components/market/cards/ProductCard";
+import ServiceCard from "@/components/market/cards/ServiceCard";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,15 +37,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import {
-  allLiveSessions,
-  marketServices,
-  sellerProducts,
-} from "@/lib/mock-data";
-import {
   archiveListing,
   deleteListing,
+  getAllCategories,
+  getListing,
   getSellerListings,
   confirmUpload,
+  updateListing,
   updateUserProfile,
   uploadImage,
 } from "@/services/request";
@@ -50,8 +51,22 @@ import {
   ArchiveListingError,
   replaceWithArchivedListing,
 } from "@/services/archive-listing";
+import {
+  getCatalogErrorStatus,
+  getSavedListings,
+  unsaveListing,
+} from "@/services/catalog";
 import { notify, notifyError } from "@/services/toastify";
-import type { BackendListing } from "@/services/mappers";
+import {
+  mapListingToProduct,
+  mapListingToService,
+  type BackendListing,
+} from "@/services/mappers";
+import {
+  getApplicableCategoryTags,
+  PRODUCT_CATEGORIES,
+  SERVICE_CATEGORIES,
+} from "@/types/categories";
 import {
   Dialog,
   DialogContent,
@@ -76,12 +91,12 @@ type ProfileDetailsDraft = {
   phone: string;
   website: string;
 };
-type ProfileTab = "Products" | "Services" | "Liked" | "Scheduled lives";
+type ProfileTab = "Products" | "Services" | "Favorites" | "Scheduled lives";
 const emptyMedia: ProfileMedia = { avatar: "", cover: "" };
 const tabs: { label: ProfileTab; icon: typeof Package }[] = [
   { label: "Products", icon: Package },
   { label: "Services", icon: Wrench },
-  { label: "Liked", icon: Star },
+  { label: "Favorites", icon: Star },
   { label: "Scheduled lives", icon: Radio },
 ];
 
@@ -114,7 +129,7 @@ export default function ProfileWorkspacePage({
   const userData = useHaggleStore((state) => state.userData);
   const setUserData = useHaggleStore((state) => state.setUserData);
   const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
-  const savedItemIds = useHaggleStore((state) => state.savedItemIds);
+  const setSavedItem = useHaggleStore((state) => state.setSavedItem);
   const accountProfile = userData?.profile ?? {};
   const accountUsername = String(
     userData?.username || accountProfile.username || "",
@@ -150,12 +165,26 @@ export default function ProfileWorkspacePage({
   const [listings, setListings] = useState<BackendListing[]>([]);
   const [listingsLoading, setListingsLoading] = useState(false);
   const [listingsError, setListingsError] = useState(false);
+  const [favoriteListings, setFavoriteListings] = useState<BackendListing[]>(
+    [],
+  );
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoritesError, setFavoritesError] = useState(false);
+  const [favoritesRetry, setFavoritesRetry] = useState(0);
+  const [favoritesPage, setFavoritesPage] = useState(1);
+  const [favoritesTotal, setFavoritesTotal] = useState(0);
+  const [favoritesTotalPages, setFavoritesTotalPages] = useState(0);
+  const [favoriteActionId, setFavoriteActionId] = useState<string | null>(
+    null,
+  );
   const [listingActionId, setListingActionId] = useState<string | null>(null);
   const [listingConfirmation, setListingConfirmation] = useState<{
     listing: BackendListing;
-    action: "archive" | "delete";
+    action: "archive" | "publish" | "delete";
   } | null>(null);
-  const [listingView, setListingView] = useState<"active" | "archived" | "drafts">("active");
+  const [listingView, setListingView] = useState<
+    "active" | "archived" | "drafts"
+  >("active");
 
   useEffect(() => {
     if (!isOwner) return;
@@ -224,7 +253,12 @@ export default function ProfileWorkspacePage({
           setListings(
             result.filter((listing) => {
               const status = listing.status?.toLowerCase();
-              return !status || status === "published" || status === "archived" || status === "draft";
+              return (
+                !status ||
+                status === "published" ||
+                status === "archived" ||
+                status === "draft"
+              );
             }),
           );
         }
@@ -257,10 +291,7 @@ export default function ProfileWorkspacePage({
   const avatarUrl =
     media.avatar || profile.avatar_url || ownerData?.avatar_url || "";
   const coverUrl =
-    media.cover ||
-    profile.cover_image_url ||
-    ownerData?.cover_image_url ||
-    "";
+    media.cover || profile.cover_image_url || ownerData?.cover_image_url || "";
   const verified = Boolean(
     profile.is_verified || ownerData?.is_verified || profile.verified,
   );
@@ -303,31 +334,78 @@ export default function ProfileWorkspacePage({
       (item.listing_type || "").toLowerCase() === "service" ||
       (item.listing_type || "").toLowerCase() === "services",
   );
-  const likedItems = isOwner
-    ? [
-        ...sellerProducts.map((item) => ({
-          id: item.id,
-          title: item.name,
-          description: item.description,
-          image: item.imageUrl,
-          kind: "Product",
-        })),
-        ...marketServices.map((item) => ({
-          id: item.id,
-          title: item.name,
-          description: item.description,
-          image: item.imageUrl,
-          kind: "Service",
-        })),
-        ...allLiveSessions.map((item) => ({
-          id: item.id,
-          title: item.title,
-          description: item.preview,
-          image: item.coverImageUrl,
-          kind: "Live",
-        })),
-      ].filter((item) => savedItemIds.includes(item.id))
-    : [];
+  useEffect(() => {
+    if (activeTab !== "Favorites") return;
+    if (!isOwner) return;
+
+    let active = true;
+    void Promise.resolve()
+      .then(() => {
+        if (!active) return null;
+        setFavoritesLoading(true);
+        setFavoritesError(false);
+        return getSavedListings(favoritesPage, 20);
+      })
+      .then((result) => {
+        if (!active || !result) return;
+        setFavoriteListings(result.listings);
+        setFavoritesPage(result.page);
+        setFavoritesTotal(result.total);
+        setFavoritesTotalPages(result.totalPages);
+        for (const listing of result.listings) {
+          setSavedItem(listing.id, true);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setFavoritesError(true);
+        if (getCatalogErrorStatus(error) === 401) {
+          setActivateAuth(true);
+        } else {
+          notifyError("Your favorites could not be loaded. Please try again.");
+        }
+      })
+      .finally(() => {
+        if (active) setFavoritesLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    activeTab,
+    favoritesPage,
+    favoritesRetry,
+    isOwner,
+    setActivateAuth,
+    setSavedItem,
+  ]);
+
+  const handleUnsaveFavorite = async (listingId: string) => {
+    if (favoriteActionId) return;
+    setFavoriteActionId(listingId);
+    try {
+      await unsaveListing(listingId);
+      setSavedItem(listingId, false);
+      setFavoriteListings((current) =>
+        current.filter((listing) => listing.id !== listingId),
+      );
+      setFavoritesTotal((current) => Math.max(0, current - 1));
+      if (favoriteListings.length === 1 && favoritesPage > 1) {
+        setFavoritesLoading(true);
+        setFavoritesPage((current) => current - 1);
+      }
+      notify("Listing removed from favorites.");
+    } catch (error: unknown) {
+      if (getCatalogErrorStatus(error) === 401) {
+        setActivateAuth(true);
+      } else {
+        notifyError("This listing could not be removed from favorites.");
+      }
+    } finally {
+      setFavoriteActionId(null);
+    }
+  };
 
   const handleImageUpload = async (slot: ImageSlot, file?: File) => {
     if (!file || !isOwner) return;
@@ -458,7 +536,9 @@ export default function ProfileWorkspacePage({
 
   const openListingEditor = (listing: BackendListing) => {
     const type = listing.listing_type?.toLowerCase();
-    router.push(`/${type === "service" || type === "services" ? "add-service" : "post-product"}/${encodeURIComponent(listing.id)}`);
+    router.push(
+      `/${type === "service" || type === "services" ? "add-service" : "post-product"}/${encodeURIComponent(listing.id)}`,
+    );
   };
 
   const refreshSellerListings = async () => {
@@ -468,7 +548,12 @@ export default function ProfileWorkspacePage({
       setListings(
         result.filter((listing) => {
           const status = listing.status?.toLowerCase();
-          return !status || status === "published" || status === "archived" || status === "draft";
+          return (
+            !status ||
+            status === "published" ||
+            status === "archived" ||
+            status === "draft"
+          );
         }),
       );
     } catch {
@@ -478,7 +563,7 @@ export default function ProfileWorkspacePage({
 
   const handleListingAction = async (
     listing: BackendListing,
-    action: "archive" | "delete",
+    action: "archive" | "publish" | "delete",
   ) => {
     if (listingActionId) return;
     setListingActionId(listing.id);
@@ -489,27 +574,168 @@ export default function ProfileWorkspacePage({
           replaceWithArchivedListing(current, archivedListing),
         );
         notify("Listing archived.");
+      } else if (action === "publish") {
+        const currentListing = await getListing(listing.id);
+        const currentStatus = currentListing.status?.toLowerCase();
+        if (currentStatus !== "archived" && currentStatus !== "draft") {
+          throw new Error(
+            "This listing is no longer archived or a draft. Refresh your listings and try again.",
+          );
+        }
+        const listingType = currentListing.listing_type?.toLowerCase();
+        const price = Number(
+          String(currentListing.starting_amount ?? "").replace(/[^\d.-]/g, ""),
+        );
+        const media = [
+          ...(currentListing.medias ?? []),
+          ...(currentListing.media ?? []),
+        ];
+        const hasImage = media.some((item) =>
+          ["image"].includes(item.media_type.toLowerCase()),
+        );
+        const missingDetails: string[] = [];
+
+        if (!currentListing.title.trim()) missingDetails.push("title");
+        if (!currentListing.description.trim())
+          missingDetails.push("description");
+        if (!currentListing.category_id) missingDetails.push("category");
+        if (!Number.isFinite(price) || price <= 0)
+          missingDetails.push("valid price");
+        if (!hasImage) missingDetails.push("at least one image");
+        if (listingType === "product") {
+          if (
+            currentListing.inventory_count == null ||
+            currentListing.inventory_count < 0
+          ) {
+            missingDetails.push("valid inventory count");
+          }
+          if (
+            !String(
+              accountProfile.city ||
+                accountProfile.location ||
+                ownerData?.city ||
+                ownerData?.location ||
+                "",
+            ).trim()
+          ) {
+            missingDetails.push("seller location");
+          }
+        } else if (listingType === "service" || listingType === "services") {
+          if (!currentListing.delivery_duration?.trim()) {
+            missingDetails.push("delivery timeframe");
+          }
+          if (!currentListing.target_audience?.trim()) {
+            missingDetails.push("target audience");
+          }
+          if (
+            currentListing.work_place?.toLowerCase() === "on_site" &&
+            !currentListing.work_address?.trim()
+          ) {
+            missingDetails.push("work address");
+          }
+        } else {
+          missingDetails.push("listing type");
+        }
+
+        const categories = await getAllCategories();
+        const childCategory = categories.find(
+          (category) => category.id === currentListing.category_id,
+        );
+        const parentCategory = childCategory?.parent_id
+          ? categories.find(
+              (category) => category.id === childCategory.parent_id,
+            )
+          : undefined;
+        const configuredCategory =
+          listingType === "product"
+            ? PRODUCT_CATEGORIES.find(
+                (category) => category.id === parentCategory?.slug,
+              )
+            : SERVICE_CATEGORIES.find(
+                (category) => category.id === parentCategory?.slug,
+              );
+        if (!childCategory || !configuredCategory) {
+          missingDetails.push("supported category");
+        }
+        const tags = Array.isArray(currentListing.tags)
+          ? currentListing.tags.join("|")
+          : (currentListing.tags ?? "");
+        const missingTags = getApplicableCategoryTags(
+          configuredCategory,
+          childCategory?.slug,
+        )
+          .filter((tag) => tag.required)
+          .filter((tag) => {
+            if (
+              listingType !== "product" &&
+              ["delivery time", "location"].includes(tag.name.toLowerCase())
+            ) {
+              return false;
+            }
+            const value = tags
+              .split("|")
+              .find((entry) => entry.startsWith(`${tag.name.toLowerCase()}:`))
+              ?.split(":")[1];
+            return !value?.trim();
+          })
+          .map((tag) => tag.name);
+        missingDetails.push(...missingTags);
+
+        if (missingDetails.length > 0) {
+          throw new Error(
+            `This listing is missing required details: ${[...new Set(missingDetails)].join(", ")}. Edit it to save it as a draft, then complete the missing details before publishing.`,
+          );
+        }
+
+        const response = await updateListing(listing.id, {
+          status: "published",
+        });
+        if (!response) {
+          throw new Error(
+            "The listing could not be published. Please try again.",
+          );
+        }
+        const publishedListing = await getListing(listing.id);
+        if (publishedListing.status?.toLowerCase() !== "published") {
+          throw new Error("The listing was not confirmed as published.");
+        }
+        setListings((current) =>
+          current.map((item) =>
+            item.id === listing.id ? publishedListing : item,
+          ),
+        );
+        notify("Listing published.");
       } else {
         await deleteListing(listing.id);
         notify("Listing deleted.");
-        setListings((current) => current.filter((item) => item.id !== listing.id));
+        setListings((current) =>
+          current.filter((item) => item.id !== listing.id),
+        );
       }
       setListingConfirmation(null);
     } catch (error) {
       if (action === "archive" && error instanceof ArchiveListingError) {
         if (error.status === 404) {
           setListingConfirmation(null);
-          notifyError("This listing is unavailable or no longer belongs to your account.");
+          notifyError(
+            "This listing is unavailable or no longer belongs to your account.",
+          );
           await refreshSellerListings();
         } else if (error.status === 401) {
           setListingConfirmation(null);
           setActivateAuth(true);
-          notifyError("Your session has expired. Sign in to archive this listing.");
+          notifyError(
+            "Your session has expired. Sign in to archive this listing.",
+          );
         } else {
           notifyError(error.message || "Unable to archive this listing.");
         }
       } else {
-        notifyError(error instanceof Error ? error.message : `Unable to ${action} this listing.`);
+        notifyError(
+          error instanceof Error
+            ? error.message
+            : `Unable to ${action} this listing.`,
+        );
       }
     } finally {
       setListingActionId(null);
@@ -541,7 +767,9 @@ export default function ProfileWorkspacePage({
     Services: isOwner
       ? "Your listed services will appear here."
       : "No services have been added yet.",
-    Liked: "Items you like will appear here.",
+    Favorites: isOwner
+      ? "Listings you add to favorites will appear here."
+      : "Favorites are only visible on your own profile.",
     "Scheduled lives": "Scheduled live sessions will appear here.",
   };
 
@@ -1121,39 +1349,49 @@ export default function ProfileWorkspacePage({
             ))}
           </div>
           <div className="min-h-44 py-6" role="tabpanel">
-            {isOwner && (activeTab === "Products" || activeTab === "Services") && (
-              <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="inline-flex w-fit rounded-xl border border-border/60 bg-background-elevated/20 p-1" role="group" aria-label="Listing status filter">
-                  <button
-                    type="button"
-                    aria-pressed={listingView === "active"}
-                    onClick={() => setListingView("active")}
-                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "active" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
+            {isOwner &&
+              (activeTab === "Products" || activeTab === "Services") && (
+                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div
+                    className="inline-flex w-fit rounded-xl border border-border/60 bg-background-elevated/20 p-1"
+                    role="group"
+                    aria-label="Listing status filter"
                   >
-                    Active
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={listingView === "drafts"}
-                    onClick={() => setListingView("drafts")}
-                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "drafts" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
-                  >
-                    Drafts <span className="ml-1 text-xs">{draftListingsCount}</span>
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={listingView === "archived"}
-                    onClick={() => setListingView("archived")}
-                    className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "archived" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
-                  >
-                    Archived <span className="ml-1 text-xs">{archivedListingsCount}</span>
-                  </button>
+                    <button
+                      type="button"
+                      aria-pressed={listingView === "active"}
+                      onClick={() => setListingView("active")}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "active" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
+                    >
+                      Active
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={listingView === "drafts"}
+                      onClick={() => setListingView("drafts")}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "drafts" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
+                    >
+                      Drafts{" "}
+                      <span className="ml-1 text-xs">{draftListingsCount}</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={listingView === "archived"}
+                      onClick={() => setListingView("archived")}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "archived" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
+                    >
+                      Archived{" "}
+                      <span className="ml-1 text-xs">
+                        {archivedListingsCount}
+                      </span>
+                    </button>
+                  </div>
+                  <p className="max-w-xl text-xs text-muted">
+                    Archived listings are hidden from public discovery and
+                    remain available here.
+                  </p>
                 </div>
-                <p className="max-w-xl text-xs text-muted">
-                  Archived listings are hidden from public discovery and remain available here.
-                </p>
-              </div>
-            )}
+              )}
             {listingsLoading &&
             (activeTab === "Products" || activeTab === "Services") ? (
               <p className="py-10 text-center text-sm text-muted" role="status">
@@ -1162,38 +1400,87 @@ export default function ProfileWorkspacePage({
             ) : listingsError &&
               (activeTab === "Products" || activeTab === "Services") ? (
               <p className="py-10 text-center text-sm text-muted" role="alert">
-                We couldn&apos;t load your {activeTab.toLowerCase()}. Please refresh and try again.
+                We couldn&apos;t load your {activeTab.toLowerCase()}. Please
+                refresh and try again.
               </p>
-            ) : activeTab === "Liked" && likedItems.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {likedItems.map((item) => (
-                  <article
-                    key={item.id}
-                    className="overflow-hidden rounded-2xl border border-border/50 bg-background-elevated/20"
-                  >
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt=""
-                        className="h-40 w-full object-cover"
+            ) : activeTab === "Favorites" && !isOwner ? (
+              <p className="py-10 text-center text-sm text-muted">
+                Favorites are only visible on your own profile.
+              </p>
+            ) : activeTab === "Favorites" && favoritesLoading ? (
+              <p className="py-10 text-center text-sm text-muted" role="status">
+                Loading your favorites...
+              </p>
+            ) : activeTab === "Favorites" && favoritesError ? (
+              <div className="py-10 text-center text-sm text-muted" role="alert">
+                <p>Your favorites could not be loaded.</p>
+                <button
+                  type="button"
+                  onClick={() => setFavoritesRetry((retry) => retry + 1)}
+                  className="mt-3 font-semibold text-primary hover:underline"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : activeTab === "Favorites" && favoriteListings.length > 0 ? (
+              <>
+                <p className="mb-4 text-sm text-muted">
+                  {favoritesTotal} saved{" "}
+                  {favoritesTotal === 1 ? "listing" : "listings"}
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {favoriteListings.map((item) => {
+                    const isService = ["service", "services"].includes(
+                      (item.listing_type || "").toLowerCase(),
+                    );
+                    return isService ? (
+                      <ServiceCard
+                        key={item.id}
+                        service={mapListingToService(item, item.category_id)}
+                        onUnsave={() => void handleUnsaveFavorite(item.id)}
+                        savePending={favoriteActionId === item.id}
                       />
                     ) : (
-                      <div className="flex h-40 items-center justify-center bg-background-elevated/50 text-muted">
-                        <Star className="h-8 w-8" />
-                      </div>
-                    )}
-                    <div className="p-4">
-                      <p className="text-xs font-semibold text-primary">
-                        {item.kind}
-                      </p>
-                      <h3 className="mt-1 font-semibold">{item.title}</h3>
-                      <p className="mt-1 line-clamp-2 text-sm text-muted">
-                        {item.description}
-                      </p>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                      <ProductCard
+                        key={item.id}
+                        product={mapListingToProduct(item)}
+                        onUnsave={() => void handleUnsaveFavorite(item.id)}
+                        savePending={favoriteActionId === item.id}
+                      />
+                    );
+                  })}
+                </div>
+                {favoritesTotalPages > 1 && (
+                  <div className="mt-6 flex items-center justify-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setFavoritesPage((page) => page - 1)}
+                      disabled={favoritesPage <= 1 || favoritesLoading}
+                      className="rounded-lg border border-border px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-muted">
+                      Page {favoritesPage} of {favoritesTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFavoritesPage((page) => page + 1)}
+                      disabled={
+                        favoritesPage >= favoritesTotalPages ||
+                        favoritesLoading
+                      }
+                      className="rounded-lg border border-border px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : activeTab === "Favorites" ? (
+              <p className="py-10 text-center text-sm text-muted">
+                You haven&apos;t saved any listings yet.
+              </p>
             ) : tabListings.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {tabListings.map((item) => (
@@ -1201,13 +1488,19 @@ export default function ProfileWorkspacePage({
                     key={item.id}
                     role={isOwner ? "link" : undefined}
                     tabIndex={isOwner ? 0 : undefined}
-                    onClick={isOwner ? () => openListingEditor(item) : undefined}
-                    onKeyDown={isOwner ? (event) => {
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault();
-                        openListingEditor(item);
-                      }
-                    } : undefined}
+                    onClick={
+                      isOwner ? () => openListingEditor(item) : undefined
+                    }
+                    onKeyDown={
+                      isOwner
+                        ? (event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              openListingEditor(item);
+                            }
+                          }
+                        : undefined
+                    }
                     className={`group relative overflow-hidden rounded-2xl border border-border/50 bg-background-elevated/20 ${isOwner ? "cursor-pointer transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" : ""}`}
                   >
                     <div className="relative">
@@ -1219,11 +1512,17 @@ export default function ProfileWorkspacePage({
                         />
                       ) : (
                         <div className="flex h-40 items-center justify-center bg-background-elevated/50 text-muted">
-                          {activeTab === "Services" ? <Wrench className="h-8 w-8" /> : <Package className="h-8 w-8" />}
+                          {activeTab === "Services" ? (
+                            <Wrench className="h-8 w-8" />
+                          ) : (
+                            <Package className="h-8 w-8" />
+                          )}
                         </div>
                       )}
                       {(item.inventory_count != null || isOwner) && (
-                        <div className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-2 transition-opacity ${item.status?.toLowerCase() === "archived" ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"}`}>
+                        <div
+                          className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-2 transition-opacity ${item.status?.toLowerCase() === "archived" ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"}`}
+                        >
                           <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
                             {item.status?.toLowerCase() === "archived"
                               ? "Archived"
@@ -1234,25 +1533,71 @@ export default function ProfileWorkspacePage({
                                   : "Service"}
                           </span>
                           {isOwner && (
-                            <div className="pointer-events-auto" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                            <div
+                              className="pointer-events-auto"
+                              onClick={(event) => event.stopPropagation()}
+                              onKeyDown={(event) => event.stopPropagation()}
+                            >
                               <DropdownMenu>
                                 <DropdownMenuTrigger
                                   aria-label={`Actions for ${item.title}`}
                                   onClick={(event) => event.stopPropagation()}
                                   className="flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur transition hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
                                 >
-                                  {listingActionId === item.id ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <MoreHorizontal className="h-4 w-4" />}
+                                  {listingActionId === item.id ? (
+                                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  )}
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-44">
-                                  <DropdownMenuItem onClick={() => openListingEditor(item)}>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="w-44"
+                                >
+                                  <DropdownMenuItem
+                                    onClick={() => openListingEditor(item)}
+                                  >
                                     <Pencil className="mr-2 h-4 w-4" /> Edit
                                   </DropdownMenuItem>
-                                  {item.status?.toLowerCase() !== "archived" && (
-                                    <DropdownMenuItem disabled={listingActionId === item.id} onClick={() => setListingConfirmation({ listing: item, action: "archive" })}>
-                                      <Archive className="mr-2 h-4 w-4" /> Archive
+                                  {["archived", "draft"].includes(
+                                    item.status?.toLowerCase() ?? "",
+                                  ) ? (
+                                    <DropdownMenuItem
+                                      disabled={listingActionId === item.id}
+                                      onClick={() =>
+                                        setListingConfirmation({
+                                          listing: item,
+                                          action: "publish",
+                                        })
+                                      }
+                                    >
+                                      <CheckCircle2 className="mr-2 h-4 w-4" />{" "}
+                                      Publish
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      disabled={listingActionId === item.id}
+                                      onClick={() =>
+                                        setListingConfirmation({
+                                          listing: item,
+                                          action: "archive",
+                                        })
+                                      }
+                                    >
+                                      <Archive className="mr-2 h-4 w-4" />{" "}
+                                      Archive
                                     </DropdownMenuItem>
                                   )}
-                                  <DropdownMenuItem variant="destructive" disabled={listingActionId === item.id} onClick={() => setListingConfirmation({ listing: item, action: "delete" })}>
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    disabled={listingActionId === item.id}
+                                    onClick={() =>
+                                      setListingConfirmation({
+                                        listing: item,
+                                        action: "delete",
+                                      })
+                                    }
+                                  >
                                     <Trash2 className="mr-2 h-4 w-4" /> Delete
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
@@ -1283,11 +1628,19 @@ export default function ProfileWorkspacePage({
                           <Eye className="h-3.5 w-3.5" aria-hidden="true" />
                           {Number(item.view_count ?? 0).toLocaleString()}
                         </span>
-                        <div className="absolute bottom-3 right-3 z-10 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100" onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                        <div
+                          className="absolute bottom-3 right-3 z-10 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
                           <button
                             type="button"
                             aria-label={`View analytics for ${item.title}`}
-                            onClick={() => router.push(`/listing-analytics/${encodeURIComponent(item.id)}`)}
+                            onClick={() =>
+                              router.push(
+                                `/listing-analytics/${encodeURIComponent(item.id)}`,
+                              )
+                            }
                             className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-background/95 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur transition hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
                           >
                             <BarChart3 className="h-3.5 w-3.5" />
@@ -1305,13 +1658,12 @@ export default function ProfileWorkspacePage({
                   <CalendarDays className="mx-auto h-7 w-7 text-muted" />
                 ) : activeTab === "Services" ? (
                   <Wrench className="mx-auto h-7 w-7 text-muted" />
-                ) : activeTab === "Liked" ? (
-                  <Star className="mx-auto h-7 w-7 text-muted" />
                 ) : (
                   <Package className="mx-auto h-7 w-7 text-muted" />
                 )}
                 <p className="mt-3 text-sm font-medium">
-                  {isOwner && (activeTab === "Products" || activeTab === "Services")
+                  {isOwner &&
+                  (activeTab === "Products" || activeTab === "Services")
                     ? listingView === "archived"
                       ? `You have no archived ${activeTab.toLowerCase()}.`
                       : listingView === "drafts"
@@ -1321,22 +1673,26 @@ export default function ProfileWorkspacePage({
                           : emptyCopy[activeTab]
                     : emptyCopy[activeTab]}
                 </p>
-                {isOwner && listingView === "active" && activeTab === "Products" && (
-                  <Link
-                    href="/post-product"
-                    className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong"
-                  >
-                    Post a product
-                  </Link>
-                )}
-                {isOwner && listingView === "active" && activeTab === "Services" && (
-                  <Link
-                    href="/add-service"
-                    className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong"
-                  >
-                    Add a service
-                  </Link>
-                )}
+                {isOwner &&
+                  listingView === "active" &&
+                  activeTab === "Products" && (
+                    <Link
+                      href="/post-product"
+                      className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong"
+                    >
+                      Post a product
+                    </Link>
+                  )}
+                {isOwner &&
+                  listingView === "active" &&
+                  activeTab === "Services" && (
+                    <Link
+                      href="/add-service"
+                      className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong"
+                    >
+                      Add a service
+                    </Link>
+                  )}
                 {isOwner && activeTab === "Scheduled lives" && (
                   <Link
                     href="/schedule-live"
@@ -1345,13 +1701,6 @@ export default function ProfileWorkspacePage({
                     Schedule a live
                   </Link>
                 )}
-                {isOwner &&
-                  activeTab === "Liked" &&
-                  savedItemIds.length > 0 && (
-                    <p className="mt-2 text-xs text-muted">
-                      Your saved items are available from your saved list.
-                    </p>
-                  )}
               </div>
             )}
           </div>
@@ -1371,9 +1720,13 @@ export default function ProfileWorkspacePage({
             <>
               <DialogHeader className="border-b border-border/60 bg-primary/[0.03] px-6 py-6">
                 <div className="flex items-start gap-4">
-                  <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${listingConfirmation.action === "delete" ? "bg-danger/10 text-danger" : "bg-primary/10 text-primary"}`}>
+                  <div
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${listingConfirmation.action === "delete" ? "bg-danger/10 text-danger" : "bg-primary/10 text-primary"}`}
+                  >
                     {listingConfirmation.action === "archive" ? (
                       <Archive className="h-5 w-5" />
+                    ) : listingConfirmation.action === "publish" ? (
+                      <CheckCircle2 className="h-5 w-5" />
                     ) : (
                       <Trash2 className="h-5 w-5" />
                     )}
@@ -1382,7 +1735,9 @@ export default function ProfileWorkspacePage({
                     <DialogTitle className="text-lg font-bold">
                       {listingConfirmation.action === "archive"
                         ? "Archive this listing?"
-                        : "Delete this listing?"}
+                        : listingConfirmation.action === "publish"
+                          ? "Publish this listing?"
+                          : "Delete this listing?"}
                     </DialogTitle>
                     <DialogDescription className="leading-relaxed">
                       {listingConfirmation.action === "archive" ? (
@@ -1393,12 +1748,25 @@ export default function ProfileWorkspacePage({
                           will be hidden from public discovery and kept in your
                           archived listings. You can still manage it later.
                         </>
+                      ) : listingConfirmation.action === "publish" ? (
+                        <>
+                          <span className="font-medium text-foreground">
+                            {listingConfirmation.listing.title}
+                          </span>{" "}
+                          {listingConfirmation.listing.status?.toLowerCase() ===
+                          "archived"
+                            ? "will become visible to buyers again."
+                            : "will be made visible to buyers."}{" "}
+                          We&apos;ll check that its required details are
+                          complete before publishing.
+                        </>
                       ) : (
                         <>
                           <span className="font-medium text-foreground">
                             {listingConfirmation.listing.title}
                           </span>{" "}
-                          will be permanently deleted. This action cannot be undone.
+                          will be permanently deleted. This action cannot be
+                          undone.
                         </>
                       )}
                     </DialogDescription>
@@ -1428,7 +1796,11 @@ export default function ProfileWorkspacePage({
                   {listingActionId ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
                   ) : null}
-                  {listingActionId ? "Processing..." : "Proceed"}
+                  {listingActionId
+                    ? "Processing..."
+                    : listingConfirmation.action === "publish"
+                      ? "Publish listing"
+                      : "Proceed"}
                 </button>
               </DialogFooter>
             </>

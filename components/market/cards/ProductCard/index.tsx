@@ -14,9 +14,16 @@ import { SellerProduct } from "@/types";
 export interface ProductCardProps {
   product: SellerProduct;
   onSelect?: (product: SellerProduct) => void;
+  onUnsave?: () => void;
+  savePending?: boolean;
 }
 
-export default function ProductCard({ product, onSelect }: ProductCardProps) {
+export default function ProductCard({
+  product,
+  onSelect,
+  onUnsave,
+  savePending = false,
+}: ProductCardProps) {
   const { saved, pending, toggle } = useListingSave(product.id);
   const rawPrice = String(product.price).trim();
   const price =
@@ -64,9 +71,15 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
         </button>
         <button
           type="button"
-          onClick={() => void toggle()}
-          disabled={pending}
-          aria-label={saved ? "Remove from favorites" : "Add to favorites"}
+          onClick={() => {
+            if (onUnsave) {
+              onUnsave();
+              return;
+            }
+            void toggle();
+          }}
+          disabled={pending || savePending}
+          aria-label={onUnsave || saved ? "Remove from favorites" : "Add to favorites"}
           aria-pressed={saved}
           className={cn(
             "absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/50 bg-black/70 text-white shadow-md backdrop-blur transition-colors hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",

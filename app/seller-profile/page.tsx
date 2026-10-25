@@ -1,5 +1,10 @@
-import { SellerPage } from "@/components/workspace-pages";
+import { ComingSoonPage } from "@/components/pages/ComingSoonPage";
 
 export default function Page() {
-  return <SellerPage />;
+  return (
+    <ComingSoonPage
+      title="Seller profile"
+      description="Open a seller profile from one of their listings to view their storefront."
+    />
+  );
 }

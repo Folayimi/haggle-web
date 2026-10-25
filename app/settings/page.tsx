@@ -1,5 +1,10 @@
-import { SettingsPage } from "@/components/workspace-pages";
+import { ComingSoonPage } from "@/components/pages/ComingSoonPage";
 
 export default function Page() {
-  return <SettingsPage />;
+  return (
+    <ComingSoonPage
+      title="Settings"
+      description="Account settings are being prepared for a future release."
+    />
+  );
 }

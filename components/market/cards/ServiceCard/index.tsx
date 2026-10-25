@@ -13,9 +13,16 @@ import { MarketService } from "@/types";
 export interface ServiceCardProps {
   service: MarketService;
   onSelect?: (service: MarketService) => void;
+  onUnsave?: () => void;
+  savePending?: boolean;
 }
 
-export default function ServiceCard({ service, onSelect }: ServiceCardProps) {
+export default function ServiceCard({
+  service,
+  onSelect,
+  onUnsave,
+  savePending = false,
+}: ServiceCardProps) {
   const { saved, pending, toggle } = useListingSave(service.id);
   const price =
     typeof service.price === "string"
@@ -44,9 +51,15 @@ export default function ServiceCard({ service, onSelect }: ServiceCardProps) {
           </span>
           <button
             type="button"
-            onClick={() => void toggle()}
-            disabled={pending}
-            aria-label={saved ? "Remove service from favorites" : "Add service to favorites"}
+            onClick={() => {
+              if (onUnsave) {
+                onUnsave();
+                return;
+              }
+              void toggle();
+            }}
+            disabled={pending || savePending}
+            aria-label={onUnsave || saved ? "Remove service from favorites" : "Add service to favorites"}
             aria-pressed={saved}
             className={cn(
               "flex h-7 w-7 shrink-0 items-center justify-center rounded-full border border-white/50 bg-black/70 text-white shadow-md backdrop-blur transition-colors hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
@@ -83,7 +96,9 @@ export default function ServiceCard({ service, onSelect }: ServiceCardProps) {
           {!!service.ratingSummary?.count && <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted"><Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />{service.ratingSummary.average.toFixed(1)} ({service.ratingSummary.count})</p>}
         </div>
         <ActionButton asChild variant="secondary" size="sm" className="shrink-0">
-          <Link href={`/services/${service.id}/book`}>Request Service</Link>
+          <Link href={`/service-detail/${encodeURIComponent(service.id)}`}>
+            View details
+          </Link>
         </ActionButton>
       </div>
     </article>

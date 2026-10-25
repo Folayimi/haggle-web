@@ -5,7 +5,7 @@
 // conversation (e.g. from the product detail view's "Message owner" action).
 
 import { useSearchParams } from "next/navigation";
-import { MessagesPage } from "./MessagesPage";
+import { MessagesPage } from "./MessagePage";
 
 export function ConversationPage() {
   const searchParams = useSearchParams();

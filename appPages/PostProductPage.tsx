@@ -38,7 +38,10 @@ import {
 import { GalleryImage } from "@/components/ProductMedia";
 
 import { AppShell } from "@/components/app-shell";
-import { PRODUCT_CATEGORIES } from "@/types/categories";
+import {
+  getApplicableCategoryTags,
+  PRODUCT_CATEGORIES,
+} from "@/types/categories";
 import { cn } from "@/lib/utils";
 import { useHaggleStore } from "@/lib/app-store";
 import {
@@ -484,7 +487,9 @@ function SmartSaveButton({
 
   return (
     <button
+      type="button"
       onClick={handleSave}
+      disabled={status === "saving"}
       className={`
         rounded-full border border-border/60
         px-4 py-2 text-sm font-medium
@@ -803,6 +808,7 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
 
   const [publishing, setPublishing] = useState(false);
   const [editLoading, setEditLoading] = useState(Boolean(editListingId));
+  const saveInProgressRef = useRef(false);
   const [editError, setEditError] = useState("");
   const [initialGallery, setInitialGallery] = useState<
     { mediaId: string; url: string; previewUrl: string }[] | undefined
@@ -994,8 +1000,10 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
       (c) => c.name === productInfo.category,
     );
     if (categoryObj) {
-      const requiredTags =
-        categoryObj.requiredTags?.filter((t) => t.required) || [];
+      const requiredTags = getApplicableCategoryTags(
+        categoryObj,
+        productInfo.subCategorySlug,
+      ).filter((tag) => tag.required);
       requiredTags.forEach((tag) => {
         const value = getTagValue(tag.name);
         if (!value) errors[tag.name] = `${tag.name} is required`;
@@ -1049,6 +1057,8 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
   // SAVE DRAFT
   // ============================================
   const saveDraft = async (status?: string): Promise<boolean | undefined> => {
+    if (saveInProgressRef.current) return false;
+    saveInProgressRef.current = true;
     if (imageGallery.length > 0) {
       setCompleted((prev) => ({ ...prev, media: true }));
     } else {
@@ -1211,6 +1221,8 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
       setDraftStatus("idle");
       setPublishing(false);
       return false;
+    } finally {
+      saveInProgressRef.current = false;
     }
   };
 
@@ -1218,6 +1230,7 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
   // STEP NAVIGATION
   // ============================================
   const goToNextStep = async () => {
+    if (saveInProgressRef.current) return;
     const currentIndex = tabs.findIndex((t) => t.id === activeTab);
     if (currentIndex < tabs.length - 1) {
       const nextTab = tabs[currentIndex + 1].id;
@@ -1240,6 +1253,7 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
   };
 
   const handleSubmit = async () => {
+    if (saveInProgressRef.current) return;
     if (imageGallery.length === 0) {
       alert("Please upload at least one image before publishing.");
       return;
@@ -1264,33 +1278,58 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
   // EFFECTS
   // ============================================
   useEffect(() => {
-    if (editListingId && !editLoading) return;
+    if (editListingId && editLoading) return;
     const categoryObj = PRODUCT_CATEGORIES.find(
       (c) => c.name === productInfo.category,
     );
-    const required = categoryObj?.requiredTags || [];
+    const applicableTags = getApplicableCategoryTags(
+      categoryObj,
+      productInfo.subCategorySlug,
+    );
     setTags((current) => {
-      const entries = current.split("|").filter(Boolean);
-      for (const tag of required) {
+      const entries = current
+        .split("|")
+        .filter(Boolean)
+        .filter((entry) =>
+          applicableTags.some((tag) =>
+            entry.startsWith(`${tag.name.toLowerCase()}:`),
+          ),
+        );
+      for (const tag of applicableTags.filter((item) => item.required)) {
         const key = tag.name.toLowerCase();
         if (!entries.some((entry) => entry.startsWith(`${key}:`))) entries.push(`${key}:`);
       }
       return entries.join("|");
     });
-  }, [editListingId, editLoading, productInfo.category]);
+  }, [
+    editListingId,
+    editLoading,
+    productInfo.category,
+    productInfo.subCategorySlug,
+  ]);
 
   // ============================================
   // RENDER
   // ============================================
-  const requiredTags = PRODUCT_CATEGORIES.find(
+  const selectedProductCategory = PRODUCT_CATEGORIES.find(
     (c) => c.name === productInfo.category,
-  )?.requiredTags;
+  );
+  const requiredTags = getApplicableCategoryTags(
+    selectedProductCategory,
+    productInfo.subCategorySlug,
+  );
+  const isSaving = draftStatus === "saving" || publishing;
 
   return (
     <AppShell>
       {publishing && <Loader type="publishing" />}
       {editLoading && <Loader type="publishing" />}
       {editError && <div role="alert" className="mx-auto mt-4 max-w-3xl rounded-xl bg-danger/10 p-4 text-sm text-danger">{editError}</div>}
+      <fieldset
+        disabled={isSaving || editLoading}
+        aria-busy={isSaving || editLoading}
+        className="contents"
+      >
       <div className="min-h-screen flex flex-col bg-transparent">
         <div className="relative flex-1 mx-auto max-w-7xl w-full px-3 py-4 lg:px-6 flex flex-col">
           {/* HEADER ROW */}
@@ -1788,6 +1827,18 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
           </div>
         </div>
       </div>
+      </fieldset>
+      {isSaving && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/30 backdrop-blur-[1px]"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="rounded-full bg-background-elevated px-5 py-3 text-sm font-medium text-foreground shadow-lg">
+            {publishing ? "Publishing product…" : "Saving product…"}
+          </span>
+        </div>
+      )}
     </AppShell>
   );
 };
