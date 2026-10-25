@@ -94,7 +94,11 @@ export default function ProductCard({
       </div>
 
       <div className="flex justify-end pt-2">
-        <ActionButton asChild size="sm" className="shrink-0">
+        <ActionButton
+          asChild
+          size="sm"
+          className="market-card-action shrink-0"
+        >
           <Link
             href={`/product-detail/${encodeURIComponent(product.id)}`}
           >

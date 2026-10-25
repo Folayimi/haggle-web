@@ -5,18 +5,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect, useMemo, useRef } from "react";
 import {
-  Activity,
   ArrowUp,
   BadgeCheck,
   BriefcaseBusiness,
   ChevronLeft,
-  Layers3,
   Megaphone,
   MapPin,
   Package,
-  Radio,
-  ShoppingBag,
-  Sparkles,
   X,
 } from "lucide-react";
 
@@ -559,7 +554,7 @@ const MarketPage = ({
 
         <div
           className={cn(
-            "mt-2 flex min-h-0 flex-1 gap-2 overflow-hidden",
+            "flex min-h-0 flex-1 gap-2 overflow-hidden",
             (selectedProductId || selectedServiceId) && "flex-col xl:flex-row",
           )}
         >
@@ -688,55 +683,55 @@ const MarketPage = ({
               <>
               <nav
                 aria-label="Marketplace sections"
-                className="flex flex-wrap gap-2"
+                className="sticky top-0 z-30 -mx-5 -mt-5 grid grid-cols-6 gap-1 border-b border-border/60 bg-background/95 px-3 py-2 shadow-sm backdrop-blur-md sm:gap-2 sm:px-5"
               >
                 <ActionCard
-                  icon={Sparkles}
                   title="Recommended For You"
+                  label="For You"
                   targetId="market-recommended"
                 />
                 <ActionCard
-                  icon={ShoppingBag}
                   title="Latest Listings"
+                  label="Latest"
                   targetId="market-latest"
                 />
                 <ActionCard
-                  icon={Activity}
                   title="Trending"
+                  label="Trend"
                   targetId="market-trending"
                 />
                 <ActionCard
-                  icon={BriefcaseBusiness}
                   title="Professional Services"
+                  label="Services"
                   targetId="market-services"
                 />
                 <ActionCard
-                  icon={Radio}
                   title="Happening Live"
+                  label="Live"
                   targetId="market-live"
                 />
                 <ActionCard
-                  icon={Layers3}
                   title="Featured Collections"
+                  label="Picks"
                   targetId="market-collections"
                 />
               </nav>
 
-              <div id="market-recommended" className="scroll-mt-4">
+              <div id="market-recommended" className="scroll-mt-20">
                 <Recommended
                   products={discovery.recommended.filter(matchesProduct)}
                   onProductSelect={handleProductSelect}
                   onViewAll={() => openMarketView("recommended")}
                 />
               </div>
-              <div id="market-latest" className="scroll-mt-4">
+              <div id="market-latest" className="scroll-mt-20">
                 <ProductFeed
                   products={discovery.latest.filter(matchesProduct)}
                   onProductSelect={handleProductSelect}
                   onViewAll={() => openMarketView("latest")}
                 />
               </div>
-              <div id="market-trending" className="scroll-mt-4">
+              <div id="market-trending" className="scroll-mt-20">
                 <TrendingNearYou
                   products={discovery.trending.filter(matchesProduct)}
                   location="Lagos"
@@ -744,20 +739,20 @@ const MarketPage = ({
                   onViewAll={() => openMarketView("trending")}
                 />
               </div>
-              <div id="market-services" className="scroll-mt-4">
+              <div id="market-services" className="scroll-mt-20">
                 <ServiceFeed
                   services={discovery.latestServices.filter(matchesService)}
                   onServiceSelect={handleServiceSelect}
                   onViewAll={() => openMarketView("services")}
                 />
               </div>
-              <div id="market-live" className="scroll-mt-4">
+              <div id="market-live" className="scroll-mt-20">
                 <LiveNow
                   sessions={discovery.liveNow}
                   onViewAll={() => openMarketView("live")}
                 />
               </div>
-              <div id="market-collections" className="scroll-mt-4">
+              <div id="market-collections" className="scroll-mt-20">
                 <FeaturedCollections
                   collections={featuredCollections}
                   onViewAll={() => openMarketView("collections")}

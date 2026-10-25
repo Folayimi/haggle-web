@@ -20,6 +20,7 @@ import {
   MessageCircle,
   Package,
   Pencil,
+  Plus,
   Radio,
   Star,
   Store,
@@ -932,16 +933,8 @@ export default function ProfileWorkspacePage({
                   </span>
                 )}
               </div>
-              <div className="mt-4 flex flex-wrap gap-3">
-                {isOwner ? (
-                  <Link
-                    href="/post-product"
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-strong"
-                  >
-                    <Package className="h-4 w-4" />
-                    Add a product
-                  </Link>
-                ) : (
+              {!isOwner && (
+                <div className="mt-4 flex flex-wrap gap-3">
                   <Link
                     href="/conversation"
                     className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-strong"
@@ -949,16 +942,14 @@ export default function ProfileWorkspacePage({
                     <MessageCircle className="h-4 w-4" />
                     Message
                   </Link>
-                )}
-                {!isOwner && (
                   <button
                     type="button"
                     className="rounded-xl border border-border/60 px-5 py-3 text-sm font-semibold transition hover:bg-background-elevated/50"
                   >
                     Follow
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
             <aside
               className="rounded-3xl border border-border/50 bg-background-elevated/25 p-4 sm:p-5"
@@ -1311,38 +1302,42 @@ export default function ProfileWorkspacePage({
 
         <section className="mt-8" aria-label="Business content">
           <div
-            className="flex gap-2 overflow-x-auto border-b border-border/60"
-            role="tablist"
-            aria-label="Profile content"
+            className="sticky top-0 z-30 -mx-4 border-b border-border/60 bg-background/95 px-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
           >
-            {tabs.map(({ label, icon: Icon }) => (
-              <button
-                key={label}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === label}
-                onClick={() => setActiveTab(label)}
-                className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${activeTab === label ? "border-primary text-primary" : "border-transparent text-muted hover:text-foreground"}`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-                {label === "Products" && products.length > 0 ? (
-                  <span className="rounded-full bg-background-elevated px-2 py-0.5 text-xs">
-                    {products.length}
-                  </span>
-                ) : null}
-                {label === "Services" && services.length > 0 ? (
-                  <span className="rounded-full bg-background-elevated px-2 py-0.5 text-xs">
-                    {services.length}
-                  </span>
-                ) : null}
-              </button>
-            ))}
+            <div
+              className="flex gap-2 overflow-x-auto"
+              role="tablist"
+              aria-label="Profile content"
+            >
+              {tabs.map(({ label, icon: Icon }) => (
+                <button
+                  key={label}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === label}
+                  onClick={() => setActiveTab(label)}
+                  className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${activeTab === label ? "border-primary text-primary" : "border-transparent text-muted hover:text-foreground"}`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                  {label === "Products" && products.length > 0 ? (
+                    <span className="rounded-full bg-background-elevated px-2 py-0.5 text-xs">
+                      {products.length}
+                    </span>
+                  ) : null}
+                  {label === "Services" && services.length > 0 ? (
+                    <span className="rounded-full bg-background-elevated px-2 py-0.5 text-xs">
+                      {services.length}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="min-h-44 py-6" role="tabpanel">
             {isOwner &&
               (activeTab === "Products" || activeTab === "Services") && (
-                <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="mb-5 flex flex-wrap items-center gap-3">
                   <div
                     className="inline-flex w-fit rounded-xl border border-border/60 bg-background-elevated/20 p-1"
                     role="group"
@@ -1377,10 +1372,18 @@ export default function ProfileWorkspacePage({
                       </span>
                     </button>
                   </div>
-                  <p className="max-w-xl text-xs text-muted">
-                    Archived listings are hidden from public discovery and
-                    remain available here.
-                  </p>
+                  <Link
+                    href={
+                      activeTab === "Products" ? "/post-product" : "/add-service"
+                    }
+                    aria-label={
+                      activeTab === "Products" ? "Add a product" : "Add a service"
+                    }
+                    title={activeTab === "Products" ? "Add a product" : "Add a service"}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white shadow-sm transition hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Link>
                 </div>
               )}
             {listingsLoading &&
@@ -1664,26 +1667,6 @@ export default function ProfileWorkspacePage({
                           : emptyCopy[activeTab]
                     : emptyCopy[activeTab]}
                 </p>
-                {isOwner &&
-                  listingView === "active" &&
-                  activeTab === "Products" && (
-                    <Link
-                      href="/post-product"
-                      className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong"
-                    >
-                      Post a product
-                    </Link>
-                  )}
-                {isOwner &&
-                  listingView === "active" &&
-                  activeTab === "Services" && (
-                    <Link
-                      href="/add-service"
-                      className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong"
-                    >
-                      Add a service
-                    </Link>
-                  )}
                 {isOwner && activeTab === "Scheduled lives" && (
                   <Link
                     href="/schedule-live"

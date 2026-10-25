@@ -1,14 +1,12 @@
 "use client";
 
-import type { LucideIcon } from "lucide-react";
-
 interface ActionCardProps {
-  icon: LucideIcon;
   title: string;
+  label: string;
   targetId: string;
 }
 
-export function ActionCard({ icon: Icon, title, targetId }: ActionCardProps) {
+export function ActionCard({ title, label, targetId }: ActionCardProps) {
   function scrollToSection() {
     document.getElementById(targetId)?.scrollIntoView({
       behavior: "smooth",
@@ -20,15 +18,14 @@ export function ActionCard({ icon: Icon, title, targetId }: ActionCardProps) {
     <button
       type="button"
       onClick={scrollToSection}
-      className="flex w-[240px] max-w-full shrink-0 items-center gap-2 overflow-hidden rounded-md border border-border bg-background-elevated text-left transition-colors hover:border-primary/30 hover:bg-surface-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+      className="group flex min-h-12 min-w-0 flex-col items-center justify-center rounded-xl border border-border/70 bg-background/80 px-0.5 py-1.5 text-center text-[9px] font-semibold leading-tight text-foreground shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/50 hover:bg-primary/5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary active:translate-y-0 sm:min-h-14 sm:px-1 sm:text-xs"
       aria-label={`Go to ${title}`}
     >
-      <span className="flex h-12 w-12 shrink-0 items-center justify-center bg-primary/15 text-primary sm:h-14 sm:w-14">
-        <Icon className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
-      </span>
-      <span className="min-w-0 truncate pr-3 text-sm font-semibold text-foreground">
-        {title}
-      </span>
+      <span
+        aria-hidden="true"
+        className="mb-1 h-1 w-4 shrink-0 rounded-full bg-primary/45 transition-all group-hover:w-6 group-hover:bg-primary sm:mb-1.5"
+      />
+      <span className="line-clamp-2">{label}</span>
     </button>
   );
 }
