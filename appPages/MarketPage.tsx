@@ -554,7 +554,7 @@ const MarketPage = ({
 
         <div
           className={cn(
-            "flex min-h-0 flex-1 gap-2 overflow-hidden",
+            "mt-2 flex min-h-0 flex-1 gap-2 overflow-hidden",
             (selectedProductId || selectedServiceId) && "flex-col xl:flex-row",
           )}
         >
