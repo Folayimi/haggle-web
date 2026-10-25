@@ -21,6 +21,8 @@ import { ActionCard } from "@/components/market/common/ActionCard";
 import {
   MarketLoadingSkeleton,
   MarketProductDetailSkeleton,
+  MarketServiceDetailSkeleton,
+  MarketSellerPanelSkeleton,
   MarketSellerActivitySkeleton,
   MarketSellerSkeleton,
 } from "@/components/market/common/MarketSkeletons";
@@ -576,7 +578,11 @@ const MarketPage = ({
             >
               {selectedProductId || selectedServiceId ? (
                 productDetailLoading || serviceDetailLoading ? (
-                  <MarketProductDetailSkeleton />
+                  selectedProductId ? (
+                    <MarketProductDetailSkeleton />
+                  ) : (
+                    <MarketServiceDetailSkeleton />
+                  )
                 ) : selectedProductId &&
                   (productDetailError || !selectedProduct) ? (
                   <div role="alert" className="py-12 text-center">
@@ -796,8 +802,10 @@ const MarketPage = ({
               </button>
             )}
           </div>
-
           {selectedProductId || selectedServiceId ? (
+            productDetailLoading || serviceDetailLoading ? (
+              <MarketSellerPanelSkeleton />
+            ) : (
             <aside className="flex max-h-[90vh] w-full shrink-0 flex-col gap-4 overflow-x-hidden overflow-y-auto rounded-xl bg-[#101010] pb-20 xl:max-h-full xl:w-[320px]">
               <section className="relative isolate min-h-[420px] shrink-0 overflow-hidden bg-[#14252b] text-white xl:min-h-[460px]">
                 {selectedSeller?.coverImageUrl ? (
@@ -1027,6 +1035,7 @@ const MarketPage = ({
                 </section>
               )}
             </aside>
+            )
           ) : null}
         </div>
       </div>
