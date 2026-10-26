@@ -41,13 +41,7 @@ import {
 // ============================================
 // TYPES
 // ============================================
-type FixedSlotId =
-  | "front"
-  | "back"
-  | "left"
-  | "right"
-  | "accessories"
-  | "packaging";
+type FixedSlotId = "cover";
 type SlotId = FixedSlotId | string; // allow dynamic "moreX"
 
 type ConnectionStatus = "idle" | "scanning" | "connected" | "uploading";
@@ -72,7 +66,7 @@ interface Presign {
 export interface GalleryImage {
   mediaId: string;
   slotId: SlotId;
-  file: File;
+  file?: File;
   key: string;
   previewUrl: string;
   status: "pending" | "uploading" | "uploaded" | "error";
@@ -92,25 +86,15 @@ export interface ProductMediaRef {
 // CONSTANTS
 // ============================================
 const FIXED_SLOTS: Slot[] = [
-  { id: "front", label: "Front", starred: true, isFixed: true },
-  { id: "back", label: "Back", starred: false, isFixed: true },
-  { id: "left", label: "Left", starred: false, isFixed: true },
-  { id: "right", label: "Right", starred: false, isFixed: true },
-  { id: "accessories", label: "Accessories", starred: false, isFixed: true },
-  { id: "packaging", label: "Packaging", starred: false, isFixed: true },
+  { id: "cover", label: "Cover", starred: true, isFixed: true },
 ];
 
 const SERVICE_SLOTS: Slot[] = [
   { id: "cover", label: "Cover", starred: true, isFixed: true },
-  { id: "sample1", label: "Sample 1", starred: true, isFixed: true },
-  { id: "sample2", label: "Sample 2", starred: true, isFixed: true },
-  { id: "sample3", label: "Sample 3", isFixed: true },
-  { id: "sample4", label: "Sample 4", isFixed: true },
-  { id: "sample5", label: "Sample 5", isFixed: true },
 ];
 
 const ROTATING_TIPS = [
-  { icon: "📸", text: "Add 4+ high-quality photos" },
+  { icon: "📸", text: "Add more photos if they help showcase the product." },
   { icon: "⚡", text: "Respond within 1 hour" },
   { icon: "📦", text: "Show packaging in photos" },
   { icon: "🔍", text: "Mention defects honestly" },
@@ -132,8 +116,13 @@ export const ProductMedia = forwardRef<
     onImagesChange?: (images: Record<SlotId, string>) => void;
     onGalleryChange?: (gallery: GalleryImage[]) => void;
     variant?: "product" | "service";
+    initialGallery?: {
+      mediaId: string;
+      url: string;
+      previewUrl?: string;
+    }[];
   }
->(({ onImagesChange, onGalleryChange, variant = "product" }, ref) => {
+>(({ onImagesChange, onGalleryChange, variant = "product", initialGallery }, ref) => {
   const [images, setImages] = useState<Record<SlotId, string>>({});
   const [imageGallery, setImageGallery] = useState<GalleryImage[]>([]);
   const [extraSlots, setExtraSlots] = useState<Slot[]>([]);
@@ -147,6 +136,28 @@ export const ProductMedia = forwardRef<
   const extraCounter = useRef<number>(1);
   const rotatingTips = variant === "service" ? SERVICE_TIPS : ROTATING_TIPS;
   const fixedSlots = variant === "service" ? SERVICE_SLOTS : FIXED_SLOTS;
+
+  useEffect(() => {
+    if (!initialGallery) return;
+    const gallery = initialGallery.map((media, index): GalleryImage => ({
+      mediaId: media.mediaId,
+      slotId: index === 0 ? "cover" : `more${index}`,
+      key: media.url,
+      previewUrl: media.previewUrl || media.url,
+      status: "uploaded",
+    }));
+    setImageGallery(gallery);
+    setImages(
+      Object.fromEntries(gallery.map((media) => [media.slotId, media.previewUrl])),
+    );
+    setExtraSlots(
+      gallery.slice(1).map((media, index) => ({
+        id: media.slotId,
+        label: `Image ${index + 2}`,
+      })),
+    );
+    extraCounter.current = Math.max(1, gallery.length);
+  }, [initialGallery]);
 
   // Rotating seller tips
   useEffect(() => {
@@ -199,6 +210,9 @@ export const ProductMedia = forwardRef<
 
     // Helper to assign a file to a specific slot
     const assignFileToSlot = (slot: Slot, file: File) => {
+      const replacedImage = imageGallery.find((item) => item.slotId === slot.id);
+      if (replacedImage?.key) void deleteUpload({ key: replacedImage.key });
+      if (replacedImage?.mediaId) void deleteListingMedia(replacedImage.mediaId);
       const previewUrl = URL.createObjectURL(file);
       const newGalleryItem: GalleryImage = {
         mediaId: "",
@@ -343,6 +357,7 @@ export const ProductMedia = forwardRef<
 
     for (const item of pendingItems) {
       try {
+        if (!item.file) throw new Error("Choose this image again to upload it.");
         const presign: Presign = await uploadImage(item.file);
         const uploadResponse = await fetch(presign.uploadUrl, {
           method: "PUT",

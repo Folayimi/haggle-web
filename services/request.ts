@@ -1,10 +1,12 @@
 import axios from "axios";
 import apiClient from "./client";
-import { notify, notifyError } from "./toastify";
+import { notify, notifyApiError, notifyError } from "./toastify";
 import { PassThrough } from "stream";
 import { Dispatch, SetStateAction } from "react";
 import { useHaggleStore } from "@/lib/app-store";
 import type { BackendCategory, BackendListing } from "./mappers";
+import { archiveListingRequest } from "./archive-listing";
+import { setBearerAuthorizationHeader } from "./auth-headers";
 
 const baseUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -50,26 +52,38 @@ const processQueue = (error: any = null, token: string | null = null) => {
       prom.reject(error);
     } else {
       // Retry the original request with the new token
-      prom.config.headers.Authorization = `Bearer ${token}`;
+      prom.config.headers = setBearerAuthorizationHeader(
+        prom.config.headers,
+        token,
+      );
       prom.resolve(apiClient(prom.config));
     }
   });
   failedQueue = [];
 };
 
+const activateAuthForExpiredSession = () => {
+  localStorage.removeItem("haggleAccessToken");
+  localStorage.removeItem("haggleRefreshToken");
+  localStorage.removeItem("haggleMediaAccessToken");
+  localStorage.setItem("activateAuth", "true");
+  useHaggleStore.getState().clearUserData();
+  useHaggleStore.getState().setActivateAuth(true);
+};
+
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("haggleAccessToken");
-    console.log("accessToken...", token);
     if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
+      config.headers = setBearerAuthorizationHeader(config.headers, token);
     }
 
     // 2. 👇 Attach the current user's id on every request — offers,
     // conversations, and other authenticated routes rely on this header
     // via getRequestUserId() on the backend, not just /users/me.
     const userData = useHaggleStore.getState().userData; // 👈 Get userData from store
-    if (userData?.id) {
+    const isCatalogRequest = /^\/?catalog(?:\/|$)/.test(config.url ?? "");
+    if (userData?.id && !isCatalogRequest) {
       config.headers["x-user-id"] = userData.id;
     }
 
@@ -85,7 +99,6 @@ apiClient.interceptors.request.use(
 
 apiClient.interceptors.response.use(
   (response) => {
-    console.log("checking....");
     // Any status code within 2xx triggers this.
     // You can return just response.data to simplify your API calls.
     return response;
@@ -93,9 +106,27 @@ apiClient.interceptors.response.use(
   async (error) => {
     // Any status code outside 2xx triggers this.
     const originalRequest = error.config;
+    const accessToken = localStorage.getItem("haggleAccessToken");
+    const refreshToken = localStorage.getItem("haggleRefreshToken");
+
+    if (!accessToken || !refreshToken) {
+      activateAuthForExpiredSession();
+      return Promise.reject(error);
+    }
 
     // Handle 401 Unauthorized
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      (!originalRequest || !originalRequest._retry)
+    ) {
+      if (!refreshToken) {
+        activateAuthForExpiredSession();
+        return Promise.reject(error);
+      }
+      if (!originalRequest) {
+        activateAuthForExpiredSession();
+        return Promise.reject(error);
+      }
       originalRequest._retry = true;
 
       // If a refresh is already in progress, queue this request
@@ -125,8 +156,6 @@ apiClient.interceptors.response.use(
         localStorage.setItem("haggleRefreshToken", newRefreshToken);
         localStorage.setItem("haggleMediaAccessToken", newMediaAccessToken);
 
-        console.log("new tokens: ", response.data.tokens);
-
         // Update the auth header for the current request
         originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
@@ -138,11 +167,15 @@ apiClient.interceptors.response.use(
       } catch (refreshError) {
         // Refresh failed - reject all queued requests and log the user out
         processQueue(refreshError, null);
-        // localStorage.clear();
+        activateAuthForExpiredSession();
         return Promise.reject(refreshError);
       } finally {
         isRefreshing = false;
       }
+    }
+
+    if (error.response?.status === 401) {
+      activateAuthForExpiredSession();
     }
 
     // Handle other global errors (e.g., show a toast notification)
@@ -156,34 +189,34 @@ apiClient.interceptors.response.use(
 
 // AUTENTICATION API CALLS
 export const userLogin = async (data: any) => {
-  let result = {};
-  await axios
-    .post(`${baseUrl}/auth/login`, data)
-    .then((response: any) => {
-      if (response?.data?.success === true) {
-        // localStorage.setItem("userData", JSON.stringify(response.data.user));
-        localStorage.setItem(
-          "haggleAccessToken",
-          response.data.tokens?.accessToken,
-        );
-        localStorage.setItem(
-          "haggleRefreshToken",
-          response.data.tokens?.refreshToken,
-        );
-        localStorage.setItem(
-          "haggleMediaAccessToken",
-          response.data.tokens?.mediaAccessToken,
-        );
-        notify(response?.data?.message);
-        result = response;
-      }
-    })
-    .catch((err) => {
-      notifyError(err?.response?.data?.error);
-      throw err;
-    });
+  try {
+    const response = await axios.post(`${baseUrl}/auth/login`, data);
+    if (response.data?.success !== true) {
+      notifyError(response.data?.message || "Unable to sign in.");
+      return null;
+    }
 
-  return result;
+    localStorage.setItem(
+      "haggleAccessToken",
+      response.data.tokens?.accessToken,
+    );
+    localStorage.setItem(
+      "haggleRefreshToken",
+      response.data.tokens?.refreshToken,
+    );
+    localStorage.setItem(
+      "haggleMediaAccessToken",
+      response.data.tokens?.mediaAccessToken,
+    );
+    notify(response.data?.message);
+    return response;
+  } catch (error) {
+    const message = axios.isAxiosError(error)
+      ? error.response?.data?.error ?? "Unable to sign in."
+      : "Unable to sign in.";
+    notifyError(message);
+    throw error;
+  }
 };
 
 export const userSignup = async (data: {
@@ -417,7 +450,11 @@ export const getUserProfile = async (
     .get(`/users/me`) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
     .then((response: any) => {
       if (response?.data?.success === true) {
-        result = response?.data;
+        result =
+          response.data.data?.user ??
+          response.data.data ??
+          response.data.user ??
+          response.data;
         console.log(result);
       }
     })
@@ -426,7 +463,7 @@ export const getUserProfile = async (
       // If the interceptor successfully refreshes the token and retries, this catch does NOT run.
       localStorage.setItem("activateAuth", "true");
       setActivateAuth(true);
-      notifyError(err?.response?.data?.error);
+      notifyApiError(err, err?.response?.data?.error ?? "Unable to load your account.");
       throw err;
     });
 
@@ -444,7 +481,7 @@ export const updateUserProfile = async (data: any) => {
       }
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error);
+      notifyApiError(err, err?.response?.data?.error ?? "Unable to update your profile.");
       throw err;
     });
 
@@ -513,7 +550,7 @@ export const getAllCategories = async () => {
         : error instanceof Error
           ? error.message
           : "Failed to load categories";
-    notifyError(message);
+    notifyApiError(error, message);
     throw error;
   }
 };
@@ -543,7 +580,7 @@ export const getAllListings = async (listingType: "product" | "services") => {
         : error instanceof Error
           ? error.message
           : `Failed to load ${listingType} listings`;
-    notifyError(message);
+    notifyApiError(error, message);
     throw error;
   }
 };
@@ -581,27 +618,41 @@ export const getListing = async (id: string): Promise<BackendListing> => {
         : error instanceof Error
           ? error.message
           : "Failed to load product";
-    notifyError(message);
+    notifyApiError(error, message);
     throw error;
   }
 };
 
-export const getSellerListings = async (sellerId: string) => {
-  let result: any = "";
-  await apiClient
-    .get(`/catalog/listings/seller/${sellerId}`) // Assumes apiClient has baseURL: "http://localhost:5000/api/v1"
-    .then((response: any) => {
-      if (response?.data?.success === true) {
-        result = response?.data;
-        console.log(result);
-      }
-    })
-    .catch((err) => {
-      // notifyError(err?.response?.data?.error);
-      // throw err;
-    });
+export const getSellerListings = async (
+  sellerId: string,
+): Promise<BackendListing[]> => {
+  try {
+    const response = await apiClient.get<{
+      success: boolean;
+      message?: string;
+      data: BackendListing[];
+    }>(`/catalog/listings/seller/${encodeURIComponent(sellerId)}`);
 
-  return result;
+    if (response.data.success !== true || !Array.isArray(response.data.data)) {
+      throw new Error(
+        response.data.message || "Invalid seller listings response",
+      );
+    }
+
+    return response.data.data;
+  } catch (error) {
+    const apiMessage = axios.isAxiosError(error)
+      ? (error.response?.data?.message ?? error.response?.data?.error)
+      : undefined;
+    const message =
+      typeof apiMessage === "string"
+        ? apiMessage
+        : error instanceof Error
+          ? error.message
+          : "Failed to load seller listings";
+    notifyApiError(error, message);
+    throw error;
+  }
 };
 
 export const createListing = async (data: any) => {
@@ -615,7 +666,7 @@ export const createListing = async (data: any) => {
       }
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error);
+      notifyApiError(err, err?.response?.data?.error ?? "Unable to create listing.");
       throw err;
     });
 
@@ -633,12 +684,24 @@ export const updateListing = async (id: any, data: any) => {
       }
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error);
+      notifyApiError(err, err?.response?.data?.error ?? "Unable to update listing.");
       throw err;
     });
 
   return result;
 };
+
+export const deleteListing = async (id: string) => {
+  const response = await apiClient.delete(
+    `/catalog/listings/${encodeURIComponent(id)}`,
+  );
+  return response.data;
+};
+
+export const archiveListing = async (
+  id: string,
+): Promise<BackendListing & { status: "archived" }> =>
+  archiveListingRequest<BackendListing>((url) => apiClient.patch(url), id);
 
 export const createListingMedia = async (data: any, id: string) => {
   let result: any = "";
@@ -651,7 +714,7 @@ export const createListingMedia = async (data: any, id: string) => {
       }
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error);
+      notifyApiError(err, err?.response?.data?.error ?? "Unable to save listing media.");
       throw err;
     });
 
@@ -669,7 +732,7 @@ export const deleteListingMedia = async (id: string) => {
       }
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error);
+      notifyApiError(err, err?.response?.data?.error ?? "Unable to delete listing media.");
       throw err;
     });
 
@@ -713,7 +776,7 @@ export const uploadImage = async (file: any) => {
       }
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error);
+      notifyApiError(err, err?.response?.data?.error ?? "Unable to upload image.");
       throw err;
     });
 
@@ -738,7 +801,7 @@ export const confirmUpload = async (data: any) => {
     })
     .catch((err) => {
       console.log(err);
-      notifyError(err?.response?.data?.error);
+      notifyApiError(err, err?.response?.data?.error ?? "Unable to confirm upload.");
       throw err;
     });
 
@@ -763,7 +826,7 @@ export const deleteUpload = async (data: any) => {
     })
     .catch((err) => {
       console.log(err);
-      notifyError(err?.response?.data?.error);
+      notifyApiError(err, err?.response?.data?.error ?? "Unable to delete upload.");
       throw err;
     });
 

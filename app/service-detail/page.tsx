@@ -1,7 +1,13 @@
-// import { ServiceDetailPage } from "@/components/workspace-pages";
+import MarketPage from "@/appPages/MarketPage";
 
-export default function Page({ searchParams }: { searchParams?: { [key: string]: string | string[] | undefined } }) {
-  const idRaw = searchParams?.service || searchParams?.id || "";
+export default async function Page({
+  searchParams,
+}: {
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
+}) {
+  const params = await searchParams;
+  const idRaw = params.service || params.id || "";
   const serviceId = Array.isArray(idRaw) ? idRaw[0] : idRaw;
-  // return <ServiceDetailPage serviceId={serviceId || undefined} />;
+
+  return <MarketPage initialServiceId={serviceId || undefined} />;
 }

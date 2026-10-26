@@ -89,7 +89,7 @@ const ForgotPasswordPage = ({
   return (
     // <div className="relative min-h-screen w-full bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center p-4">
 
-    <div className="w-full max-w-md">
+    <div className="w-full">
       {/* Loading overlay */}
       {(loading || resending) && (
         <div className="absolute inset-0 bg-black/30 z-50 flex items-center justify-center">
@@ -101,7 +101,7 @@ const ForgotPasswordPage = ({
           </div>
         </div>
       )}
-      <div className="bg-white rounded-3xl shadow-xl p-8 md:p-10 transition-all duration-300">
+      <div className="w-full transition-all duration-300">
         {/* Logo */}
         <div className="flex justify-center mb-8">
           <img src="/haggle.png" alt="Haggle" className="h-12 w-auto object-contain" />

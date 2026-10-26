@@ -3,35 +3,71 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   BadgeCheck,
+  Archive,
+  BarChart3,
+  CheckCircle2,
   CalendarDays,
   Camera,
   Clock3,
+  Eye,
   ImagePlus,
   LoaderCircle,
+  MoreHorizontal,
   MapPin,
   MessageCircle,
   Package,
   Pencil,
+  Plus,
   Radio,
   Star,
   Store,
+  Trash2,
   Wrench,
+  X,
 } from "lucide-react";
 import { useHaggleStore } from "@/lib/app-store";
+import ProductCard from "@/components/market/cards/ProductCard";
+import ServiceCard from "@/components/market/cards/ServiceCard";
+import { ProfileListingCardsSkeleton } from "@/components/market/common/MarketSkeletons";
 import {
-  allLiveSessions,
-  marketServices,
-  sellerProducts,
-} from "@/lib/mock-data";
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
+  archiveListing,
+  deleteListing,
+  getAllCategories,
+  getListing,
   getSellerListings,
   confirmUpload,
+  updateListing,
   updateUserProfile,
   uploadImage,
 } from "@/services/request";
-import type { BackendListing } from "@/services/mappers";
+import {
+  ArchiveListingError,
+  replaceWithArchivedListing,
+} from "@/services/archive-listing";
+import {
+  getSavedListings,
+  unsaveListing,
+} from "@/services/catalog";
+import { notify, notifyApiError } from "@/services/toastify";
+import {
+  mapListingToProduct,
+  mapListingToService,
+  type BackendListing,
+} from "@/services/mappers";
+import {
+  getApplicableCategoryTags,
+  PRODUCT_CATEGORIES,
+  SERVICE_CATEGORIES,
+} from "@/types/categories";
 import {
   Dialog,
   DialogContent,
@@ -45,18 +81,23 @@ type ImageSlot = "avatar" | "cover";
 type ProfileMedia = { avatar: string; cover: string };
 type ProfileDetailsDraft = {
   full_name: string;
+  username: string;
   business_name: string;
   bio: string;
   city: string;
   state: string;
   country: string;
+  postal_code: string;
+  email: string;
+  phone: string;
+  website: string;
 };
-type ProfileTab = "Products" | "Services" | "Liked" | "Scheduled lives";
+type ProfileTab = "Products" | "Services" | "Favorites" | "Scheduled lives";
 const emptyMedia: ProfileMedia = { avatar: "", cover: "" };
 const tabs: { label: ProfileTab; icon: typeof Package }[] = [
   { label: "Products", icon: Package },
   { label: "Services", icon: Wrench },
-  { label: "Liked", icon: Star },
+  { label: "Favorites", icon: Star },
   { label: "Scheduled lives", icon: Radio },
 ];
 
@@ -70,9 +111,14 @@ function toPublicImageUrl(key: string) {
   ).toString();
 }
 
-function asListings(result: any): BackendListing[] {
-  const rows = Array.isArray(result) ? result : result?.data;
-  return Array.isArray(rows) ? rows : [];
+function listingImageUrl(listing: BackendListing) {
+  const imagePath =
+    listing.thumbnail_url?.trim() ||
+    listing.medias?.find((media) => media.is_cover)?.url ||
+    listing.media?.find((media) => media.is_cover)?.url ||
+    listing.medias?.[0]?.url ||
+    listing.media?.[0]?.url;
+  return imagePath ? toPublicImageUrl(imagePath) || imagePath : "";
 }
 
 export default function ProfileWorkspacePage({
@@ -80,9 +126,10 @@ export default function ProfileWorkspacePage({
 }: {
   username: string;
 }) {
+  const router = useRouter();
   const userData = useHaggleStore((state) => state.userData);
   const setUserData = useHaggleStore((state) => state.setUserData);
-  const savedItemIds = useHaggleStore((state) => state.savedItemIds);
+  const setSavedItem = useHaggleStore((state) => state.setSavedItem);
   const accountProfile = userData?.profile ?? {};
   const accountUsername = String(
     userData?.username || accountProfile.username || "",
@@ -92,26 +139,60 @@ export default function ProfileWorkspacePage({
   const profile = isOwner ? accountProfile : {};
   const ownerData = isOwner ? userData : null;
   const [media, setMedia] = useState<ProfileMedia>(emptyMedia);
+  const [imagePreview, setImagePreview] = useState<{
+    src: string;
+    alt: string;
+  } | null>(null);
   const [uploading, setUploading] = useState<ImageSlot | null>(null);
   const [uploadMessage, setUploadMessage] = useState("");
   const [profileDraft, setProfileDraft] = useState<ProfileDetailsDraft>({
     full_name: "",
+    username: "",
     business_name: "",
     bio: "",
     city: "",
     state: "",
     country: "",
+    postal_code: "",
+    email: "",
+    phone: "",
+    website: "",
   });
   const [editOpen, setEditOpen] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaveMessage, setProfileSaveMessage] = useState("");
   const [activeTab, setActiveTab] = useState<ProfileTab>("Products");
   const [listings, setListings] = useState<BackendListing[]>([]);
+  const [listingsLoading, setListingsLoading] = useState(false);
+  const [listingsError, setListingsError] = useState(false);
+  const [favoriteListings, setFavoriteListings] = useState<BackendListing[]>(
+    [],
+  );
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoritesError, setFavoritesError] = useState(false);
+  const [favoritesRetry, setFavoritesRetry] = useState(0);
+  const [favoritesPage, setFavoritesPage] = useState(1);
+  const [favoritesTotal, setFavoritesTotal] = useState(0);
+  const [favoritesTotalPages, setFavoritesTotalPages] = useState(0);
+  const [favoriteActionId, setFavoriteActionId] = useState<string | null>(
+    null,
+  );
+  const [listingActionId, setListingActionId] = useState<string | null>(null);
+  const [listingConfirmation, setListingConfirmation] = useState<{
+    listing: BackendListing;
+    action: "archive" | "publish" | "delete";
+  } | null>(null);
+  const [listingView, setListingView] = useState<
+    "active" | "archived" | "drafts"
+  >("active");
 
   useEffect(() => {
     if (!isOwner) return;
     setProfileDraft({
       full_name: String(accountProfile.full_name || userData?.full_name || ""),
+      username: String(
+        userData?.username || accountProfile.username || routeUsername,
+      ).replace(/^@/, ""),
       business_name: String(
         accountProfile.business_name || userData?.business_name || "",
       ),
@@ -119,6 +200,12 @@ export default function ProfileWorkspacePage({
       city: String(accountProfile.city || accountProfile.location || ""),
       state: String(accountProfile.state || ""),
       country: String(accountProfile.country || ""),
+      postal_code: String(
+        accountProfile.postal_code || userData?.postal_code || "",
+      ),
+      email: String(accountProfile.email || userData?.email || ""),
+      phone: String(accountProfile.phone || userData?.phone || ""),
+      website: String(accountProfile.website || userData?.website || ""),
     });
   }, [
     accountProfile.bio,
@@ -127,33 +214,64 @@ export default function ProfileWorkspacePage({
     accountProfile.country,
     accountProfile.full_name,
     accountProfile.location,
+    accountProfile.username,
+    accountProfile.postal_code,
+    accountProfile.email,
+    accountProfile.phone,
+    accountProfile.website,
     accountProfile.state,
     isOwner,
     userData?.bio,
     userData?.business_name,
+    userData?.username,
     userData?.full_name,
+    userData?.postal_code,
+    userData?.email,
+    userData?.phone,
+    userData?.website,
   ]);
 
   useEffect(() => {
-    if (!routeUsername) return;
-    try {
-      const saved = localStorage.getItem(
-        `haggle-profile-media:${routeUsername}`,
-      );
-      setMedia(saved ? { ...emptyMedia, ...JSON.parse(saved) } : emptyMedia);
-    } catch {
-      setMedia(emptyMedia);
-    }
+    setMedia(emptyMedia);
   }, [routeUsername]);
 
   useEffect(() => {
     const sellerId =
       ownerData?.id || ownerData?.user_id || accountProfile.user_id;
-    if (!isOwner || !sellerId) return;
+    if (!isOwner || !sellerId) {
+      setListings([]);
+      setListingsLoading(false);
+      setListingsError(false);
+      return;
+    }
     let active = true;
-    void getSellerListings(String(sellerId)).then((result) => {
-      if (active) setListings(asListings(result));
-    });
+    setListingsLoading(true);
+    setListingsError(false);
+    void getSellerListings(String(sellerId))
+      .then((result) => {
+        if (active) {
+          setListings(
+            result.filter((listing) => {
+              const status = listing.status?.toLowerCase();
+              return (
+                !status ||
+                status === "published" ||
+                status === "archived" ||
+                status === "draft"
+              );
+            }),
+          );
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setListings([]);
+          setListingsError(true);
+        }
+      })
+      .finally(() => {
+        if (active) setListingsLoading(false);
+      });
     return () => {
       active = false;
     };
@@ -173,11 +291,7 @@ export default function ProfileWorkspacePage({
   const avatarUrl =
     media.avatar || profile.avatar_url || ownerData?.avatar_url || "";
   const coverUrl =
-    media.cover ||
-    profile.cover_url ||
-    profile.cover_image_url ||
-    ownerData?.cover_url ||
-    "";
+    media.cover || profile.cover_image_url || ownerData?.cover_image_url || "";
   const verified = Boolean(
     profile.is_verified || ownerData?.is_verified || profile.verified,
   );
@@ -190,8 +304,8 @@ export default function ProfileWorkspacePage({
   ).toLowerCase();
   const isSeller = Boolean(
     profile.business_name ||
-      ownerData?.business_name ||
-      /seller|vendor|business|both/.test(role),
+    ownerData?.business_name ||
+    /seller|vendor|business|both/.test(role),
   );
   const followers =
     profile.followers ??
@@ -220,31 +334,69 @@ export default function ProfileWorkspacePage({
       (item.listing_type || "").toLowerCase() === "service" ||
       (item.listing_type || "").toLowerCase() === "services",
   );
-  const likedItems = isOwner
-    ? [
-        ...sellerProducts.map((item) => ({
-          id: item.id,
-          title: item.name,
-          description: item.description,
-          image: item.imageUrl,
-          kind: "Product",
-        })),
-        ...marketServices.map((item) => ({
-          id: item.id,
-          title: item.name,
-          description: item.description,
-          image: item.imageUrl,
-          kind: "Service",
-        })),
-        ...allLiveSessions.map((item) => ({
-          id: item.id,
-          title: item.title,
-          description: item.preview,
-          image: item.coverImageUrl,
-          kind: "Live",
-        })),
-      ].filter((item) => savedItemIds.includes(item.id))
-    : [];
+  useEffect(() => {
+    if (activeTab !== "Favorites") return;
+    if (!isOwner) return;
+
+    let active = true;
+    void Promise.resolve()
+      .then(() => {
+        if (!active) return null;
+        setFavoritesLoading(true);
+        setFavoritesError(false);
+        return getSavedListings(favoritesPage, 20);
+      })
+      .then((result) => {
+        if (!active || !result) return;
+        setFavoriteListings(result.listings);
+        setFavoritesPage(result.page);
+        setFavoritesTotal(result.total);
+        setFavoritesTotalPages(result.totalPages);
+        for (const listing of result.listings) {
+          setSavedItem(listing.id, true);
+        }
+      })
+      .catch((error: unknown) => {
+        if (!active) return;
+        setFavoritesError(true);
+        notifyApiError(error, "Your favorites could not be loaded. Please try again.");
+      })
+      .finally(() => {
+        if (active) setFavoritesLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [
+    activeTab,
+    favoritesPage,
+    favoritesRetry,
+    isOwner,
+    setSavedItem,
+  ]);
+
+  const handleUnsaveFavorite = async (listingId: string) => {
+    if (favoriteActionId) return;
+    setFavoriteActionId(listingId);
+    try {
+      await unsaveListing(listingId);
+      setSavedItem(listingId, false);
+      setFavoriteListings((current) =>
+        current.filter((listing) => listing.id !== listingId),
+      );
+      setFavoritesTotal((current) => Math.max(0, current - 1));
+      if (favoriteListings.length === 1 && favoritesPage > 1) {
+        setFavoritesLoading(true);
+        setFavoritesPage((current) => current - 1);
+      }
+      notify("Listing removed from favorites.");
+    } catch (error: unknown) {
+      notifyApiError(error, "This listing could not be removed from favorites.");
+    } finally {
+      setFavoriteActionId(null);
+    }
+  };
 
   const handleImageUpload = async (slot: ImageSlot, file?: File) => {
     if (!file || !isOwner) return;
@@ -267,35 +419,37 @@ export default function ProfileWorkspacePage({
       await confirmUpload({ key: upload.key });
       const uploadedUrl = toPublicImageUrl(upload.key);
       if (!uploadedUrl) {
+        setMedia((current) => ({ ...current, [slot]: "" }));
+        URL.revokeObjectURL(previewUrl);
         setUploadMessage(
           "The image uploaded, but the public image URL is not configured yet.",
         );
         return;
       }
       const field = slot === "avatar" ? "avatar_url" : "cover_image_url";
-      const nextMedia = { ...media, [slot]: uploadedUrl };
-      setMedia(nextMedia);
-      localStorage.setItem(
-        `haggle-profile-media:${routeUsername}`,
-        JSON.stringify(nextMedia),
-      );
-      setUserData({
-        ...userData,
-        [field]: uploadedUrl,
-        profile: { ...profile, [field]: uploadedUrl },
-      });
       try {
-        await updateUserProfile({ [field]: uploadedUrl });
+        const result = await updateUserProfile({ [field]: uploadedUrl });
+        if (!result) throw new Error("Profile image update failed.");
+        setUserData({
+          ...userData,
+          [field]: uploadedUrl,
+          profile: { ...profile, [field]: uploadedUrl },
+        });
+        setMedia((current) => ({ ...current, [slot]: uploadedUrl }));
         setUploadMessage(
           slot === "cover" ? "Cover image updated." : "Profile photo updated.",
         );
       } catch {
+        setMedia((current) => ({ ...current, [slot]: "" }));
+        URL.revokeObjectURL(previewUrl);
         setUploadMessage(
-          "Image uploaded. Profile sync is temporarily unavailable.",
+          "The image uploaded, but your profile could not be updated. Please try again.",
         );
       }
       URL.revokeObjectURL(previewUrl);
     } catch (error) {
+      setMedia((current) => ({ ...current, [slot]: "" }));
+      URL.revokeObjectURL(previewUrl);
       setUploadMessage(
         error instanceof Error
           ? error.message
@@ -311,22 +465,18 @@ export default function ProfileWorkspacePage({
     const nextProfile: ProfileDetailsDraft = {
       ...profileDraft,
       full_name: profileDraft.full_name.trim(),
+      username: profileDraft.username.trim().replace(/^@/, ""),
       business_name: profileDraft.business_name.trim(),
       bio: profileDraft.bio.trim(),
       city: profileDraft.city.trim(),
       state: profileDraft.state.trim(),
       country: profileDraft.country.trim(),
+      postal_code: profileDraft.postal_code.trim(),
+      email: profileDraft.email.trim(),
+      phone: profileDraft.phone.trim(),
+      website: profileDraft.website.trim(),
     };
-    const personalFields = {
-      full_name: nextProfile.full_name,
-      bio: nextProfile.bio,
-      city: nextProfile.city,
-      state: nextProfile.state,
-      country: nextProfile.country,
-    };
-    const profileUpdates = isSeller
-      ? nextProfile
-      : personalFields;
+    const profileUpdates = nextProfile;
     setProfileSaving(true);
     setProfileSaveMessage("");
     try {
@@ -339,8 +489,13 @@ export default function ProfileWorkspacePage({
       });
       setProfileDraft(nextProfile);
       setEditOpen(false);
+      if (nextProfile.username && nextProfile.username !== routeUsername) {
+        router.replace(`/profile/${encodeURIComponent(nextProfile.username)}`);
+      }
     } catch {
-      setProfileSaveMessage("Your changes could not be saved. Please try again.");
+      setProfileSaveMessage(
+        "Your changes could not be saved. Please try again.",
+      );
     } finally {
       setProfileSaving(false);
     }
@@ -350,6 +505,9 @@ export default function ProfileWorkspacePage({
     setProfileSaveMessage("");
     setProfileDraft({
       full_name: String(accountProfile.full_name || userData?.full_name || ""),
+      username: String(
+        userData?.username || accountProfile.username || routeUsername,
+      ).replace(/^@/, ""),
       business_name: String(
         accountProfile.business_name || userData?.business_name || "",
       ),
@@ -357,16 +515,244 @@ export default function ProfileWorkspacePage({
       city: String(accountProfile.city || accountProfile.location || ""),
       state: String(accountProfile.state || ""),
       country: String(accountProfile.country || ""),
+      postal_code: String(
+        accountProfile.postal_code || userData?.postal_code || "",
+      ),
+      email: String(accountProfile.email || userData?.email || ""),
+      phone: String(accountProfile.phone || userData?.phone || ""),
+      website: String(accountProfile.website || userData?.website || ""),
     });
     setEditOpen(true);
   };
 
-  const tabListings =
+  const openListingEditor = (listing: BackendListing) => {
+    const type = listing.listing_type?.toLowerCase();
+    router.push(
+      `/${type === "service" || type === "services" ? "add-service" : "post-product"}/${encodeURIComponent(listing.id)}`,
+    );
+  };
+
+  const refreshSellerListings = async () => {
+    if (!sellerId) return;
+    try {
+      const result = await getSellerListings(sellerId);
+      setListings(
+        result.filter((listing) => {
+          const status = listing.status?.toLowerCase();
+          return (
+            !status ||
+            status === "published" ||
+            status === "archived" ||
+            status === "draft"
+          );
+        }),
+      );
+    } catch {
+      // Keep the current seller view when a follow-up refresh also fails.
+    }
+  };
+
+  const handleListingAction = async (
+    listing: BackendListing,
+    action: "archive" | "publish" | "delete",
+  ) => {
+    if (listingActionId) return;
+    setListingActionId(listing.id);
+    try {
+      if (action === "archive") {
+        const archivedListing = await archiveListing(listing.id);
+        setListings((current) =>
+          replaceWithArchivedListing(current, archivedListing),
+        );
+        notify("Listing archived.");
+      } else if (action === "publish") {
+        const currentListing = await getListing(listing.id);
+        const currentStatus = currentListing.status?.toLowerCase();
+        if (currentStatus !== "archived" && currentStatus !== "draft") {
+          throw new Error(
+            "This listing is no longer archived or a draft. Refresh your listings and try again.",
+          );
+        }
+        const listingType = currentListing.listing_type?.toLowerCase();
+        const price = Number(
+          String(currentListing.starting_amount ?? "").replace(/[^\d.-]/g, ""),
+        );
+        const media = [
+          ...(currentListing.medias ?? []),
+          ...(currentListing.media ?? []),
+        ];
+        const hasImage = media.some((item) =>
+          ["image"].includes(item.media_type.toLowerCase()),
+        );
+        const missingDetails: string[] = [];
+
+        if (!currentListing.title.trim()) missingDetails.push("title");
+        if (!currentListing.description.trim())
+          missingDetails.push("description");
+        if (!currentListing.category_id) missingDetails.push("category");
+        if (!Number.isFinite(price) || price <= 0)
+          missingDetails.push("valid price");
+        if (!hasImage) missingDetails.push("at least one image");
+        if (listingType === "product") {
+          if (
+            currentListing.inventory_count == null ||
+            currentListing.inventory_count < 0
+          ) {
+            missingDetails.push("valid inventory count");
+          }
+          if (
+            !String(
+              accountProfile.city ||
+                accountProfile.location ||
+                ownerData?.city ||
+                ownerData?.location ||
+                "",
+            ).trim()
+          ) {
+            missingDetails.push("seller location");
+          }
+        } else if (listingType === "service" || listingType === "services") {
+          if (!currentListing.delivery_duration?.trim()) {
+            missingDetails.push("delivery timeframe");
+          }
+          if (!currentListing.target_audience?.trim()) {
+            missingDetails.push("target audience");
+          }
+          if (
+            currentListing.work_place?.toLowerCase() === "on_site" &&
+            !currentListing.work_address?.trim()
+          ) {
+            missingDetails.push("work address");
+          }
+        } else {
+          missingDetails.push("listing type");
+        }
+
+        const categories = await getAllCategories();
+        const childCategory = categories.find(
+          (category) => category.id === currentListing.category_id,
+        );
+        const parentCategory = childCategory?.parent_id
+          ? categories.find(
+              (category) => category.id === childCategory.parent_id,
+            )
+          : undefined;
+        const configuredCategory =
+          listingType === "product"
+            ? PRODUCT_CATEGORIES.find(
+                (category) => category.id === parentCategory?.slug,
+              )
+            : SERVICE_CATEGORIES.find(
+                (category) => category.id === parentCategory?.slug,
+              );
+        if (!childCategory || !configuredCategory) {
+          missingDetails.push("supported category");
+        }
+        const tags = Array.isArray(currentListing.tags)
+          ? currentListing.tags.join("|")
+          : (currentListing.tags ?? "");
+        const missingTags = getApplicableCategoryTags(
+          configuredCategory,
+          childCategory?.slug,
+        )
+          .filter((tag) => tag.required)
+          .filter((tag) => {
+            if (
+              listingType !== "product" &&
+              ["delivery time", "location"].includes(tag.name.toLowerCase())
+            ) {
+              return false;
+            }
+            const value = tags
+              .split("|")
+              .find((entry) => entry.startsWith(`${tag.name.toLowerCase()}:`))
+              ?.split(":")[1];
+            return !value?.trim();
+          })
+          .map((tag) => tag.name);
+        missingDetails.push(...missingTags);
+
+        if (missingDetails.length > 0) {
+          throw new Error(
+            `This listing is missing required details: ${[...new Set(missingDetails)].join(", ")}. Edit it to save it as a draft, then complete the missing details before publishing.`,
+          );
+        }
+
+        const response = await updateListing(listing.id, {
+          status: "published",
+        });
+        if (!response) {
+          throw new Error(
+            "The listing could not be published. Please try again.",
+          );
+        }
+        const publishedListing = await getListing(listing.id);
+        if (publishedListing.status?.toLowerCase() !== "published") {
+          throw new Error("The listing was not confirmed as published.");
+        }
+        setListings((current) =>
+          current.map((item) =>
+            item.id === listing.id ? publishedListing : item,
+          ),
+        );
+        notify("Listing published.");
+      } else {
+        await deleteListing(listing.id);
+        notify("Listing deleted.");
+        setListings((current) =>
+          current.filter((item) => item.id !== listing.id),
+        );
+      }
+      setListingConfirmation(null);
+    } catch (error) {
+      if (action === "archive" && error instanceof ArchiveListingError) {
+        if (error.status === 404) {
+          setListingConfirmation(null);
+          notifyApiError(
+            error,
+            "This listing is unavailable or no longer belongs to your account.",
+          );
+          await refreshSellerListings();
+        } else if (error.status === 401) {
+          setListingConfirmation(null);
+          notifyApiError(
+            error,
+            "Your session has expired. Sign in to archive this listing.",
+          );
+        } else {
+          notifyApiError(error, error.message || "Unable to archive this listing.");
+        }
+      } else {
+        notifyApiError(
+          error,
+          error instanceof Error
+            ? error.message
+            : `Unable to ${action} this listing.`,
+        );
+      }
+    } finally {
+      setListingActionId(null);
+    }
+  };
+
+  const allTabListings =
     activeTab === "Products"
       ? products
       : activeTab === "Services"
         ? services
         : [];
+  const tabListings = allTabListings.filter((listing) => {
+    const status = listing.status?.toLowerCase();
+    if (listingView === "archived") return status === "archived";
+    if (listingView === "drafts") return status === "draft";
+    return status !== "archived" && status !== "draft";
+  });
+  const archivedListingsCount = allTabListings.filter(
+    (listing) => listing.status?.toLowerCase() === "archived",
+  ).length;
+  const draftListingsCount = allTabListings.filter(
+    (listing) => listing.status?.toLowerCase() === "draft",
+  ).length;
   const emptyCopy: Record<ProfileTab, string> = {
     Products: isOwner
       ? "Your listed products will appear here."
@@ -374,66 +760,92 @@ export default function ProfileWorkspacePage({
     Services: isOwner
       ? "Your listed services will appear here."
       : "No services have been added yet.",
-    Liked: "Items you like will appear here.",
+    Favorites: isOwner
+      ? "Listings you add to favorites will appear here."
+      : "Favorites are only visible on your own profile.",
     "Scheduled lives": "Scheduled live sessions will appear here.",
   };
 
   return (
-    <main className="min-h-screen bg-background text-foreground">
+    <main className="min-h-screen bg-transparent text-foreground">
       <div className="mx-auto w-full max-w-7xl px-4 py-4 sm:px-6 sm:py-6 lg:px-8">
         <section aria-label="Business profile">
           <div className="relative">
             <div className="relative h-[150px] overflow-hidden rounded-3xl border border-border/50 bg-background-elevated/40 sm:h-[180px] lg:h-[200px]">
-            {coverUrl ? (
-              <img
-                src={coverUrl}
-                alt={`${displayName} cover image`}
-                className="absolute inset-0 h-full w-full object-cover"
-              />
-            ) : (
-              <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/15 via-background-elevated/50 to-secondary/15 px-6 text-center">
-                <ImagePlus className="mb-3 h-9 w-9 text-primary" />
-                <p className="max-w-xs text-base font-semibold">
-                  Upload your business cover image or an elegant picture of
-                  yourself
-                </p>
-                {isOwner && (
-                  <p className="mt-2 text-sm text-muted">
-                    This image introduces your business.
+              {coverUrl ? (
+                <button
+                  type="button"
+                  aria-label="View cover image"
+                  onClick={() =>
+                    setImagePreview({
+                      src: coverUrl,
+                      alt: `${displayName} cover image`,
+                    })
+                  }
+                  className="absolute inset-0 z-0 h-full w-full cursor-zoom-in"
+                >
+                  <img
+                    src={coverUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                </button>
+              ) : (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-br from-primary/15 via-background-elevated/50 to-secondary/15 px-6 text-center">
+                  <ImagePlus className="mb-3 h-9 w-9 text-primary" />
+                  <p className="max-w-xs text-base font-semibold">
+                    Upload your business cover image or an elegant picture of
+                    yourself
                   </p>
-                )}
-              </div>
-            )}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-black/15" />
-            {isOwner && (
-              <label className="absolute left-4 top-4 inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/20 bg-black/45 px-3.5 py-2.5 text-sm font-semibold text-white backdrop-blur hover:bg-black/60">
-                {uploading === "cover" ? (
-                  <LoaderCircle className="h-4 w-4 animate-spin" />
-                ) : (
-                  <Camera className="h-4 w-4" />
-                )}
-                {coverUrl ? "Change cover" : "Upload cover"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  disabled={uploading !== null}
-                  onChange={(event) => {
-                    void handleImageUpload("cover", event.target.files?.[0]);
-                    event.currentTarget.value = "";
-                  }}
-                />
-              </label>
-            )}
+                  {isOwner && (
+                    <p className="mt-2 text-sm text-muted">
+                      This image introduces your business.
+                    </p>
+                  )}
+                </div>
+              )}
+              <div className="pointer-events-none absolute inset-0 z-[1] bg-gradient-to-t from-black/55 via-transparent to-black/15" />
+              {isOwner && (
+                <label className="absolute left-4 top-4 z-10 inline-flex cursor-pointer items-center gap-2 rounded-full border border-white/20 bg-black/45 px-3.5 py-2.5 text-sm font-semibold text-white backdrop-blur hover:bg-black/60">
+                  {uploading === "cover" ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Camera className="h-4 w-4" />
+                  )}
+                  {coverUrl ? "Change cover" : "Upload cover"}
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="sr-only"
+                    disabled={uploading !== null}
+                    onChange={(event) => {
+                      void handleImageUpload("cover", event.target.files?.[0]);
+                      event.currentTarget.value = "";
+                    }}
+                  />
+                </label>
+              )}
             </div>
             <div className="absolute -bottom-8 left-4 z-10 h-20 w-20 rounded-full border-4 border-background bg-background-elevated shadow-xl sm:-bottom-9 sm:left-8 sm:h-24 sm:w-24">
               <div className="h-full w-full overflow-hidden rounded-full bg-background-elevated">
                 {avatarUrl ? (
-                  <img
-                    src={avatarUrl}
-                    alt={`${fullName} profile`}
-                    className="h-full w-full object-cover"
-                  />
+                  <button
+                    type="button"
+                    aria-label="View profile photo"
+                    onClick={() =>
+                      setImagePreview({
+                        src: avatarUrl,
+                        alt: `${fullName} profile photo`,
+                      })
+                    }
+                    className="h-full w-full cursor-zoom-in"
+                  >
+                    <img
+                      src={avatarUrl}
+                      alt=""
+                      className="h-full w-full object-cover"
+                    />
+                  </button>
                 ) : (
                   <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-primary/15 to-secondary/15 text-muted">
                     <Store className="h-9 w-9" />
@@ -441,7 +853,7 @@ export default function ProfileWorkspacePage({
                 )}
               </div>
               {isOwner && (
-                <label className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-primary text-white shadow-md">
+                <label className="absolute bottom-0 right-0 z-10 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full border-2 border-background bg-primary text-white shadow-md">
                   {uploading === "avatar" ? (
                     <LoaderCircle className="h-4 w-4 animate-spin" />
                   ) : (
@@ -522,16 +934,8 @@ export default function ProfileWorkspacePage({
                   </span>
                 )}
               </div>
-              <div className="mt-4 flex flex-wrap gap-3">
-                {isOwner ? (
-                  <Link
-                    href="/post-product"
-                    className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-strong"
-                  >
-                    <Package className="h-4 w-4" />
-                    Add a product
-                  </Link>
-                ) : (
+              {!isOwner && (
+                <div className="mt-4 flex flex-wrap gap-3">
                   <Link
                     href="/conversation"
                     className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-strong"
@@ -539,58 +943,58 @@ export default function ProfileWorkspacePage({
                     <MessageCircle className="h-4 w-4" />
                     Message
                   </Link>
-                )}
-                {!isOwner && (
                   <button
                     type="button"
                     className="rounded-xl border border-border/60 px-5 py-3 text-sm font-semibold transition hover:bg-background-elevated/50"
                   >
                     Follow
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
             <aside
               className="rounded-3xl border border-border/50 bg-background-elevated/25 p-4 sm:p-5"
-              aria-label={isSeller ? "Business details" : "Followers and following"}
+              aria-label={
+                isSeller ? "Business details" : "Followers and following"
+              }
             >
               <h2 className="text-base font-bold">
                 {isSeller ? "Business details" : "Community"}
               </h2>
               {isSeller ? (
-              <div className="mt-3 grid grid-cols-2 gap-2">
-                <div className="rounded-2xl bg-background/60 p-4">
-                  <p className="text-xs text-muted">Rating</p>
-                  <p className="mt-2 flex items-center gap-1.5 font-bold">
-                    <Star className="h-4 w-4 fill-primary text-primary" />
-                    {profile.rating || profile.average_rating || "—"}
-                  </p>
+                <div className="mt-3 grid grid-cols-2 gap-2">
+                  <div className="rounded-2xl bg-background/60 p-4">
+                    <p className="text-xs text-muted">Rating</p>
+                    <p className="mt-2 flex items-center gap-1.5 font-bold">
+                      <Star className="h-4 w-4 fill-primary text-primary" />
+                      {profile.rating || profile.average_rating || "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-background/60 p-4">
+                    <p className="text-xs text-muted">Reviews</p>
+                    <p className="mt-2 font-bold">
+                      {profile.review_count ?? profile.reviews_count ?? "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-background/60 p-4">
+                    <p className="text-xs text-muted">Response time</p>
+                    <p className="mt-2 truncate font-bold">
+                      {profile.average_response_time ||
+                        profile.response_time ||
+                        "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-background/60 p-4">
+                    <p className="text-xs text-muted">Followers</p>
+                    <p className="mt-2 font-bold">
+                      {profile.followers ?? profile.follower_count ?? "—"}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl bg-background/60 p-3">
+                    <p className="text-xs text-muted">Following</p>
+                    <p className="mt-1 font-bold">{following}</p>
+                  </div>
                 </div>
-                <div className="rounded-2xl bg-background/60 p-4">
-                  <p className="text-xs text-muted">Reviews</p>
-                  <p className="mt-2 font-bold">
-                    {profile.review_count ?? profile.reviews_count ?? "—"}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-background/60 p-4">
-                  <p className="text-xs text-muted">Response time</p>
-                  <p className="mt-2 truncate font-bold">
-                    {profile.average_response_time ||
-                      profile.response_time ||
-                      "—"}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-background/60 p-4">
-                  <p className="text-xs text-muted">Followers</p>
-                  <p className="mt-2 font-bold">
-                    {profile.followers ?? profile.follower_count ?? "—"}
-                  </p>
-                </div>
-                <div className="rounded-2xl bg-background/60 p-3">
-                  <p className="text-xs text-muted">Following</p>
-                  <p className="mt-1 font-bold">{following}</p>
-                </div>
-              </div>
               ) : (
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   <div className="rounded-2xl bg-background/60 p-3">
@@ -604,16 +1008,16 @@ export default function ProfileWorkspacePage({
                 </div>
               )}
               {isSeller && (
-              <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border/50 px-3 py-2.5 text-sm">
-                {verified ? (
-                  <BadgeCheck className="h-4 w-4 text-secondary" />
-                ) : (
-                  <Store className="h-4 w-4 text-primary" />
-                )}
-                <span>
-                  {verified ? "Verified business" : "Business profile"}
-                </span>
-              </div>
+                <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border/50 px-3 py-2.5 text-sm">
+                  {verified ? (
+                    <BadgeCheck className="h-4 w-4 text-secondary" />
+                  ) : (
+                    <Store className="h-4 w-4 text-primary" />
+                  )}
+                  <span>
+                    {verified ? "Verified business" : "Business profile"}
+                  </span>
+                </div>
               )}
               {uploadMessage && (
                 <p className="mt-4 text-xs leading-5 text-muted" role="status">
@@ -626,13 +1030,13 @@ export default function ProfileWorkspacePage({
 
         {isOwner && (
           <Dialog open={editOpen} onOpenChange={setEditOpen}>
-            <DialogContent className="max-h-[calc(100dvh-2rem)] max-w-2xl gap-5 overflow-y-auto rounded-2xl p-5 sm:p-7">
-              <DialogHeader>
+            <DialogContent className="flex w-[calc(100vw-2rem)] min-w-0 max-h-[min(90dvh,52rem)] max-w-none flex-col gap-0 overflow-hidden rounded-2xl p-0 sm:w-[85vw] lg:w-[65vw] lg:min-w-[65vw] lg:max-w-none">
+              <DialogHeader className="shrink-0 border-b border-border/60 px-5 py-4 pr-14 sm:px-7">
                 <DialogTitle className="text-xl font-bold">
                   Edit profile
                 </DialogTitle>
                 <DialogDescription>
-                  Update the details people see when they visit your profile.
+                  Keep your personal and business details up to date.
                 </DialogDescription>
               </DialogHeader>
               <form
@@ -640,26 +1044,79 @@ export default function ProfileWorkspacePage({
                   event.preventDefault();
                   void handleProfileSave();
                 }}
-                className="space-y-4"
+                className="flex min-h-0 flex-1 flex-col"
               >
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <label className="space-y-1.5 text-sm font-medium">
-                    <span>Your name</span>
-                    <input
-                      value={profileDraft.full_name}
-                      onChange={(event) =>
-                        setProfileDraft((draft) => ({
-                          ...draft,
-                          full_name: event.target.value,
-                        }))
-                      }
-                      maxLength={100}
-                      className="w-full rounded-xl border border-border/60 bg-background px-3.5 py-2.5 font-normal outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
-                    />
-                  </label>
-                  {isSeller && (
-                    <label className="space-y-1.5 text-sm font-medium">
-                      <span>Business name</span>
+                <div className="min-h-0 flex-1 space-y-7 overflow-y-auto px-5 py-5 sm:px-7">
+                  <p className="text-xs text-muted">* Indicates required</p>
+
+                  <section
+                    className="space-y-4"
+                    aria-labelledby="profile-basic-info"
+                  >
+                    <h3
+                      id="profile-basic-info"
+                      className="text-base font-semibold"
+                    >
+                      Basic info
+                    </h3>
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium">Full name</span>
+                      <input
+                        value={profileDraft.full_name}
+                        onChange={(event) =>
+                          setProfileDraft((draft) => ({
+                            ...draft,
+                            full_name: event.target.value,
+                          }))
+                        }
+                        maxLength={100}
+                        autoComplete="name"
+                        className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                      />
+                    </label>
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium">Username*</span>
+                      <div className="flex overflow-hidden rounded-lg border border-border/70 bg-background focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/15">
+                        <span className="flex items-center border-r border-border/60 px-3 text-muted">
+                          @
+                        </span>
+                        <input
+                          value={profileDraft.username}
+                          onChange={(event) =>
+                            setProfileDraft((draft) => ({
+                              ...draft,
+                              username: event.target.value.replace(/^@/, ""),
+                            }))
+                          }
+                          maxLength={50}
+                          autoComplete="username"
+                          required
+                          className="min-w-0 flex-1 bg-transparent px-3 py-2.5 outline-none"
+                        />
+                      </div>
+                      <span className="block text-xs text-muted">
+                        Your profile address will use this username.
+                      </span>
+                    </label>
+                  </section>
+
+                  <section
+                    className="space-y-4"
+                    aria-labelledby="profile-business-info"
+                  >
+                    <div>
+                      <h3
+                        id="profile-business-info"
+                        className="text-base font-semibold"
+                      >
+                        Business info
+                      </h3>
+                      <p className="mt-1 text-sm text-muted">
+                        Help customers recognize and understand your business.
+                      </p>
+                    </div>
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium">Business name</span>
                       <input
                         value={profileDraft.business_name}
                         onChange={(event) =>
@@ -669,68 +1126,169 @@ export default function ProfileWorkspacePage({
                           }))
                         }
                         maxLength={120}
-                        className="w-full rounded-xl border border-border/60 bg-background px-3.5 py-2.5 font-normal outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
+                        autoComplete="organization"
+                        className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
                       />
                     </label>
-                  )}
-                </div>
-                <label className="block space-y-1.5 text-sm font-medium">
-                  <span>About you or your business</span>
-                  <textarea
-                    value={profileDraft.bio}
-                    onChange={(event) =>
-                      setProfileDraft((draft) => ({
-                        ...draft,
-                        bio: event.target.value.slice(0, 500),
-                      }))
-                    }
-                    placeholder="Add a short introduction..."
-                    maxLength={500}
-                    rows={4}
-                    className="w-full resize-y rounded-xl border border-border/60 bg-background px-3.5 py-2.5 font-normal leading-6 outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
-                  />
-                  <span className="block text-right text-xs font-normal text-muted">
-                    {profileDraft.bio.length}/500
-                  </span>
-                </label>
-                <div className="grid gap-4 sm:grid-cols-3">
-                  {(["city", "state", "country"] as const).map((field) => (
-                    <label
-                      key={field}
-                      className="space-y-1.5 text-sm font-medium"
-                    >
-                      <span>{field[0].toUpperCase() + field.slice(1)}</span>
-                      <input
-                        value={profileDraft[field]}
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium">Bio</span>
+                      <textarea
+                        value={profileDraft.bio}
                         onChange={(event) =>
                           setProfileDraft((draft) => ({
                             ...draft,
-                            [field]: event.target.value,
+                            bio: event.target.value.slice(0, 500),
                           }))
                         }
-                        maxLength={80}
-                        className="w-full rounded-xl border border-border/60 bg-background px-3.5 py-2.5 font-normal outline-none focus:border-primary/60 focus:ring-2 focus:ring-primary/15"
+                        placeholder="Tell people what you do and what makes your business special."
+                        maxLength={500}
+                        rows={4}
+                        className="w-full resize-y rounded-lg border border-border/70 bg-background px-3 py-2.5 leading-6 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                      />
+                      <span className="block text-right text-xs text-muted">
+                        {profileDraft.bio.length}/500
+                      </span>
+                    </label>
+                  </section>
+
+                  <section
+                    className="space-y-4"
+                    aria-labelledby="profile-location"
+                  >
+                    <h3
+                      id="profile-location"
+                      className="text-base font-semibold"
+                    >
+                      Location
+                    </h3>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      {(
+                        ["city", "state", "country", "postal_code"] as const
+                      ).map((field) => (
+                        <label
+                          key={field}
+                          className="block space-y-1.5 text-sm"
+                        >
+                          <span className="font-medium">
+                            {
+                              {
+                                city: "City",
+                                state: "State / Region",
+                                country: "Country / Region",
+                                postal_code: "Postal code",
+                              }[field]
+                            }
+                          </span>
+                          <input
+                            value={profileDraft[field]}
+                            onChange={(event) =>
+                              setProfileDraft((draft) => ({
+                                ...draft,
+                                [field]: event.target.value,
+                              }))
+                            }
+                            maxLength={field === "postal_code" ? 20 : 80}
+                            autoComplete={
+                              {
+                                city: "address-level2",
+                                state: "address-level1",
+                                country: "country-name",
+                                postal_code: "postal-code",
+                              }[field]
+                            }
+                            className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                          />
+                        </label>
+                      ))}
+                    </div>
+                  </section>
+
+                  <section
+                    className="space-y-4"
+                    aria-labelledby="profile-contact-info"
+                  >
+                    <div>
+                      <h3
+                        id="profile-contact-info"
+                        className="text-base font-semibold"
+                      >
+                        Contact info
+                      </h3>
+                      <p className="mt-1 text-sm text-muted">
+                        Add the best ways for customers to reach your business.
+                      </p>
+                    </div>
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="block space-y-1.5 text-sm">
+                        <span className="font-medium">Email</span>
+                        <input
+                          type="email"
+                          value={profileDraft.email}
+                          onChange={(event) =>
+                            setProfileDraft((draft) => ({
+                              ...draft,
+                              email: event.target.value,
+                            }))
+                          }
+                          maxLength={254}
+                          autoComplete="email"
+                          className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                        />
+                      </label>
+                      <label className="block space-y-1.5 text-sm">
+                        <span className="font-medium">Phone</span>
+                        <input
+                          type="tel"
+                          value={profileDraft.phone}
+                          onChange={(event) =>
+                            setProfileDraft((draft) => ({
+                              ...draft,
+                              phone: event.target.value,
+                            }))
+                          }
+                          maxLength={30}
+                          autoComplete="tel"
+                          className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                        />
+                      </label>
+                    </div>
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium">Website</span>
+                      <input
+                        type="url"
+                        value={profileDraft.website}
+                        onChange={(event) =>
+                          setProfileDraft((draft) => ({
+                            ...draft,
+                            website: event.target.value,
+                          }))
+                        }
+                        maxLength={240}
+                        placeholder="https://example.com"
+                        autoComplete="url"
+                        className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
                       />
                     </label>
-                  ))}
+                  </section>
+
+                  {profileSaveMessage && (
+                    <p className="text-sm text-destructive" role="alert">
+                      {profileSaveMessage}
+                    </p>
+                  )}
                 </div>
-                {profileSaveMessage && (
-                  <p className="text-sm text-destructive" role="alert">
-                    {profileSaveMessage}
-                  </p>
-                )}
-                <DialogFooter className="-mx-5 -mb-5 px-5 sm:-mx-7 sm:-mb-7 sm:px-7">
+                <DialogFooter className="mx-0 mb-0 mt-0 flex-row justify-end gap-2 rounded-none border-t border-border/60 bg-background px-5 py-3 sm:px-7">
                   <button
                     type="button"
                     onClick={() => setEditOpen(false)}
-                    className="rounded-xl border border-border/60 px-4 py-2.5 text-sm font-semibold transition hover:bg-background-elevated"
+                    className="rounded-full border border-border/60 px-5 py-2.5 text-sm font-semibold transition hover:bg-background-elevated"
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
                     disabled={profileSaving}
-                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong disabled:cursor-wait disabled:opacity-60"
+                    className="inline-flex items-center justify-center gap-2 rounded-full bg-primary px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-primary-strong disabled:cursor-wait disabled:opacity-60"
                   >
                     {profileSaving && (
                       <LoaderCircle className="h-4 w-4 animate-spin" />
@@ -745,88 +1303,304 @@ export default function ProfileWorkspacePage({
 
         <section className="mt-8" aria-label="Business content">
           <div
-            className="flex gap-2 overflow-x-auto border-b border-border/60"
-            role="tablist"
-            aria-label="Profile content"
+            className="sticky top-0 z-30 -mx-4 border-b border-border/60 bg-background/95 px-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
           >
-            {tabs.map(({ label, icon: Icon }) => (
-              <button
-                key={label}
-                type="button"
-                role="tab"
-                aria-selected={activeTab === label}
-                onClick={() => setActiveTab(label)}
-                className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${activeTab === label ? "border-primary text-primary" : "border-transparent text-muted hover:text-foreground"}`}
-              >
-                <Icon className="h-4 w-4" />
-                {label}
-                {label === "Products" && products.length > 0 ? (
-                  <span className="rounded-full bg-background-elevated px-2 py-0.5 text-xs">
-                    {products.length}
-                  </span>
-                ) : null}
-                {label === "Services" && services.length > 0 ? (
-                  <span className="rounded-full bg-background-elevated px-2 py-0.5 text-xs">
-                    {services.length}
-                  </span>
-                ) : null}
-              </button>
-            ))}
+            <div
+              className="flex gap-2 overflow-x-auto"
+              role="tablist"
+              aria-label="Profile content"
+            >
+              {tabs.map(({ label, icon: Icon }) => (
+                <button
+                  key={label}
+                  type="button"
+                  role="tab"
+                  aria-selected={activeTab === label}
+                  onClick={() => setActiveTab(label)}
+                  className={`inline-flex shrink-0 items-center gap-2 border-b-2 px-4 py-3 text-sm font-semibold transition ${activeTab === label ? "border-primary text-primary" : "border-transparent text-muted hover:text-foreground"}`}
+                >
+                  <Icon className="h-4 w-4" />
+                  {label}
+                  {label === "Products" && products.length > 0 ? (
+                    <span className="rounded-full bg-background-elevated px-2 py-0.5 text-xs">
+                      {products.length}
+                    </span>
+                  ) : null}
+                  {label === "Services" && services.length > 0 ? (
+                    <span className="rounded-full bg-background-elevated px-2 py-0.5 text-xs">
+                      {services.length}
+                    </span>
+                  ) : null}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="min-h-44 py-6" role="tabpanel">
-            {activeTab === "Liked" && likedItems.length > 0 ? (
-              <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                {likedItems.map((item) => (
-                  <article
-                    key={item.id}
-                    className="overflow-hidden rounded-2xl border border-border/50 bg-background-elevated/20"
+            {isOwner &&
+              (activeTab === "Products" || activeTab === "Services") && (
+                <div className="mb-5 flex flex-wrap items-center gap-3">
+                  <div
+                    className="inline-flex w-fit rounded-xl border border-border/60 bg-background-elevated/20 p-1"
+                    role="group"
+                    aria-label="Listing status filter"
                   >
-                    {item.image ? (
-                      <img
-                        src={item.image}
-                        alt=""
-                        className="h-40 w-full object-cover"
+                    <button
+                      type="button"
+                      aria-pressed={listingView === "active"}
+                      onClick={() => setListingView("active")}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "active" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
+                    >
+                      Active
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={listingView === "drafts"}
+                      onClick={() => setListingView("drafts")}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "drafts" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
+                    >
+                      Drafts{" "}
+                      <span className="ml-1 text-xs">{draftListingsCount}</span>
+                    </button>
+                    <button
+                      type="button"
+                      aria-pressed={listingView === "archived"}
+                      onClick={() => setListingView("archived")}
+                      className={`rounded-lg px-3 py-2 text-sm font-semibold transition ${listingView === "archived" ? "bg-background text-foreground shadow-sm" : "text-muted hover:text-foreground"}`}
+                    >
+                      Archived{" "}
+                      <span className="ml-1 text-xs">
+                        {archivedListingsCount}
+                      </span>
+                    </button>
+                  </div>
+                  <Link
+                    href={
+                      activeTab === "Products" ? "/post-product" : "/add-service"
+                    }
+                    aria-label={
+                      activeTab === "Products" ? "Add a product" : "Add a service"
+                    }
+                    title={activeTab === "Products" ? "Add a product" : "Add a service"}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white shadow-sm transition hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Link>
+                </div>
+              )}
+            {listingsLoading &&
+            (activeTab === "Products" || activeTab === "Services") ? (
+              <ProfileListingCardsSkeleton
+                label={`your ${activeTab.toLowerCase()} from the catalog`}
+              />
+            ) : listingsError &&
+              (activeTab === "Products" || activeTab === "Services") ? (
+              <p className="py-10 text-center text-sm text-muted" role="alert">
+                We couldn&apos;t load your {activeTab.toLowerCase()}. Please
+                refresh and try again.
+              </p>
+            ) : activeTab === "Favorites" && !isOwner ? (
+              <p className="py-10 text-center text-sm text-muted">
+                Favorites are only visible on your own profile.
+              </p>
+            ) : activeTab === "Favorites" && favoritesLoading ? (
+              <ProfileListingCardsSkeleton label="your favorites" />
+            ) : activeTab === "Favorites" && favoritesError ? (
+              <div className="py-10 text-center text-sm text-muted" role="alert">
+                <p>Your favorites could not be loaded.</p>
+                <button
+                  type="button"
+                  onClick={() => setFavoritesRetry((retry) => retry + 1)}
+                  className="mt-3 font-semibold text-primary hover:underline"
+                >
+                  Retry
+                </button>
+              </div>
+            ) : activeTab === "Favorites" && favoriteListings.length > 0 ? (
+              <>
+                <p className="mb-4 text-sm text-muted">
+                  {favoritesTotal} saved{" "}
+                  {favoritesTotal === 1 ? "listing" : "listings"}
+                </p>
+                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                  {favoriteListings.map((item) => {
+                    const isService = ["service", "services"].includes(
+                      (item.listing_type || "").toLowerCase(),
+                    );
+                    return isService ? (
+                      <ServiceCard
+                        key={item.id}
+                        service={mapListingToService(item, item.category_id)}
+                        onUnsave={() => void handleUnsaveFavorite(item.id)}
+                        savePending={favoriteActionId === item.id}
                       />
                     ) : (
-                      <div className="flex h-40 items-center justify-center bg-background-elevated/50 text-muted">
-                        <Star className="h-8 w-8" />
-                      </div>
-                    )}
-                    <div className="p-4">
-                      <p className="text-xs font-semibold text-primary">
-                        {item.kind}
-                      </p>
-                      <h3 className="mt-1 font-semibold">{item.title}</h3>
-                      <p className="mt-1 line-clamp-2 text-sm text-muted">
-                        {item.description}
-                      </p>
-                    </div>
-                  </article>
-                ))}
-              </div>
+                      <ProductCard
+                        key={item.id}
+                        product={mapListingToProduct(item)}
+                        onUnsave={() => void handleUnsaveFavorite(item.id)}
+                        savePending={favoriteActionId === item.id}
+                      />
+                    );
+                  })}
+                </div>
+                {favoritesTotalPages > 1 && (
+                  <div className="mt-6 flex items-center justify-center gap-4">
+                    <button
+                      type="button"
+                      onClick={() => setFavoritesPage((page) => page - 1)}
+                      disabled={favoritesPage <= 1 || favoritesLoading}
+                      className="rounded-lg border border-border px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Previous
+                    </button>
+                    <span className="text-sm text-muted">
+                      Page {favoritesPage} of {favoritesTotalPages}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => setFavoritesPage((page) => page + 1)}
+                      disabled={
+                        favoritesPage >= favoritesTotalPages ||
+                        favoritesLoading
+                      }
+                      className="rounded-lg border border-border px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      Next
+                    </button>
+                  </div>
+                )}
+              </>
+            ) : activeTab === "Favorites" ? (
+              <p className="py-10 text-center text-sm text-muted">
+                You haven&apos;t saved any listings yet.
+              </p>
             ) : tabListings.length > 0 ? (
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 {tabListings.map((item) => (
                   <article
                     key={item.id}
-                    className="overflow-hidden rounded-2xl border border-border/50 bg-background-elevated/20"
+                    role={isOwner ? "link" : undefined}
+                    tabIndex={isOwner ? 0 : undefined}
+                    onClick={
+                      isOwner ? () => openListingEditor(item) : undefined
+                    }
+                    onKeyDown={
+                      isOwner
+                        ? (event) => {
+                            if (event.key === "Enter" || event.key === " ") {
+                              event.preventDefault();
+                              openListingEditor(item);
+                            }
+                          }
+                        : undefined
+                    }
+                    className={`group relative overflow-hidden rounded-2xl border border-border/50 bg-background-elevated/20 ${isOwner ? "cursor-pointer transition-colors hover:border-primary/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary" : ""}`}
                   >
-                    {item.thumbnail_url ? (
-                      <img
-                        src={item.thumbnail_url}
-                        alt=""
-                        className="h-40 w-full object-cover"
-                      />
-                    ) : (
-                      <div className="flex h-40 items-center justify-center bg-background-elevated/50 text-muted">
-                        {activeTab === "Services" ? (
-                          <Wrench className="h-8 w-8" />
-                        ) : (
-                          <Package className="h-8 w-8" />
-                        )}
-                      </div>
-                    )}
-                    <div className="p-4">
+                    <div className="relative">
+                      {listingImageUrl(item) ? (
+                        <img
+                          src={listingImageUrl(item)}
+                          alt=""
+                          className="h-40 w-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex h-40 items-center justify-center bg-background-elevated/50 text-muted">
+                          {activeTab === "Services" ? (
+                            <Wrench className="h-8 w-8" />
+                          ) : (
+                            <Package className="h-8 w-8" />
+                          )}
+                        </div>
+                      )}
+                      {(item.inventory_count != null || isOwner) && (
+                        <div
+                          className={`pointer-events-none absolute inset-x-0 top-0 flex items-start justify-between p-2 transition-opacity ${item.status?.toLowerCase() === "archived" ? "opacity-100" : "opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"}`}
+                        >
+                          <span className="rounded-full bg-black/70 px-2.5 py-1 text-xs font-semibold text-white backdrop-blur">
+                            {item.status?.toLowerCase() === "archived"
+                              ? "Archived"
+                              : item.status?.toLowerCase() === "draft"
+                                ? "Draft"
+                                : item.inventory_count != null
+                                  ? `${item.inventory_count} left`
+                                  : "Service"}
+                          </span>
+                          {isOwner && (
+                            <div
+                              className="pointer-events-auto"
+                              onClick={(event) => event.stopPropagation()}
+                              onKeyDown={(event) => event.stopPropagation()}
+                            >
+                              <DropdownMenu>
+                                <DropdownMenuTrigger
+                                  aria-label={`Actions for ${item.title}`}
+                                  onClick={(event) => event.stopPropagation()}
+                                  className="flex h-8 w-8 items-center justify-center rounded-full bg-black/70 text-white backdrop-blur transition hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+                                >
+                                  {listingActionId === item.id ? (
+                                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                                  ) : (
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  )}
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align="end"
+                                  className="w-44"
+                                >
+                                  <DropdownMenuItem
+                                    onClick={() => openListingEditor(item)}
+                                  >
+                                    <Pencil className="mr-2 h-4 w-4" /> Edit
+                                  </DropdownMenuItem>
+                                  {["archived", "draft"].includes(
+                                    item.status?.toLowerCase() ?? "",
+                                  ) ? (
+                                    <DropdownMenuItem
+                                      disabled={listingActionId === item.id}
+                                      onClick={() =>
+                                        setListingConfirmation({
+                                          listing: item,
+                                          action: "publish",
+                                        })
+                                      }
+                                    >
+                                      <CheckCircle2 className="mr-2 h-4 w-4" />{" "}
+                                      Publish
+                                    </DropdownMenuItem>
+                                  ) : (
+                                    <DropdownMenuItem
+                                      disabled={listingActionId === item.id}
+                                      onClick={() =>
+                                        setListingConfirmation({
+                                          listing: item,
+                                          action: "archive",
+                                        })
+                                      }
+                                    >
+                                      <Archive className="mr-2 h-4 w-4" />{" "}
+                                      Archive
+                                    </DropdownMenuItem>
+                                  )}
+                                  <DropdownMenuItem
+                                    variant="destructive"
+                                    disabled={listingActionId === item.id}
+                                    onClick={() =>
+                                      setListingConfirmation({
+                                        listing: item,
+                                        action: "delete",
+                                      })
+                                    }
+                                  >
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                  </DropdownMenuItem>
+                                </DropdownMenuContent>
+                              </DropdownMenu>
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4 pb-12">
                       <h3 className="font-semibold">{item.title}</h3>
                       <p className="mt-1 line-clamp-2 text-sm text-muted">
                         {item.description}
@@ -838,6 +1612,36 @@ export default function ProfileWorkspacePage({
                         </p>
                       )}
                     </div>
+                    {isOwner && (
+                      <>
+                        <span
+                          aria-label={`${item.view_count ?? 0} views`}
+                          className="absolute bottom-3 left-3 z-10 inline-flex items-center gap-1 rounded-full border border-border/60 bg-background/95 px-2.5 py-1.5 text-xs font-medium text-muted opacity-100 shadow-sm backdrop-blur transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                        >
+                          <Eye className="h-3.5 w-3.5" aria-hidden="true" />
+                          {Number(item.view_count ?? 0).toLocaleString()}
+                        </span>
+                        <div
+                          className="absolute bottom-3 right-3 z-10 opacity-100 transition-opacity sm:opacity-0 sm:group-hover:opacity-100 sm:group-focus-within:opacity-100"
+                          onClick={(event) => event.stopPropagation()}
+                          onKeyDown={(event) => event.stopPropagation()}
+                        >
+                          <button
+                            type="button"
+                            aria-label={`View analytics for ${item.title}`}
+                            onClick={() =>
+                              router.push(
+                                `/listing-analytics/${encodeURIComponent(item.id)}`,
+                              )
+                            }
+                            className="inline-flex items-center gap-1.5 rounded-full border border-primary/20 bg-background/95 px-3 py-1.5 text-xs font-semibold text-primary shadow-sm backdrop-blur transition hover:border-primary/40 hover:bg-primary/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+                          >
+                            <BarChart3 className="h-3.5 w-3.5" />
+                            View analytics
+                          </button>
+                        </div>
+                      </>
+                    )}
                   </article>
                 ))}
               </div>
@@ -847,30 +1651,21 @@ export default function ProfileWorkspacePage({
                   <CalendarDays className="mx-auto h-7 w-7 text-muted" />
                 ) : activeTab === "Services" ? (
                   <Wrench className="mx-auto h-7 w-7 text-muted" />
-                ) : activeTab === "Liked" ? (
-                  <Star className="mx-auto h-7 w-7 text-muted" />
                 ) : (
                   <Package className="mx-auto h-7 w-7 text-muted" />
                 )}
                 <p className="mt-3 text-sm font-medium">
-                  {emptyCopy[activeTab]}
+                  {isOwner &&
+                  (activeTab === "Products" || activeTab === "Services")
+                    ? listingView === "archived"
+                      ? `You have no archived ${activeTab.toLowerCase()}.`
+                      : listingView === "drafts"
+                        ? `You have no draft ${activeTab.toLowerCase()}.`
+                        : allTabListings.length > 0
+                          ? `You have no active ${activeTab.toLowerCase()}.`
+                          : emptyCopy[activeTab]
+                    : emptyCopy[activeTab]}
                 </p>
-                {isOwner && activeTab === "Products" && (
-                  <Link
-                    href="/post-product"
-                    className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong"
-                  >
-                    Post a product
-                  </Link>
-                )}
-                {isOwner && activeTab === "Services" && (
-                  <Link
-                    href="/add-service"
-                    className="mt-4 inline-flex rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-strong"
-                  >
-                    Add a service
-                  </Link>
-                )}
                 {isOwner && activeTab === "Scheduled lives" && (
                   <Link
                     href="/schedule-live"
@@ -879,18 +1674,148 @@ export default function ProfileWorkspacePage({
                     Schedule a live
                   </Link>
                 )}
-                {isOwner &&
-                  activeTab === "Liked" &&
-                  savedItemIds.length > 0 && (
-                    <p className="mt-2 text-xs text-muted">
-                      Your saved items are available from your saved list.
-                    </p>
-                  )}
               </div>
             )}
           </div>
         </section>
       </div>
+      <Dialog
+        open={Boolean(listingConfirmation)}
+        onOpenChange={(open) => {
+          if (!open && !listingActionId) setListingConfirmation(null);
+        }}
+      >
+        <DialogContent
+          showCloseButton={false}
+          className="w-[calc(100vw-2rem)] max-w-md gap-0 overflow-hidden rounded-2xl border border-border/70 border-t-4 border-t-primary p-0 shadow-xl shadow-primary/10"
+        >
+          {listingConfirmation && (
+            <>
+              <DialogHeader className="border-b border-border/60 bg-primary/[0.03] px-6 py-6">
+                <div className="flex items-start gap-4">
+                  <div
+                    className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${listingConfirmation.action === "delete" ? "bg-danger/10 text-danger" : "bg-primary/10 text-primary"}`}
+                  >
+                    {listingConfirmation.action === "archive" ? (
+                      <Archive className="h-5 w-5" />
+                    ) : listingConfirmation.action === "publish" ? (
+                      <CheckCircle2 className="h-5 w-5" />
+                    ) : (
+                      <Trash2 className="h-5 w-5" />
+                    )}
+                  </div>
+                  <div className="space-y-2">
+                    <DialogTitle className="text-lg font-bold">
+                      {listingConfirmation.action === "archive"
+                        ? "Archive this listing?"
+                        : listingConfirmation.action === "publish"
+                          ? "Publish this listing?"
+                          : "Delete this listing?"}
+                    </DialogTitle>
+                    <DialogDescription className="leading-relaxed">
+                      {listingConfirmation.action === "archive" ? (
+                        <>
+                          <span className="font-medium text-foreground">
+                            {listingConfirmation.listing.title}
+                          </span>{" "}
+                          will be hidden from public discovery and kept in your
+                          archived listings. You can still manage it later.
+                        </>
+                      ) : listingConfirmation.action === "publish" ? (
+                        <>
+                          <span className="font-medium text-foreground">
+                            {listingConfirmation.listing.title}
+                          </span>{" "}
+                          {listingConfirmation.listing.status?.toLowerCase() ===
+                          "archived"
+                            ? "will become visible to buyers again."
+                            : "will be made visible to buyers."}{" "}
+                          We&apos;ll check that its required details are
+                          complete before publishing.
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-medium text-foreground">
+                            {listingConfirmation.listing.title}
+                          </span>{" "}
+                          will be permanently deleted. This action cannot be
+                          undone.
+                        </>
+                      )}
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+              <DialogFooter className="mx-0 mb-0 border-0 bg-transparent px-6 pb-7 pt-5">
+                <button
+                  type="button"
+                  disabled={Boolean(listingActionId)}
+                  onClick={() => setListingConfirmation(null)}
+                  className="inline-flex h-10 items-center justify-center rounded-lg border border-border/70 px-4 text-sm font-semibold text-foreground transition hover:bg-background-elevated disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={Boolean(listingActionId)}
+                  onClick={() =>
+                    void handleListingAction(
+                      listingConfirmation.listing,
+                      listingConfirmation.action,
+                    )
+                  }
+                  className={`inline-flex h-10 items-center justify-center gap-2 rounded-lg px-4 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60 ${listingConfirmation.action === "delete" ? "bg-danger hover:bg-danger/90" : "bg-primary hover:bg-primary-strong"}`}
+                >
+                  {listingActionId ? (
+                    <LoaderCircle className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  {listingActionId
+                    ? "Processing..."
+                    : listingConfirmation.action === "publish"
+                      ? "Publish listing"
+                      : "Proceed"}
+                </button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+      <Dialog
+        open={Boolean(imagePreview)}
+        onOpenChange={(open) => {
+          if (!open) setImagePreview(null);
+        }}
+      >
+        <DialogContent
+          overlayClassName="bg-black/85 supports-backdrop-filter:backdrop-blur-sm"
+          showCloseButton={false}
+          className="flex max-h-[92dvh] w-[min(94vw,1200px)] max-w-[94vw] flex-col items-center justify-center gap-0 border-0 bg-transparent p-0 shadow-none ring-0"
+        >
+          <DialogHeader className="sr-only">
+            <DialogTitle>Profile image</DialogTitle>
+            <DialogDescription>
+              Expanded view of the profile cover or avatar image.
+            </DialogDescription>
+          </DialogHeader>
+          {imagePreview && (
+            <div className="relative flex max-h-[92dvh] w-full items-center justify-center">
+              <img
+                src={imagePreview.src}
+                alt={imagePreview.alt}
+                className="max-h-[88dvh] max-w-full rounded-lg object-contain shadow-2xl"
+              />
+              <button
+                type="button"
+                aria-label="Close image preview"
+                onClick={() => setImagePreview(null)}
+                className="absolute right-3 top-3 inline-flex h-10 w-10 items-center justify-center rounded-full bg-black/65 text-white transition hover:bg-black/85 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </main>
   );
 }

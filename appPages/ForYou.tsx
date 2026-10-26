@@ -258,6 +258,7 @@ const ForYou = () => {
   const [feedData, setFeedData] = useState<FeedItem[]>([]);
   const feedContainerRef = useRef<HTMLDivElement>(null);
   const userData = useHaggleStore((state) => state.userData);
+  const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
 
   useEffect(() => {
     setFeedData(generateMockFeed(selectedCategory));
@@ -362,15 +363,32 @@ const ForYou = () => {
               <span>Broadcast</span>
             </button>
 
-            {/* Notification */}
-            <button className="p-2 rounded-full bg-black/30 backdrop-blur-sm hover:bg-black/50 transition-all duration-200 border border-white/10">
-              <span className="text-white text-sm">🔔</span>
-            </button>
-
-            {/* Profile */}
-            <button className="p-2 rounded-full bg-black/30 backdrop-blur-sm hover:bg-black/50 transition-all duration-200 border border-white/10">
-              <span className="text-white text-sm">👤</span>
-            </button>
+            {userData ? (
+              <>
+                <button
+                  type="button"
+                  aria-label="Notifications"
+                  className="rounded-full border border-white/10 bg-black/30 p-2 transition-all duration-200 hover:bg-black/50"
+                >
+                  <span className="text-sm text-white">🔔</span>
+                </button>
+                <button
+                  type="button"
+                  aria-label="Profile"
+                  className="rounded-full border border-white/10 bg-black/30 p-2 transition-all duration-200 hover:bg-black/50"
+                >
+                  <span className="text-sm text-white">👤</span>
+                </button>
+              </>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setActivateAuth(true)}
+                className="rounded-full border border-white/20 bg-white px-4 py-1.5 text-xs font-semibold text-gray-900 transition hover:bg-white/90"
+              >
+                Sign in
+              </button>
+            )}
           </div>
         </div>
 

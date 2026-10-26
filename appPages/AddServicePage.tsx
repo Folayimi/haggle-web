@@ -61,18 +61,25 @@ import {
 
 import { AppShell } from "@/components/app-shell";
 import { cn } from "@/lib/utils";
-import { SERVICE_CATEGORIES, type Subcategory } from "@/types/categories";
+import {
+  getApplicableCategoryTags,
+  SERVICE_CATEGORIES,
+  type Subcategory,
+} from "@/types/categories";
 import { ProductMedia, ProductMediaRef, GalleryImage } from "@/components/ProductMedia";
 import {
   createCategory,
   createListing,
+  getAllCategories,
   getCategory,
+  getListing,
   updateListing,
 } from "@/services/request";
-import { notifyError } from "@/services/toastify";
+import { notifyApiError } from "@/services/toastify";
 import { useHaggleStore } from "@/lib/app-store";
 import Loader from "@/reusables/loader";
 import { useRouter } from "next/navigation";
+import { resolveListingMediaUrl } from "@/services/mappers";
 
 // ============================================
 // TYPES
@@ -142,6 +149,7 @@ function GlassyField({
   optional = false,
   icon,
   prominent = false,
+  inputType = "text",
   value,
   onChange,
   helper,
@@ -155,6 +163,7 @@ function GlassyField({
   optional?: boolean;
   icon?: React.ReactNode;
   prominent?: boolean;
+  inputType?: React.HTMLInputTypeAttribute;
   value?: string;
   onChange?: (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
@@ -206,7 +215,7 @@ function GlassyField({
         />
       ) : (
         <input
-          type="text"
+          type={inputType}
           placeholder={placeholder}
           value={value}
           onChange={onChange}
@@ -1545,8 +1554,9 @@ function StickyHeader({
       "
     >
       <div className="flex items-center gap-3">
-        <Link
-          href="/create"
+        <button
+          type="button"
+          onClick={onCancel}
           className="
             rounded-full p-2
             border border-border/80 bg-background-elevated/30
@@ -1555,7 +1565,7 @@ function StickyHeader({
           "
         >
           <ArrowLeft className="h-4 w-4" />
-        </Link>
+        </button>
         <div>
           <span className="text-xs font-medium uppercase tracking-[0.12em] text-secondary/80">
             Add Service
@@ -1572,8 +1582,9 @@ function StickyHeader({
           saving={saving}
           lastSaved={lastSaved}
         />
-        <Link
-          href="/create"
+        <button
+          type="button"
+          onClick={onCancel}
           className="
             rounded-full border border-border/60
             px-4 py-2 text-sm font-medium text-muted/70
@@ -1582,7 +1593,7 @@ function StickyHeader({
           "
         >
           Cancel
-        </Link>
+        </button>
         <button
           type="button"
           onClick={onNext}
@@ -1607,8 +1618,9 @@ function StickyHeader({
 // ============================================
 // MAIN PAGE
 // ============================================
-const AddServicePage = () => {
+const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {}) => {
   const serviceMediaRef = useRef<ProductMediaRef>(null);
+  const saveInProgressRef = useRef(false);
   const userData = useHaggleStore((state) => state.userData);
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabId>("tell");
@@ -1650,6 +1662,97 @@ const AddServicePage = () => {
   // TAGS STATE - Dynamic service tags as pipe-delimited string
   // ============================================
   const [tags, setTags] = useState("");
+  const [editLoading, setEditLoading] = useState(Boolean(editListingId));
+  const [editError, setEditError] = useState("");
+  const [initialGallery, setInitialGallery] = useState<
+    { mediaId: string; url: string; previewUrl: string }[] | undefined
+  >(undefined);
+
+  useEffect(() => {
+    if (!editListingId) return;
+    let active = true;
+    const loadListing = async () => {
+      setEditLoading(true);
+      setEditError("");
+      try {
+        const [listing, categories] = await Promise.all([
+          getListing(editListingId),
+          getAllCategories(),
+        ]);
+        if (listing.listing_type && listing.listing_type.toLowerCase() !== "service" && listing.listing_type.toLowerCase() !== "services") {
+          throw new Error("This listing is not a service.");
+        }
+        const child = categories.find((item) => item.id === listing.category_id);
+        const parent = child?.parent_id
+          ? categories.find((item) => item.id === child.parent_id)
+          : undefined;
+        const selectedCategory = SERVICE_CATEGORIES.find(
+          (item) => item.id === parent?.slug,
+        );
+        const selectedSubcategory = selectedCategory?.subcategories.find(
+          (item) => item.id === child?.slug,
+        );
+        if (!selectedCategory || !selectedSubcategory) {
+          throw new Error("The service category is not available in this form.");
+        }
+        if (!active) return;
+        setCategory(selectedCategory.name);
+        setServiceSubCategories(selectedCategory.subcategories);
+        setServiceType(selectedSubcategory.name);
+        setServiceName(listing.title || "");
+        setServiceDescription(listing.description || "");
+        setPrice(listing.starting_amount || "");
+        setDeliveryTime(listing.delivery_duration || "");
+        setAddress(listing.work_address || "");
+        setWorkLocation(String(listing.work_place || "").toUpperCase() === "ON_SITE" ? "workshop" : "home");
+        const audience = String(listing.target_audience || "businesses").toLowerCase() as TargetAudience;
+        if (["general", "businesses", "individuals", "creators", "students", "startups", "professionals"].includes(audience)) setTargetAudience(audience);
+        const style = String(listing.negotiation_style || "").toUpperCase();
+        if (["FIXED", "NEGOTIABLE", "COUNTER"].includes(style)) setNegotiationStyle(style as NegotiationStyle);
+        setNegotiationNote(listing.negotiation_note || "");
+        const applicableTags = getApplicableCategoryTags(
+          selectedCategory,
+          selectedSubcategory.id,
+        ).filter(
+          (tag) =>
+            !["delivery time", "location"].includes(tag.name.toLowerCase()),
+        );
+        const tagEntries = (
+          Array.isArray(listing.tags) ? listing.tags.join("|") : listing.tags || ""
+        )
+          .split("|")
+          .filter(Boolean)
+          .filter((entry) =>
+            applicableTags.some((tag) =>
+              entry.startsWith(`${tag.name.toLowerCase()}:`),
+            ),
+          );
+        for (const tag of applicableTags.filter((item) => item.required)) {
+          const key = tag.name.toLowerCase();
+          if (!tagEntries.some((entry) => entry.startsWith(`${key}:`))) {
+            tagEntries.push(`${key}:`);
+          }
+        }
+        setTags(tagEntries.join("|"));
+        setListingId(listing.id);
+        localStorage.setItem("serviceListingId", listing.id);
+        const media = [...(listing.medias?.length ? listing.medias : listing.media || [])]
+          .filter((item) => item.media_type.toLowerCase() === "image")
+          .sort((a, b) => Number(Boolean(b.is_cover)) - Number(Boolean(a.is_cover)) || (a.sort_order ?? 0) - (b.sort_order ?? 0));
+        setInitialGallery(media.map((item) => {
+          let previewUrl = item.url;
+          try { previewUrl = resolveListingMediaUrl(item.url); } catch { /* show the stored media path as a fallback */ }
+          return { mediaId: item.id, url: item.url, previewUrl };
+        }));
+      } catch (error) {
+        if (active) setEditError(error instanceof Error ? error.message : "Unable to load this listing.");
+      } finally {
+        if (active) setEditLoading(false);
+      }
+    };
+    void loadListing();
+    return () => { active = false; };
+  }, [editListingId]);
 
   // ============================================
   // HANDLE TAG CHANGE
@@ -1684,8 +1787,11 @@ const AddServicePage = () => {
   // INITIALIZE TAGS WHEN CATEGORY CHANGES
   // ============================================
   const selectedCategory = SERVICE_CATEGORIES.find((c) => c.name === category);
+  const selectedSubcategory = selectedCategory?.subcategories.find(
+    (item) => item.name === serviceType,
+  );
   const requiredTags =
-    selectedCategory?.requiredTags.filter(
+    getApplicableCategoryTags(selectedCategory, selectedSubcategory?.id).filter(
       (tag) =>
         !["delivery time", "location"].includes(tag.name.toLowerCase()),
     ) ?? [];
@@ -1729,6 +1835,7 @@ const AddServicePage = () => {
   };
 
   const handleTabChange = (tab: TabId) => {
+    if (saveInProgressRef.current) return;
     const currentIndex = tabs.findIndex((item) => item.id === activeTab);
     const targetIndex = tabs.findIndex((item) => item.id === tab);
     if (targetIndex > currentIndex + 1) return;
@@ -1783,6 +1890,8 @@ const AddServicePage = () => {
   };
 
   const saveListing = async (status: "draft" | "published" = "draft") => {
+    if (saveInProgressRef.current) return false;
+    saveInProgressRef.current = true;
     setSaving(true);
     setPublishing(status === "published");
     try {
@@ -1853,17 +1962,20 @@ const AddServicePage = () => {
       return true;
     } catch (error) {
       console.error("Failed to save service listing:", error);
-      notifyError(
+      notifyApiError(
+        error,
         error instanceof Error ? error.message : "Unable to save service.",
       );
       return false;
     } finally {
+      saveInProgressRef.current = false;
       setSaving(false);
       setPublishing(false);
     }
   };
 
   const handleNext = async () => {
+    if (saveInProgressRef.current) return;
     if (activeTab === "tell") {
       if (!validateTab("tell")) return;
       if (await saveListing()) {
@@ -1884,7 +1996,16 @@ const AddServicePage = () => {
     if (!validateTab("tell") || !validateTab("offer")) return;
     if (await saveListing("published")) {
       localStorage.removeItem("serviceListingId");
-      router.push("/create");
+      const username = String(
+        userData?.username ||
+          userData?.profile?.username ||
+          userData?.data?.username ||
+          userData?.data?.profile?.username ||
+          "",
+      )
+        .trim()
+        .replace(/^@/, "");
+      router.push(`/profile/${encodeURIComponent(username)}`);
     }
   };
 
@@ -1912,20 +2033,29 @@ const AddServicePage = () => {
   const detailsConfidence = getDetailsConfidence();
   const pricingConfidence = getPricingConfidence();
   const mediaConfidence = getMediaConfidence();
+  const isSaving = saving || publishing;
 
   return (
     <AppShell>
       {publishing && <Loader type="publishing" />}
+      {editLoading && <Loader type="publishing" />}
+      {editError && <div role="alert" className="mx-auto mt-4 max-w-3xl rounded-xl bg-danger/10 p-4 text-sm text-danger">{editError}</div>}
+      <fieldset
+        disabled={isSaving || editLoading}
+        aria-busy={isSaving || editLoading}
+        className="contents"
+      >
       <div className="min-h-screen flex flex-col">
         <div className="flex-1 mx-auto max-w-7xl w-full px-3 lg:px-6 flex flex-col">
           {/* STICKY HEADER */}
           <StickyHeader
             activeTab={activeTab}
-            title="New Service"
+            title={editListingId ? "Edit Service" : "New Service"}
             onNext={handleNext}
             onSave={() => {
               if (validateTab("tell")) void saveListing("draft");
             }}
+            onCancel={() => router.back()}
             saving={saving}
             lastSaved={lastSaved}
           />
@@ -1943,6 +2073,7 @@ const AddServicePage = () => {
                 ref={serviceMediaRef}
                 variant="service"
                 onGalleryChange={setImageGallery}
+                initialGallery={initialGallery}
               />
             </div>
 
@@ -2041,16 +2172,18 @@ const AddServicePage = () => {
                             setServiceSubCategories(
                               selected?.subcategories ?? [],
                             );
+                            const applicableTags = getApplicableCategoryTags(selected)
+                              .filter(
+                                (tag) =>
+                                  !["delivery time", "location"].includes(
+                                    tag.name.toLowerCase(),
+                                  ),
+                              );
                             setTags(
-                              selected?.requiredTags
-                                .filter(
-                                  (tag) =>
-                                    !["delivery time", "location"].includes(
-                                      tag.name.toLowerCase(),
-                                    ),
-                                )
+                              applicableTags
+                                .filter((tag) => tag.required)
                                 .map((tag) => `${tag.name.toLowerCase()}:`)
-                                .join("|") ?? "",
+                                .join("|"),
                             );
                             setValidationErrors((prev) => {
                               const next = { ...prev };
@@ -2068,6 +2201,43 @@ const AddServicePage = () => {
                           error={validationErrors.serviceType}
                           onChange={(value) => {
                             setServiceType(value);
+                            const subcategory = selectedCategory?.subcategories.find(
+                              (item) => item.name === value,
+                            );
+                            const applicableTags = getApplicableCategoryTags(
+                              selectedCategory,
+                              subcategory?.id,
+                            ).filter(
+                              (tag) =>
+                                !["delivery time", "location"].includes(
+                                  tag.name.toLowerCase(),
+                                ),
+                            );
+                            setTags((current) => {
+                              const entries = current
+                                .split("|")
+                                .filter(Boolean)
+                                .filter((entry) =>
+                                  applicableTags.some((tag) =>
+                                    entry.startsWith(
+                                      `${tag.name.toLowerCase()}:`,
+                                    ),
+                                  ),
+                                );
+                              for (const tag of applicableTags.filter(
+                                (item) => item.required,
+                              )) {
+                                const key = tag.name.toLowerCase();
+                                if (
+                                  !entries.some((entry) =>
+                                    entry.startsWith(`${key}:`),
+                                  )
+                                ) {
+                                  entries.push(`${key}:`);
+                                }
+                              }
+                              return entries.join("|");
+                            });
                             setValidationErrors((prev) => {
                               const next = { ...prev };
                               delete next.serviceType;
@@ -2105,6 +2275,7 @@ const AddServicePage = () => {
                                     label={tag.name}
                                     placeholder={tag.placeholder ?? ""}
                                     prominent
+                                    inputType={tag.type === "date" ? "date" : "text"}
                                     value={getTagValue(tag.name)}
                                     optional={!tag.required}
                                     error={validationErrors[tag.name]}
@@ -2283,6 +2454,18 @@ const AddServicePage = () => {
           </div>
         </div>
       </div>
+      </fieldset>
+      {isSaving && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-background/30 backdrop-blur-[1px]"
+          role="status"
+          aria-live="polite"
+        >
+          <span className="rounded-full bg-background-elevated px-5 py-3 text-sm font-medium text-foreground shadow-lg">
+            {publishing ? "Publishing service…" : "Saving service…"}
+          </span>
+        </div>
+      )}
     </AppShell>
   );
 };

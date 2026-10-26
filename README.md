@@ -1,6 +1,6 @@
-# Haggle Web App AI Build Spec
+# Haggle Web App — Project Status and Build Guide
 
-This file is written for an AI coding agent that needs to build a web app equivalent of the current Flutter `haggle` app.
+This README describes the current web implementation, records completed work, and gives the remaining implementation priorities. The UI/UX specifications later in this document describe the intended product; they are not a claim that every listed feature is already complete.
 
 ## Goal
 
@@ -22,9 +22,45 @@ Haggle combines:
 
 The web version should feel like a polished consumer marketplace product, not an admin dashboard and not a generic SaaS template.
 
+## Project Status
+
+Haggle Web is an active Next.js App Router application connected to the existing API. The app has route coverage for the main marketplace, listing creation and detail, seller profile, messaging, reminders, analytics, and live-room experiences. A route being present does not mean every interaction in the target specification below is complete; use the implementation notes and roadmap in this section to distinguish shipped behavior from remaining work.
+
+### Implemented
+
+- Product and service listing creation/editing, with category and subcategory-specific attributes. Inapplicable attributes are omitted from the form, required attributes are validated, and stale attribute values are removed when category selections change.
+- Product and service detail experiences with gallery/media browsing, seller information, reviews, favorites, and related listing content.
+- Service detail custom quote requests that open a direct conversation with the request details as the initial message. Both `/service-detail/[id]` and the legacy query-string route are supported.
+- Marketplace product/service discovery using the catalog API's latest, trending, and authenticated recommendation feeds, with category filtering and load-more pagination.
+- Review summaries and full review lists backed by the catalog API, including create/edit/delete and pagination.
+- Catalog-backed save/unsave behavior, authenticated interaction events, and listing-owner engagement metrics.
+- The profile's Favorites tab fetches the current user's saved listings from the authenticated, paginated catalog endpoint, renders the existing product and service cards, and supports unsaving listings.
+- Profile listing actions to archive listings and republish archived or draft listings after confirmation and required-field/media validation.
+- Category applicability regression tests and archive-listing regression tests.
+
+### Next priorities
+
+1. **Complete the core buyer/seller journey:** verify discovery → listing detail → offer or service request → conversation, and fill gaps in state handling, feedback, and navigation.
+2. **Close remaining screen-spec gaps:** compare the live feed, search, public seller profile, messages, reminders, analytics, create hub, live scheduling, room styling, and negotiation room against their target sections below. Implement missing interactions rather than assuming route coverage is sufficient.
+3. **Finish negotiation and live-session behavior:** connect offer actions and product selections to the negotiation flow; verify buyer and seller room actions, presence, and live updates against the available backend capabilities.
+4. **Harden listing and category flows:** test category/subcategory switching and edit/publish behavior for every supported category, including empty, loading, error, and legacy listing data.
+5. **Stabilize project validation:** resolve the current TypeScript check blocker (`@/components/workspace-pages` imports), address lint errors, and expand automated tests for the critical user journeys.
+6. **Prepare for release:** validate responsive layouts and accessibility, confirm API authorization/error handling, and document required environment configuration and deployment steps.
+
+### Validation commands
+
+```bash
+npm run lint
+npx tsc --noEmit
+npm run test:archive
+node --experimental-strip-types --test tests/category-applicability.test.mjs
+```
+
+The focused archive and category applicability tests pass. The full TypeScript check currently reports unresolved `@/components/workspace-pages` imports; lint also reports diagnostics in application components and should be treated as unfinished validation rather than a clean release gate.
+
 ## Source Of Truth In This Repo
 
-Mirror these current Flutter routes and experiences:
+The Flutter app provides product and interaction references for these routes and experiences:
 
 - `/login`
 - `/signup`
@@ -47,6 +83,42 @@ Mirror these current Flutter routes and experiences:
 Important note:
 
 - `onboarding_view.dart` is still a placeholder in Flutter. For the web app, replace that placeholder with a polished landing/onboarding gateway that introduces the product and routes users into auth or the app.
+
+## Recently Implemented Marketplace Behavior
+
+The following notes describe behavior present in the web implementation; they should be kept in sync with code changes.
+
+The current web implementation includes the following product and service detail behavior:
+
+- Product posting renders the `Size` requirement as a multi-select control. It offers XS, S, M, L, XL, XXL, XXXL, One Size, and numeric sizes 28 through 46. Chosen sizes appear as removable capsules.
+- The posting form stores chosen sizes as a comma-separated value inside the existing pipe-delimited listing tags string, for example `size:XS, M`. This keeps the current backend tags format.
+- Product detail maps the saved Size tag into separate available-size buttons. Buyers can select one size at a time. That selection currently changes the button state only; it is not yet passed into the negotiation flow.
+- Structured product tags render with their labels, such as `Brand: Nike` and `Condition: Good`. The Size tag is not repeated as a comma-separated feature badge; it appears in the size selector. Unstructured tags remain plain feature badges.
+- The product detail cover image uses a fixed responsive height: 320px by default, 380px at the small breakpoint, and 420px on large screens.
+- Product and service details show a rating summary, review count, and up to three review previews below the gallery. **Show more** replaces the detail content in the main market panel with the full review list. The existing market header back control returns to the selected detail, and from there it returns to the marketplace. The reviews view has no separate back button.
+- Service detail uses the product detail layout pattern with a bounded portfolio gallery, selectable thumbnails and image viewer, catalog-backed saving, service scope and delivery facts, and more published services from the same seller. Buyers can submit a custom quote request with budget, timeline, and project details; it starts a direct conversation and sends the request as the opening message.
+- Service detail is available from both `/service-detail/[id]` and the legacy `/service-detail?service=<id>` URL.
+- Review summaries and reviews load from the catalog API for products and services. The normalized `ListingReviewData` shape (`rating`, `reviewCount`, `reviews`, and `isSample`) is retained; live API data sets `isSample` to `false`. Reviewers can create, edit, and delete their review, and the full review view supports pagination and uses the marketplace header back control.
+- The market uses the catalog's latest, trending, and authenticated recommendation feeds for products and services. Feed order comes from the backend; category filtering is sent with the request, search stays in the existing UI, and browse views support load-more pagination.
+- Product and service favorite buttons call the catalog save/unsave endpoints and update the existing persisted saved-item state only after a successful response. The frontend does not invent a saved-list response shape.
+- Archived products and services can be republished from the profile listing menu after confirmation. Publishing validates the saved listing's required fields and media; incomplete listings can be edited and saved as drafts, which can then also be published from the menu.
+- Category tags can be restricted to applicable subcategories. The product and service creation forms, archive republish validation, and regression tests use the same applicability resolver, so an irrelevant attribute is neither requested nor required for that selection.
+- Listing detail requests continue through the existing authenticated API client, which carries the configured `/api/v1` base URL and bearer token. Catalog requests do not send the store's `x-user-id` header; the API identifies the user from the token.
+- Authenticated listing selections and completed product-video watches are sent as idempotent interaction events. Listing views come from the normal detail request and backend `view_count`; the UI does not emit separate view events or locally increment counts.
+- Listing owners see per-listing engagement metrics on product or service details, with 7, 30, or 90 day windows. The backend remains responsible for authorizing access.
+
+Relevant implementation files:
+
+- Product creation: `appPages/PostProductPage.tsx`
+- Product detail: `components/market/sections/MarketProductDetail.tsx`
+- Product and service detail routes: `app/product-detail/[id]/page.tsx`, `app/service-detail/[id]/page.tsx`
+- Service detail: `components/market/sections/MarketServiceDetail.tsx`
+- Shared review views: `components/market/sections/ListingReviews.tsx`
+- Review data boundary and hook: `services/listing-reviews.ts`, `components/market/hooks/useListingReviews.ts`
+- Catalog API contracts: `services/catalog.ts`
+- Discovery and save hooks: `components/market/hooks/useListingFeed.ts`, `components/market/hooks/useListingSave.ts`
+- Owner metrics: `components/market/sections/ListingAnalytics.tsx`
+- Product tag normalization: `services/mappers.ts`, `types/product.ts`
 
 ## Non-Negotiable Product Requirements
 
@@ -114,19 +186,13 @@ Use the Flutter app's current design language, then adapt it into a stronger web
 - preserve image-heavy and media-heavy sections
 - use subtle motion for route changes, hover states, drawers, and bottom sheets
 
-## Recommended Web Stack
+## Current Web Stack
 
-If no stack is specified, use:
-
-- Next.js with App Router
-- TypeScript
-- Tailwind CSS
-- shadcn/ui or Radix primitives for accessible overlays and tabs
-- Framer Motion for meaningful motion
-- Zustand or React Context for local app state
-- TanStack Query for async data boundaries
-
-If backend work is not requested yet, build the first version with clean mock data and strong component architecture so real APIs can be attached later.
+- Next.js App Router (`next` 16.2.6) and React 19
+- TypeScript and Tailwind CSS
+- Zustand for shared client state and TanStack Query for asynchronous data
+- Framer Motion for selected UI transitions
+- Existing authenticated API client and catalog endpoints for marketplace data
 
 ## App Shell
 
@@ -159,6 +225,8 @@ Use the current Flutter dashboard navigation as the baseline:
 ---
 
 ## Detailed Screen‑by‑Screen UI/UX Specifications
+
+These sections are the target experience and acceptance guidance for the remaining work. Some details below are implemented, some are partial, and some are still planned; consult **Project Status** above and inspect the relevant screen before changing it.
 
 For each screen, follow the modern e‑commerce enhancements described below.
 
@@ -218,6 +286,9 @@ For each screen, follow the modern e‑commerce enhancements described below.
 - Sticky header on scroll: simplified CTA “Offer $X” always visible.
 - Offer section: show last 5 offers (anonymized) to build transparency. Example: “User *** made an offer of $45 2 mins ago”.
 - Seller section: response time, acceptance rate, “Similar products from this seller”.
+- Available sizes from the listing's `size:` tag are displayed as individually selectable buttons. Render keyed attributes with their labels (for example, `Brand: Nike`) and omit the combined Size tag from generic feature badges.
+- Keep the lead product image at a bounded responsive height so it does not stretch alongside long descriptions.
+- Below the product images, show the rating, total review count, and the first three reviews. “Show more” replaces the main market detail panel with the full review list. The market header back control returns to product details.
 - **Modern e‑commerce flow:** Add a “Bundle & save” suggestion – other products from same seller that could be combined for a better offer.
 - After making an offer, show pending status and a “Chat with seller” shortcut.
 
@@ -227,6 +298,7 @@ For each screen, follow the modern e‑commerce enhancements described below.
 
 **How:**
 - Show portfolio gallery, average response time, and “Completed X projects”.
+- Below the service gallery, show the rating, total review count, and the first three reviews. “Show more” replaces the main market detail panel with the full review list. Use the market header back control to return to service details.
 - Use a step‑by‑step breakdown: what’s included, what’s extra, typical turnaround.
 - Instead of “Make offer”, use “Propose budget” with a slider and a message field.
 - **E‑commerce twist:** Show “Similar services you might need” as cross‑sell.
@@ -292,6 +364,7 @@ For each screen, follow the modern e‑commerce enhancements described below.
 
 **How:**
 - Pricing step: allow “Minimum acceptable offer” (hidden from buyers) and “Auto‑counter offer” rules (e.g., counter 5% below asking).
+- Render the Size requirement as a multi-select dropdown with removable selected-size capsules. Serialize selected sizes as comma-separated text in the existing tags string so the backend format stays compatible.
 - Media: drag‑drop upload with priority order. AI alt‑text suggestion.
 - After publish, show a success screen with “Share on social” and “Schedule live” CTAs.
 
@@ -364,6 +437,8 @@ For each screen, follow the modern e‑commerce enhancements described below.
 
 ## Data Model Baseline
 
+The following types are a conceptual domain reference from the original build brief. Prefer the current API contracts and application types when implementing or changing data flows.
+
 Use these entities as the initial frontend domain model:
 
 ```ts
@@ -435,116 +510,42 @@ type ChatMessage = {
   createdAt: string;
 };
 
-Interaction Notes
-reserved live tickets should persist in client state
+## Interaction and Integration Notes
 
-search should keep recent searches
+Treat these as product requirements to verify against the implementation, not assumptions that they are all shipped:
 
-theme toggle should persist
+- Reserved live tickets, recent searches, and theme preferences should persist according to the existing app behavior.
+- Profile sharing should use a public seller URL.
+- Screenshot attachments and voice notes must follow current browser support and backend capabilities; do not rely on mock-only storage for production behavior.
 
-profile sharing should generate a public seller URL pattern
+The app already uses the existing API for marketplace and listing operations. Further live-session integrations should be designed around the backend's actual capabilities and contracts:
 
-room screenshot capture stores image in IndexedDB for mock demo
+- WebRTC or an equivalent provider for live audio/video, if not provided by the backend.
+- WebSocket or another realtime channel for room presence, chat, and offers, if not provided by the backend.
+- The backend's relational data and media-storage systems; avoid adding duplicate client-side persistence or services without a concrete requirement.
 
-voice notes use browser recording API with mock storage
+## Modern Web UX Rules
 
-Realtime And Backend Planning
-If implementing backend later, design around:
+- Prioritize responsive behavior from mobile through wide desktop.
+- Use sticky headers, drawers, tabs, sheets, and hover affordances where they improve usability.
+- Keep motion tasteful and purposeful.
+- Preserve warmth in colors and writing.
+- Copy should sound human, calm, and confidence-building.
+- Use realistic content and media, not placeholder lorem ipsum.
 
-auth
+## Definition Of Done
 
-user profiles
+The web version is complete when:
 
-seller storefronts
+- The main Haggle experiences are represented on web and their primary journeys work end to end.
+- The app feels like the same Haggle product, not a generic storefront redesign.
+- Buyers can discover listings, reserve live sessions, message, and negotiate.
+- Sellers can present products and services, schedule lives, and manage live interactions.
+- Critical flows have loading, empty, success, and error states, and pass targeted automated tests.
+- The UI is accessible, responsive, and polished on both desktop and mobile.
 
-product and service listings
+## Product Acceptance Criteria
 
-live session scheduling
+Do not simplify Haggle into a normal storefront. The completed product should preserve a strong visual identity, media-rich discovery, a warm premium consumer UI, buyer and seller flows, negotiation-specific interactions, and responsive modern web behavior.
 
-reminder reservations
-
-direct messaging
-
-room presence
-
-offer and counteroffer events
-
-screenshot attachments
-
-Suggested future services:
-
-WebRTC for live voice or video
-
-WebSocket layer for room presence and offer updates
-
-Postgres for relational data
-
-object storage for media
-
-Modern Web UX Rules
-prioritize strong responsive behavior from mobile through wide desktop
-
-use sticky headers, drawers, tabs, sheets, and hover affordances where they improve usability
-
-keep motion tasteful and purposeful
-
-preserve warmth in colors and writing
-
-copy should sound human, calm, and confidence-building
-
-use realistic demo content and media, not placeholder lorem ipsum
-
-Definition Of Done
-The web version is successful when:
-
-the main Flutter experiences are visibly represented on web
-
-the app feels like the same Haggle product, not a different redesign
-
-buyers can discover, reserve, message, and negotiate
-
-sellers can present products and services, schedule lives, and manage live interactions
-
-the UI feels modern, premium, and consumer-facing on both desktop and mobile
-
-Build Priority Order
-Landing and auth
-
-App shell and navigation
-
-Home live feed
-
-Market and search
-
-Seller profile and product or service detail pages
-
-Messages and conversation experience
-
-Create hub and creation flows
-
-Reminders and analytics
-
-Negotiation room buyer mode
-
-Negotiation room seller mode
-
-Final Instruction To The AI Builder
-Do not simplify Haggle into a normal storefront.
-
-Build it as a live negotiation marketplace with:
-
-strong visual identity
-
-media-rich discovery
-
-warm premium consumer UI
-
-buyer and seller flows
-
-negotiation-specific interactions
-
-responsive modern web behavior
-
-Now, also implement the specific UI/UX changes described above for each screen. They are not optional – they define the modern e‑commerce feel. When in doubt, prioritize trust signals, offer transparency, and one‑tap negotiation actions.
-
-When unsure, choose the option that preserves immersion, trust, and live marketplace energy.
+Use the screen specifications above as the target when implementing the next priorities. Prioritize trust signals, offer transparency, and direct negotiation actions while preserving the marketplace's warm, live feel.

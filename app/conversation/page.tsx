@@ -1,4 +1,4 @@
-import { ConversationPage } from "@/components/workspace-pages";
+import { ConversationPage } from "@/components/pages/ConversationPage";
 
 export default function Page() {
   return <ConversationPage />;

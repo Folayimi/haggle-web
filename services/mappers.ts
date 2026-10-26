@@ -32,11 +32,32 @@ export interface BackendListing {
   negotiation_note?: string | null;
   tags: string | string[] | null;
   save_count?: number;
+  view_count?: number;
+  share_count?: number;
+  seller?: BackendListingSeller | null;
+  rating_summary?: BackendRatingSummary | null;
+  trending_score?: number;
+  recommendation_reason?:
+    | "based_on_category"
+    | "based_on_followed_seller"
+    | "recently_listed"
+    | "trending";
+  recommendation_score?: number;
   created_at: string;
   thumbnail_url?: string | null;
   cover_media_id?: string | null;
   medias?: BackendListingMedia[];
   media?: BackendListingMedia[];
+}
+
+export interface BackendListingSeller {
+  full_name: string;
+  avatar_url: string | null;
+}
+
+export interface BackendRatingSummary {
+  average: number;
+  count: number;
 }
 
 export interface BackendCategory {
@@ -81,7 +102,7 @@ interface BackendNegotiationThread {
   latest_offer?: BackendOffer;
 }
 
-function resolveListingMediaUrl(path: string): string {
+export function resolveListingMediaUrl(path: string): string {
   if (/^https?:\/\//i.test(path)) return path;
 
   const r2PublicUrl = process.env.NEXT_PUBLIC_R2_PUBLIC_URL;
@@ -121,6 +142,38 @@ export function mapListingToProduct(listing: BackendListing): SellerProduct {
   const rawTags = Array.isArray(listing.tags)
     ? listing.tags
     : (listing.tags ?? "").split("|");
+  const availableSizes = rawTags.flatMap((tag) => {
+    const separator = tag.indexOf(":");
+    if (
+      separator < 0 ||
+      tag.slice(0, separator).trim().toLowerCase() !== "size"
+    ) {
+      return [];
+    }
+    return tag
+      .slice(separator + 1)
+      .split(",")
+      .map((size) => size.trim())
+      .filter(Boolean);
+  });
+  const attributes = rawTags.flatMap((tag) => {
+    const separator = tag.indexOf(":");
+    if (separator < 0) return [];
+
+    const key = tag.slice(0, separator).trim();
+    const value = tag.slice(separator + 1).trim();
+    if (!key || key.toLowerCase() === "size" || !value) return [];
+
+    return [
+      {
+        label: key
+          .split(/[-_\s]+/)
+          .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
+          .join(" "),
+        value,
+      },
+    ];
+  });
   const tags = rawTags
     .map((tag) => {
       const separator = tag.indexOf(":");
@@ -154,10 +207,22 @@ export function mapListingToProduct(listing: BackendListing): SellerProduct {
         : inventoryCount <= 10
           ? `Only ${inventoryCount} left in stock`
           : "In stock",
-    features: tags,
+    availableSizes,
+    attributes,
+    features: rawTags
+      .filter((tag) => !tag.includes(":"))
+      .map((tag) => tag.trim())
+      .filter(Boolean),
     negotiationNote: listing.negotiation_note ?? "",
     tags,
     saveCount: listing.save_count ?? 0,
+    viewCount: listing.view_count ?? 0,
+    shareCount: listing.share_count ?? 0,
+    sellerSummary: listing.seller ?? null,
+    ratingSummary: listing.rating_summary ?? null,
+    trendingScore: listing.trending_score,
+    recommendationReason: listing.recommendation_reason,
+    recommendationScore: listing.recommendation_score,
     negotiationCount: 0,
     createdAt: listing.created_at,
   };
@@ -210,6 +275,14 @@ export function mapListingToService(
           : workPlace ?? "",
     workAddress: listing.work_address ?? "",
     negotiationNote: listing.negotiation_note ?? "",
+    viewCount: listing.view_count ?? 0,
+    saveCount: listing.save_count ?? 0,
+    shareCount: listing.share_count ?? 0,
+    sellerSummary: listing.seller ?? null,
+    ratingSummary: listing.rating_summary ?? null,
+    trendingScore: listing.trending_score,
+    recommendationReason: listing.recommendation_reason,
+    recommendationScore: listing.recommendation_score,
     gallery: listingMedia
       .map((media) => resolveListingMediaUrl(media.url))
       .filter((url) => url !== (thumbnailUrl ? resolveListingMediaUrl(thumbnailUrl) : "")),
@@ -256,21 +329,72 @@ interface BackendUser {
   username?: string;
   business_name?: string;
   avatar_url?: string;
+  cover_image_url?: string;
+  bio?: string;
+  city?: string;
+  state?: string;
+  country?: string;
+  location?: string;
   is_verified?: boolean;
+  followers?: number | string;
+  follower_count?: number | string;
+  profile?: {
+    full_name?: string;
+    username?: string;
+    business_name?: string;
+    avatar_url?: string;
+    cover_image_url?: string;
+    bio?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    location?: string;
+    is_verified?: boolean;
+    followers?: number | string;
+    follower_count?: number | string;
+  };
 }
 
 export function mapUserToSeller(user: BackendUser) {
-  // NOTE: followers, rating, response_time, and trust pills aren't modeled
-  // on the backend yet (Section 22/23 territory, deferred post-MVP).
+  const isVerified = Boolean(user.is_verified ?? user.profile?.is_verified);
+
+  // NOTE: rating, response_time, and trust pills aren't modeled on the
+  // backend yet (Section 22/23 territory, deferred post-MVP).
   // Honest placeholders here -- never invent numbers.
   return {
     id: user.id,
-    name: user.full_name ?? user.username ?? "Seller",
-    businessName: user.business_name ?? "",
-    avatarUrl: user.avatar_url ?? "/placeholder-avatar.jpg",
-    badge: user.is_verified ? "Verified seller" : "New seller",
-    trustPills: user.is_verified ? ["Phone verified"] : [],
-    followers: "—",
+    name:
+      user.full_name ??
+      user.profile?.full_name ??
+      user.username ??
+      user.profile?.username ??
+      "Seller",
+    username: user.username ?? user.profile?.username ?? "",
+    businessName: user.business_name ?? user.profile?.business_name ?? "",
+    avatarUrl:
+      user.avatar_url ?? user.profile?.avatar_url ?? "/placeholder-avatar.jpg",
+    coverImageUrl: user.cover_image_url ?? user.profile?.cover_image_url ?? "",
+    bio: user.bio ?? user.profile?.bio ?? "",
+    location:
+      [
+        user.city ?? user.profile?.city,
+        user.state ?? user.profile?.state,
+        user.country ?? user.profile?.country,
+      ]
+        .filter(Boolean)
+        .join(", ") ||
+      user.location ||
+      user.profile?.location ||
+      "",
+    isVerified,
+    badge: isVerified ? "Verified seller" : "Haggle seller",
+    trustPills: isVerified ? ["Verified seller"] : [],
+    followers:
+      user.follower_count ??
+      user.profile?.follower_count ??
+      user.followers ??
+      user.profile?.followers ??
+      "—",
     rating: "—",
     responseTime: "—",
   };

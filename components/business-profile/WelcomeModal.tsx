@@ -1,4 +1,3 @@
-// components/business-profile/WelcomeModal.tsx
 "use client";
 
 import { motion, AnimatePresence } from "framer-motion";
@@ -8,8 +7,8 @@ import { Check, X } from "lucide-react";
 interface WelcomeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  username: string; // current user's username
-  onContinue: () => void; // navigate to profile
+  username: string;
+  onContinue: () => void;
 }
 
 const BENEFITS = [
@@ -33,11 +32,7 @@ export default function WelcomeModal({
 
   const handleContinue = () => {
     onContinue();
-    router.push(`/profile/${username}`);
-  };
-
-  const handleExplore = () => {
-    onClose();
+    router.push(`/profile/${encodeURIComponent(username)}`);
   };
 
   return (
@@ -53,15 +48,15 @@ export default function WelcomeModal({
             backdropFilter: "blur(8px)",
             WebkitBackdropFilter: "blur(8px)",
           }}
-          onClick={handleExplore}
+          onClick={onClose}
         >
           <motion.div
             initial={{ scale: 0.9, opacity: 0, y: 30 }}
             animate={{ scale: 1, opacity: 1, y: 0 }}
             exit={{ scale: 0.9, opacity: 0, y: 30 }}
             transition={{ duration: 0.35, ease: [0.25, 0.1, 0.25, 1] }}
-            className="relative my-auto w-full max-w-3xl max-h-[90vh] overflow-y-auto rounded-3xl border border-border/40 bg-background-elevated/80 p-6 pt-14 shadow-2xl backdrop-blur-xl sm:p-8 sm:pt-14"
-            onClick={(e) => e.stopPropagation()}
+            className="relative my-auto max-h-[90vh] w-full max-w-3xl overflow-y-auto rounded-3xl border border-border/40 bg-background-elevated/80 p-6 pt-14 shadow-2xl backdrop-blur-xl sm:p-8 sm:pt-14"
+            onClick={(event) => event.stopPropagation()}
           >
             <button
               type="button"
@@ -72,17 +67,16 @@ export default function WelcomeModal({
               <X className="h-5 w-5" />
             </button>
 
-            {/* Header */}
-            <div className="text-center mb-8">
+            <div className="mb-8 text-center">
               <h2 className="text-3xl font-bold text-foreground md:text-4xl">
                 Welcome to <span className="text-primary">Haggle</span> Business
               </h2>
-              <p className="text-muted/80 mt-2 max-w-lg mx-auto">
-                We're committed to growing your business. Here's what you get as a seller:
+              <p className="mx-auto mt-2 max-w-lg text-muted/80">
+                We&apos;re committed to growing your business. Here&apos;s what
+                you get as a seller:
               </p>
             </div>
 
-            {/* Benefits Grid */}
             <div className="mx-auto mb-8 grid max-w-2xl grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
               {BENEFITS.map((benefit) => (
                 <div
@@ -97,9 +91,9 @@ export default function WelcomeModal({
               ))}
             </div>
 
-            {/* Actions */}
             <div className="flex justify-center">
               <button
+                type="button"
                 onClick={handleContinue}
                 className="inline-flex w-full max-w-sm cursor-pointer items-center justify-center rounded-xl bg-primary px-8 py-3.5 text-base font-semibold text-white shadow-lg shadow-primary/20 transition-all hover:bg-primary-strong hover:shadow-xl hover:shadow-primary/30 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
@@ -107,7 +101,7 @@ export default function WelcomeModal({
               </button>
             </div>
 
-            <p className="text-xs text-muted/40 text-center mt-4">
+            <p className="mt-4 text-center text-xs text-muted/40">
               You can always access your profile from the navigation bar.
             </p>
           </motion.div>

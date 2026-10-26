@@ -1,5 +1,10 @@
-import { NegotiationRoomPage } from "@/components/workspace-pages";
+import { ComingSoonPage } from "@/components/pages/ComingSoonPage";
 
 export default function Page() {
-  return <NegotiationRoomPage />;
+  return (
+    <ComingSoonPage
+      title="Negotiation room"
+      description="Live negotiation rooms are being prepared for a future release."
+    />
+  );
 }

@@ -1,12 +1,13 @@
 "use client";
 
+import Image from "next/image";
 import Link from "next/link";
-import { Heart, MessageCircle } from "lucide-react";
+import { Heart, MessageCircle, Star } from "lucide-react";
 
 import { CardImage } from "@/components/market/common/CardImage";
 import { ActionButton } from "@/components/market/common/ActionButton";
 import { getProductCover } from "@/components/market/data/market";
-import { useHaggleStore } from "@/lib/app-store";
+import { useListingSave } from "@/components/market/hooks/useListingSave";
 import { formatPrice } from "@/lib/formatters";
 import { cn } from "@/lib/utils";
 import { SellerProduct } from "@/types";
@@ -14,12 +15,17 @@ import { SellerProduct } from "@/types";
 export interface ProductCardProps {
   product: SellerProduct;
   onSelect?: (product: SellerProduct) => void;
+  onUnsave?: () => void;
+  savePending?: boolean;
 }
 
-export default function ProductCard({ product, onSelect }: ProductCardProps) {
-  const savedIds = useHaggleStore((state) => state.savedItemIds);
-  const toggleSavedItem = useHaggleStore((state) => state.toggleSavedItem);
-  const saved = savedIds.includes(product.id);
+export default function ProductCard({
+  product,
+  onSelect,
+  onUnsave,
+  savePending = false,
+}: ProductCardProps) {
+  const { saved, pending, toggle } = useListingSave(product.id);
   const rawPrice = String(product.price).trim();
   const price =
     typeof product.price === "string"
@@ -46,26 +52,46 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
               alt={product.name}
               className="h-full w-full [&_img]:h-full"
             />
-            <p className="absolute bottom-2 left-2 z-10 rounded-md bg-black/55 px-2.5 py-1 text-sm font-bold tracking-tight text-white shadow-sm backdrop-blur-sm sm:bottom-3 sm:left-3">
-              {Number.isFinite(price)
-                ? formatPrice(price, product.priceCurrency)
-                : "Price unavailable"}
-            </p>
-          </div>
-
-          <div className="min-w-0 pt-2.5">
-            <h3 className="line-clamp-1 text-sm font-semibold leading-snug text-foreground">
-              {product.name}
-            </h3>
-            <p className="mt-0.5 line-clamp-1 text-xs leading-4 text-muted">
-              {product.description}
-            </p>
           </div>
         </button>
+        {product.sellerSummary?.avatar_url && (
+          <div className="absolute left-3 top-3 z-10 h-9 w-9 overflow-hidden rounded-full border border-white/70 shadow-sm">
+            <Image
+              src={product.sellerSummary.avatar_url}
+              alt={`${product.sellerSummary.full_name || "Seller"} profile`}
+              width={36}
+              height={36}
+              className="h-full w-full object-cover"
+            />
+          </div>
+        )}
+        <div className="pointer-events-none absolute bottom-2 left-2 right-2 z-10 flex items-center justify-between gap-2 sm:bottom-3 sm:left-3 sm:right-3">
+          <p className="min-w-0 truncate rounded-md bg-black/65 px-2.5 py-1 text-sm font-bold tracking-tight text-white shadow-sm backdrop-blur-sm">
+            {Number.isFinite(price)
+              ? `~${formatPrice(price, product.priceCurrency)}`
+              : "Price unavailable"}
+          </p>
+          <ActionButton asChild size="sm" className="market-card-action shrink-0">
+            <Link
+              href={`/product-detail/${encodeURIComponent(product.id)}`}
+              className="pointer-events-auto"
+            >
+              <MessageCircle className="h-4 w-4" />
+              Negotiate
+            </Link>
+          </ActionButton>
+        </div>
         <button
           type="button"
-          onClick={() => toggleSavedItem(product.id)}
-          aria-label={saved ? "Remove from favorites" : "Add to favorites"}
+          onClick={() => {
+            if (onUnsave) {
+              onUnsave();
+              return;
+            }
+            void toggle();
+          }}
+          disabled={pending || savePending}
+          aria-label={onUnsave || saved ? "Remove from favorites" : "Add to favorites"}
           aria-pressed={saved}
           className={cn(
             "absolute right-3 top-3 z-10 flex h-7 w-7 items-center justify-center rounded-full border border-white/50 bg-black/70 text-white shadow-md backdrop-blur transition-colors hover:bg-black focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2",
@@ -79,16 +105,34 @@ export default function ProductCard({ product, onSelect }: ProductCardProps) {
         </button>
       </div>
 
-      <div className="flex justify-end pt-2">
-        <ActionButton asChild size="sm" className="shrink-0">
-          <Link
-            href={`/product-detail?product=${encodeURIComponent(product.id)}`}
-          >
-            <MessageCircle className="h-4 w-4" />
-            Negotiate
-          </Link>
-        </ActionButton>
-      </div>
+      <button
+        type="button"
+        onClick={() => onSelect?.(product)}
+        disabled={!onSelect}
+        className={cn(
+          "block w-full min-w-0 rounded-xl pt-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2 disabled:cursor-default",
+          onSelect && "cursor-pointer",
+        )}
+      >
+        <h3 className="line-clamp-1 text-sm font-semibold leading-snug text-foreground">
+          {product.name}
+        </h3>
+        <p className="mt-0.5 line-clamp-1 text-xs leading-4 text-muted">
+          {product.description}
+        </p>
+        {product.recommendationReason && <p className="mt-1 text-[11px] font-medium text-primary">{recommendationLabel(product.recommendationReason)}</p>}
+        {!!product.ratingSummary?.count && <p className="mt-1 inline-flex items-center gap-1 text-[11px] text-muted"><Star className="h-3 w-3 fill-amber-400 text-amber-400" aria-hidden="true" />{product.ratingSummary.average.toFixed(1)} ({product.ratingSummary.count})</p>}
+      </button>
     </article>
   );
+}
+
+function recommendationLabel(reason: NonNullable<SellerProduct["recommendationReason"]>) {
+  const labels = {
+    based_on_category: "Based on this category",
+    based_on_followed_seller: "From a seller you follow",
+    recently_listed: "Recently listed",
+    trending: "Trending",
+  };
+  return labels[reason];
 }

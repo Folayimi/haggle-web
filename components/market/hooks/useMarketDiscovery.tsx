@@ -9,60 +9,50 @@ import {
 } from "@/types";
 
 interface Params {
-  products: SellerProduct[];
-  services: MarketService[];
   sellers: Seller[];
   liveSessions: SellerLiveSession[];
   negotiations?: Negotiation[];
+  recommendedProducts?: SellerProduct[];
+  trendingProducts?: SellerProduct[];
+  latestProducts?: SellerProduct[];
+  latestServices?: MarketService[];
+  trendingServices?: MarketService[];
+  recommendedServices?: MarketService[];
 }
 
 export function useMarketDiscovery({
-  products,
-
-  services,
-
   sellers,
 
   liveSessions,
 
   negotiations = [],
+  recommendedProducts = [],
+  trendingProducts = [],
+  latestProducts = [],
+  latestServices = [],
+  trendingServices = [],
+  recommendedServices = [],
 }: Params) {
   return useMemo(() => {
-    const recommended = products.slice(0, 8);
-
-    const trending = [...products]
-      .sort(
-        (a, b) =>
-          (b.negotiationCount ?? 0) - (a.negotiationCount ?? 0),
-      )
-      .slice(0, 8);
-
-    const latest = [...products].sort(
-      (a, b) =>
-        new Date(b.createdAt ?? 0).getTime() -
-        new Date(a.createdAt ?? 0).getTime(),
-    );
-
     const liveNow = liveSessions.filter((x) => x.status === "Live now");
 
     const upcoming = liveSessions.filter((x) => x.status !== "Live now");
 
     return {
-      recommended,
-
-      trending,
-
-      latest,
+      recommended: recommendedProducts,
+      trending: trendingProducts,
+      latest: latestProducts,
+      latestServices,
+      trendingServices,
+      recommendedServices,
 
       liveNow,
 
       upcoming,
 
-      services,
-
       sellers,
 
       negotiations,
     };
-  }, [products, services, sellers, liveSessions, negotiations]);
+  }, [sellers, liveSessions, negotiations, recommendedProducts, trendingProducts, latestProducts, latestServices, trendingServices, recommendedServices]);
 }

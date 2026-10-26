@@ -1,6 +1,6 @@
 // services/users.ts
 import apiClient from "./client";
-import { notifyError } from "./toastify";
+import { notifyApiError } from "./toastify";
 
 export const getUserById = async (id: string) => {
   let result: any = null;
@@ -10,7 +10,7 @@ export const getUserById = async (id: string) => {
       result = response?.data?.data ?? response?.data ?? null;
     })
     .catch((err) => {
-      notifyError(err?.response?.data?.error ?? "Failed to load seller");
+      notifyApiError(err, err?.response?.data?.error ?? "Failed to load seller");
       throw err;
     });
   return result;

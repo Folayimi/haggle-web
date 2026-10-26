@@ -2,10 +2,10 @@
 
 // components/pages/ConversationPage.tsx
 // Thin wrapper around MessagesPage's compact mode, opened directly on one
-// conversation (e.g. from ProductDetailPage's "Message owner" button).
+// conversation (e.g. from the product detail view's "Message owner" action).
 
 import { useSearchParams } from "next/navigation";
-import { MessagesPage } from "./MessagesPage";
+import { MessagesPage } from "./MessagePage";
 
 export function ConversationPage() {
   const searchParams = useSearchParams();

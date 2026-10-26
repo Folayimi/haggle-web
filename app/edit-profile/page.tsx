@@ -1,5 +1,10 @@
-import { EditProfilePage } from "@/components/workspace-pages";
+import { ComingSoonPage } from "@/components/pages/ComingSoonPage";
 
 export default function Page() {
-  return <EditProfilePage />;
+  return (
+    <ComingSoonPage
+      title="Edit profile"
+      description="Profile editing is being prepared for a future release."
+    />
+  );
 }
