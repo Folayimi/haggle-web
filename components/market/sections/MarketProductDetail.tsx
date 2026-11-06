@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
   ChevronLeft,
   ChevronRight,
@@ -20,6 +20,9 @@ import { trackListingInteraction } from "@/services/catalog";
 import { getSellerListings } from "@/services/request";
 import { mapListingToProduct } from "@/services/mappers";
 import { notifyApiError } from "@/services/toastify";
+import { createConversation } from "@/services/conversations";
+// import { createNegotiation } from "@/services/negotiations";
+import { useHaggleStore } from "@/lib/app-store";
 import {
   Dialog,
   DialogClose,
@@ -43,6 +46,9 @@ export function MarketProductDetail({
   showAllReviews: boolean;
   onShowAllReviewsChange: (show: boolean) => void;
 }) {
+  const router = useRouter();
+  const userData = useHaggleStore((state) => state.userData);
+  const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
   const {
     saved,
     pending: savePending,
@@ -73,6 +79,7 @@ export function MarketProductDetail({
   );
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const [selectedSize, setSelectedSize] = useState("");
+  const [negotiationStarting, setNegotiationStarting] = useState(false);
   const activeMedia = product.images?.find(
     (media) => media.url === activeMediaUrl,
   );
@@ -99,6 +106,42 @@ export function MarketProductDetail({
     typeof product.price === "number"
       ? product.price
       : Number(String(product.price).replace(/[^\d.-]/g, ""));
+
+    const startNegotiation = async () => {
+    if (!userData?.id) {
+      setActivateAuth(true);
+      return;
+    }
+    if (userData.id === product.sellerId) {
+      notifyApiError(
+        new Error("You cannot negotiate with your own listing."),
+        "You cannot negotiate with your own listing.",
+      );
+      return;
+    }
+    setNegotiationStarting(true);
+    try {
+      // Only create the conversation
+      const conversation = await createConversation({
+        conversation_type: "direct",
+        seller_id: product.sellerId,
+        listing_id: product.id,
+        participant_ids: [userData.id, product.sellerId],
+      });
+      
+      if (!conversation) throw new Error("A conversation could not be created.");
+      
+      // Navigate to the messages page with just the conversation and listing IDs.
+      // Notice there is no negotiationId in the URL anymore.
+      router.push(
+        `/messages?conversationId=${encodeURIComponent(conversation.id)}&listingId=${encodeURIComponent(product.id)}`,
+      );
+    } catch (error) {
+      notifyApiError(error, "Unable to start a conversation for this product.");
+    } finally {
+      setNegotiationStarting(false);
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -210,13 +253,15 @@ export function MarketProductDetail({
                   </button>
                 )}
               </div>
-              <Link
-                href={`/product-detail/${encodeURIComponent(product.id)}`}
+              <button
+                type="button"
+                onClick={() => void startNegotiation()}
+                disabled={negotiationStarting}
                 className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
               >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                Negotiate
-              </Link>
+                {negotiationStarting ? "Starting..." : "Negotiate price"}
+              </button>
             </div>
 
             <div className="flex min-w-0 flex-col">
@@ -338,12 +383,8 @@ export function MarketProductDetail({
                   <button
                     key={media.id}
                     type="button"
-                    onClick={() =>
-                      openViewer(
-                        mediaItems.findIndex((item) => item.url === media.url),
-                      )
-                    }
-                    aria-label={`View ${product.name} photo in image viewer`}
+                    onClick={() => setActiveMediaUrl(media.url)}
+                    aria-label={`Show ${product.name} photo`}
                     aria-pressed={activeMediaUrl === media.url}
                     className={cn(
                       "relative aspect-[4/3] overflow-hidden rounded-xl bg-background-elevated focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary",
@@ -393,45 +434,47 @@ export function MarketProductDetail({
               aria-labelledby="more-from-seller-title"
               className="rounded-2xl bg-background p-4 sm:p-6"
             >
-              <div className="mb-5">
-                <h2 id="more-from-seller-title" className="text-lg font-bold">
-                  More products by this seller
-                </h2>
-                <p className="mt-1 text-sm text-muted">
-                  Explore other products from the same seller.
-                </p>
+              <div>
+                <div className="mb-5">
+                  <h2 id="more-from-seller-title" className="text-lg font-bold">
+                    More products by this seller
+                  </h2>
+                  <p className="mt-1 text-sm text-muted">
+                    Explore other products from the same seller.
+                  </p>
+                </div>
+                {sellerProductsLoading ? (
+                  <div
+                    role="status"
+                    className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
+                  >
+                    <span className="sr-only">
+                      Loading more products from this seller
+                    </span>
+                    {Array.from({ length: 4 }, (_, index) => (
+                      <div key={index} className="animate-pulse">
+                        <div className="aspect-[4/3] rounded-xl bg-primary/10" />
+                        <div className="mt-3 h-4 w-3/4 rounded bg-primary/10" />
+                        <div className="mt-2 h-3 w-full rounded bg-primary/10" />
+                      </div>
+                    ))}
+                  </div>
+                ) : sellerProducts.length > 0 ? (
+                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                    {sellerProducts.map((sellerProduct) => (
+                      <ProductCard
+                        key={sellerProduct.id}
+                        product={sellerProduct}
+                        onSelect={onProductSelect}
+                      />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-border/60 px-4 py-6 text-center text-sm text-muted">
+                    This seller has no other published products yet.
+                  </p>
+                )}
               </div>
-              {sellerProductsLoading ? (
-                <div
-                  role="status"
-                  className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"
-                >
-                  <span className="sr-only">
-                    Loading more products from this seller
-                  </span>
-                  {Array.from({ length: 4 }, (_, index) => (
-                    <div key={index} className="animate-pulse">
-                      <div className="aspect-[4/3] rounded-xl bg-primary/10" />
-                      <div className="mt-3 h-4 w-3/4 rounded bg-primary/10" />
-                      <div className="mt-2 h-3 w-full rounded bg-primary/10" />
-                    </div>
-                  ))}
-                </div>
-              ) : sellerProducts.length > 0 ? (
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                  {sellerProducts.map((sellerProduct) => (
-                    <ProductCard
-                      key={sellerProduct.id}
-                      product={sellerProduct}
-                      onSelect={onProductSelect}
-                    />
-                  ))}
-                </div>
-              ) : (
-                <p className="rounded-xl border border-dashed border-border/60 px-4 py-6 text-center text-sm text-muted">
-                  This seller has no other published products yet.
-                </p>
-              )}
             </section>
           )}
 

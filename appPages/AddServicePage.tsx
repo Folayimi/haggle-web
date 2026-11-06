@@ -67,6 +67,7 @@ import {
   type Subcategory,
 } from "@/types/categories";
 import { ProductMedia, ProductMediaRef, GalleryImage } from "@/components/ProductMedia";
+import AddressFields from "@/components/AddressFields";
 import {
   createCategory,
   createListing,
@@ -75,6 +76,12 @@ import {
   getListing,
   updateListing,
 } from "@/services/request";
+import {
+  createAddress,
+  getAddresses,
+  updateAddress,
+} from "@/services/addresses";
+import type { AddressDraft } from "@/types/address";
 import { notifyApiError } from "@/services/toastify";
 import { useHaggleStore } from "@/lib/app-store";
 import Loader from "@/reusables/loader";
@@ -1633,6 +1640,14 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
   const [category, setCategory] = useState("");
   const [serviceType, setServiceType] = useState("");
   const [address, setAddress] = useState("");
+  const [addressDraft, setAddressDraft] = useState<AddressDraft>({
+    country: "",
+    country_code: "",
+    state: "",
+    city: "",
+    line_1: "",
+    postal_code: "",
+  });
   const [serviceDescription, setServiceDescription] = useState("");
   const [serviceSubcategories, setServiceSubCategories] = useState<
     Subcategory[]
@@ -1667,6 +1682,36 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
   const [initialGallery, setInitialGallery] = useState<
     { mediaId: string; url: string; previewUrl: string }[] | undefined
   >(undefined);
+
+  useEffect(() => {
+    let active = true;
+    void getAddresses()
+      .then((addresses) => {
+        if (!active || editListingId) return;
+        const address = addresses.find((item) => item.is_default) ?? addresses[0];
+        if (address) {
+          setAddressDraft({
+            country: address.country,
+            country_code: address.country_code,
+            state: address.state,
+            city: address.city,
+            line_1: address.line_1,
+            postal_code: address.postal_code,
+          });
+          setAddress(
+            [address.line_1, address.city, address.state, address.country]
+              .filter(Boolean)
+              .join(", "),
+          );
+        }
+      })
+      .catch(() => {
+        // The address field remains available for a manually entered location.
+      });
+    return () => {
+      active = false;
+    };
+  }, [editListingId]);
 
   useEffect(() => {
     if (!editListingId) return;
@@ -1813,8 +1858,18 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
         errors.serviceDescription = "Description is required";
       if (!category) errors.category = "Category is required";
       if (!serviceType) errors.serviceType = "Service type is required";
-      if (workLocation === "workshop" && !address.trim())
-        errors.address = "Workshop address is required";
+      for (const field of [
+        "line_1",
+        "city",
+        "state",
+        "country",
+        "country_code",
+        "postal_code",
+      ] as const) {
+        if (!addressDraft[field].trim()) {
+          errors[field] = "This address field is required";
+        }
+      }
 
       requiredTags.forEach((tag) => {
         if (tag.required && !getTagValue(tag.name).trim()) {
@@ -1889,12 +1944,39 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
     return subcategoryId;
   };
 
+  const saveServiceAddress = async () => {
+    const addresses = await getAddresses();
+    const current =
+      addresses.find((item) => item.is_default) ?? addresses[0];
+    const input = {
+      ...addressDraft,
+      label: current?.label || "Business",
+      recipient_name:
+        current?.recipient_name ||
+        userData?.full_name ||
+        userData?.profile?.full_name ||
+        "Business",
+      phone_e164:
+        current?.phone_e164 || userData?.phone || userData?.profile?.phone || "",
+      is_default: true,
+    };
+    if (!input.phone_e164) {
+      throw new Error("Add a phone number to your address before saving.");
+    }
+    if (current) {
+      await updateAddress(current.id, input);
+    } else {
+      await createAddress(input);
+    }
+  };
+
   const saveListing = async (status: "draft" | "published" = "draft") => {
     if (saveInProgressRef.current) return false;
     saveInProgressRef.current = true;
     setSaving(true);
     setPublishing(status === "published");
     try {
+      await saveServiceAddress();
       const categoryId = await getServiceCategoryId();
       const sellerId = userData?.profile?.user_id ?? userData?.id;
       if (typeof sellerId !== "string" || !sellerId) {
@@ -2300,7 +2382,7 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
                         onChange={setWorkLocation}
                       />
 
-                      {workLocation === "workshop" && (
+                      {(
                         <motion.div
                           initial={{ opacity: 0, height: 0 }}
                           animate={{ opacity: 1, height: "auto" }}
@@ -2308,13 +2390,23 @@ const AddServicePage = ({ listingId: editListingId }: { listingId?: string } = {
                           transition={{ duration: 0.3 }}
                           className="overflow-hidden"
                         >
-                          <GlassyField
-                            label="Workshop Address"
-                            placeholder="Enter your studio or workshop address..."
-                            icon={<MapPin className="h-3 w-3" />}
-                            value={address}
-                            onChange={(e) => setAddress(e.target.value)}
-                            error={validationErrors.address}
+                          <AddressFields
+                            title="Workshop address"
+                            value={addressDraft}
+                            onChange={(nextAddress) => {
+                              setAddressDraft(nextAddress);
+                              setAddress(
+                                [
+                                  nextAddress.line_1,
+                                  nextAddress.city,
+                                  nextAddress.state,
+                                  nextAddress.country,
+                                ]
+                                  .filter(Boolean)
+                                  .join(", "),
+                              );
+                            }}
+                            errors={validationErrors}
                           />
                         </motion.div>
                       )}

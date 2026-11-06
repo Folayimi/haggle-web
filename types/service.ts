@@ -34,7 +34,12 @@ export interface MarketService {
   viewCount?: number;
   saveCount?: number;
   shareCount?: number;
-  sellerSummary?: { full_name: string; avatar_url: string | null } | null;
+  sellerSummary?: {
+    full_name: string;
+    avatar_url: string | null;
+    bio?: string | null;
+    sells_summary?: string | null;
+  } | null;
   ratingSummary?: { average: number; count: number } | null;
   trendingScore?: number;
   recommendationReason?:

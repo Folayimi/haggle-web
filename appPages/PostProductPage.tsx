@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { ProductMedia, ProductMediaRef } from "@/components/ProductMedia";
+import AddressFields from "@/components/AddressFields";
 import React, { useRef, useState, useEffect } from "react";
 import {
   ArrowLeft,
@@ -54,6 +55,12 @@ import {
   updateListing,
   updateUserProfile,
 } from "@/services/request";
+import {
+  createAddress,
+  getAddresses,
+  updateAddress,
+} from "@/services/addresses";
+import type { AddressDraft } from "@/types/address";
 import { resolveListingMediaUrl } from "@/services/mappers";
 import Image from "next/image";
 import Loader from "@/reusables/loader";
@@ -782,7 +789,6 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
     lowestAcceptablePrice: "",
     autoDeclinePrice: "",
     negotiationNote: "",
-    location: "",
   });
   const [imageGallery, setImageGallery] = useState<GalleryImage[]>([]);
   const [uploadStatus, setUploadStatus] = useState<
@@ -810,6 +816,14 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
   const [editLoading, setEditLoading] = useState(Boolean(editListingId));
   const saveInProgressRef = useRef(false);
   const [editError, setEditError] = useState("");
+  const [addressDraft, setAddressDraft] = useState<AddressDraft>({
+    country: "",
+    country_code: "",
+    state: "",
+    city: "",
+    line_1: "",
+    postal_code: "",
+  });
   const [initialGallery, setInitialGallery] = useState<
     { mediaId: string; url: string; previewUrl: string }[] | undefined
   >(undefined);
@@ -823,6 +837,41 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
   const completedCount = Object.values(completed).filter(Boolean).length;
 
   const router = useRouter();
+
+  useEffect(() => {
+    let active = true;
+    void getAddresses()
+      .then((addresses) => {
+        if (!active) return;
+        const address =
+          addresses.find((item) => item.is_default) ?? addresses[0];
+        if (address) {
+          setAddressDraft({
+            country: address.country,
+            country_code: address.country_code,
+            state: address.state,
+            city: address.city,
+            line_1: address.line_1,
+            postal_code: address.postal_code,
+          });
+          if (!editListingId) {
+          }
+        }
+      })
+      .catch(() => {
+        if (active) setAddressDraft({
+          country: "",
+          country_code: "",
+          state: "",
+          city: "",
+          line_1: "",
+          postal_code: "",
+        });
+      });
+    return () => {
+      active = false;
+    };
+  }, [editListingId]);
 
   useEffect(() => {
     if (!editListingId) return;
@@ -866,7 +915,6 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
           lowestAcceptablePrice: listing.lowest_amount || "",
           autoDeclinePrice: listing.auto_decline_amount || "",
           negotiationNote: listing.negotiation_note || "",
-          location: String(userData?.profile?.city || userData?.profile?.location || ""),
         }));
         const style = String(listing.negotiation_style || "").toLowerCase();
         if (["flexible", "moderate", "firm"].includes(style)) {
@@ -893,7 +941,7 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
     };
     void loadListing();
     return () => { active = false; };
-  }, [editListingId, setProductListingId, userData?.profile?.city, userData?.profile?.location]);
+  }, [editListingId, setProductListingId]);
 
   // ============================================
   // VALIDATE A SPECIFIC TAB
@@ -993,7 +1041,18 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
     if (!productInfo.category) errors.category = "Category is required";
     if (!productInfo.subCategory)
       errors.subCategory = "Sub-category is required";
-    if (!productInfo.location.trim()) errors.location = "Location is required";
+    for (const field of [
+      "line_1",
+      "city",
+      "state",
+      "country",
+      "country_code",
+      "postal_code",
+    ] as const) {
+      if (!addressDraft[field].trim()) {
+        errors[field] = "This address field is required";
+      }
+    }
 
     // Validate required tags
     const categoryObj = PRODUCT_CATEGORIES.find(
@@ -1051,6 +1110,32 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
       .find((t) => t.startsWith(`${name.toLowerCase()}:`));
     return tag?.split(":")[1] || "";
   };
+
+  const saveProductAddress = async () => {
+    const addresses = await getAddresses();
+    const current = addresses.find((address) => address.is_default) ?? addresses[0];
+    const input = {
+      ...addressDraft,
+      label: current?.label || "Business",
+      recipient_name:
+        current?.recipient_name ||
+        userData?.full_name ||
+        userData?.profile?.full_name ||
+        "Business",
+      phone_e164:
+        current?.phone_e164 || userData?.phone || userData?.profile?.phone || "",
+      is_default: true,
+    };
+    if (!input.phone_e164) {
+      throw new Error("Add a phone number to your address before saving.");
+    }
+    if (current) {
+      await updateAddress(current.id, input);
+    } else {
+      await createAddress(input);
+    }
+  };
+
   let listingId: string = localStorage.getItem("productListingId") ?? "";
   let subCategoryId: string | null = null;
   // ============================================
@@ -1094,6 +1179,7 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
     };
 
     try {
+      await saveProductAddress();
       // ============================================
       // GET OR CREATE SUB-CATEGORY
       // ============================================
@@ -1204,7 +1290,6 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
       // UPDATE PROFILE
       // ============================================
       const updatedProfile = await updateUserProfile({
-        city: productInfo?.location,
         primary_role: "seller",
         preferred_role: "seller",
       });
@@ -1559,19 +1644,12 @@ const PostProductPage = ({ listingId: editListingId }: { listingId?: string } = 
                         </div>
                       </div>
                       {productInfo.subCategory && (
-                        <div className="space-y-1.5">
-                          <GlassyField
-                            label="Location"
-                            placeholder="Your current Location. e.g. Lagos, Nigeria"
-                            prominent
-                            value={productInfo.location}
-                            onChange={(e) =>
-                              setProductInfo({
-                                ...productInfo,
-                                location: e.target.value,
-                              })
-                            }
-                            error={validationErrors.location}
+                        <div className="space-y-3">
+                          <AddressFields
+                            title="Pickup location"
+                            value={addressDraft}
+                            onChange={setAddressDraft}
+                            errors={validationErrors}
                           />
                         </div>
                       )}

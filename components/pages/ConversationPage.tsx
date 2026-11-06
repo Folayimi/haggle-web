@@ -11,5 +11,5 @@ export function ConversationPage() {
   const searchParams = useSearchParams();
   const conversationId = searchParams.get("id") ?? undefined;
 
-  return <MessagesPage compact initialConversationId={conversationId} />;
+  return <MessagesPage initialConversationId={conversationId} />;
 }

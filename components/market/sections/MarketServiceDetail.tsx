@@ -194,7 +194,6 @@ export function MarketServiceDetail({
         .filter(Boolean)
         .join("\n");
       const message = await sendMessage(conversation.id, {
-        sender_user_id: userData.id,
         message_type: "text",
         text_body: quoteMessage,
       });

@@ -837,9 +837,9 @@ const MarketPage = ({
                     <h2 className="line-clamp-2 text-3xl font-bold leading-tight">
                       {selectedSeller?.businessName || selectedSeller?.name || "Seller on Haggle"}
                     </h2>
-                    {selectedSeller?.bio && (
-                      <p className="mt-3 line-clamp-3 max-w-sm text-sm leading-5 text-white/80">
-                        {selectedSeller.bio}
+                    {selectedSeller?.sellsSummary && (
+                      <p className="mt-3 max-h-32 max-w-sm overflow-y-auto whitespace-pre-wrap text-sm leading-5 text-white/80">
+                        {selectedSeller.sellsSummary}
                       </p>
                     )}
                     {selectedSeller?.location && (
@@ -1154,7 +1154,7 @@ const MarketPage = ({
                   </div>
                   {selectedSeller.username && (
                     <Link
-                      href={`/profile/${encodeURIComponent(selectedSeller.username)}`}
+                      href={`/profile/${encodeURIComponent(selectedSeller.id)}`}
                       onClick={() => setSellerProfileOpen(false)}
                       className="inline-flex rounded-full border border-white/25 px-5 py-2.5 text-sm font-semibold transition hover:border-white hover:bg-white/10"
                     >

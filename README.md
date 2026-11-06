@@ -38,6 +38,224 @@ Haggle Web is an active Next.js App Router application connected to the existing
 - Profile listing actions to archive listings and republish archived or draft listings after confirmation and required-field/media validation.
 - Category applicability regression tests and archive-listing regression tests.
 
+## Conversation and Messaging Implementation
+
+The web app currently includes a REST-backed conversation experience for direct buyer/seller messaging. The implementation is intentionally separate from the broader negotiation-room and realtime-chat specification below: the shipped flow supports loading conversations, opening a thread, sending text messages, and starting a conversation from a service quote request.
+
+### User-facing entry points
+
+- `/conversation` renders the functional conversation screen.
+- `/conversation?id=<conversationId>` opens a specific conversation directly. This is used after a service quote request creates a conversation.
+- `/messages` is currently only a placeholder route and does not render the messaging interface yet.
+- Service detail pages expose **Request Service**. Submitting the quote form creates a direct conversation and sends the quote request as its first message.
+
+### Conversation list
+
+The conversation screen loads the authenticated user's conversations through `GET /conversations`.
+
+Each conversation is represented with:
+
+- conversation ID
+- conversation type
+- seller name and optional seller ID
+- optional listing ID
+- optional session ID
+- creation timestamp
+- last-message timestamp
+- last-message preview
+
+The full messages view displays a two-pane layout on large screens:
+
+- left pane: conversation list
+- right pane: active message thread
+
+The list includes a search-shaped input for the UI, but client-side conversation search/filtering is not wired yet. Selecting a conversation loads it into the active thread. When no conversation ID is supplied in the URL, the first returned conversation is selected automatically.
+
+### Message threads
+
+When a conversation is selected, the client loads its messages through:
+
+```http
+GET /conversations/:conversationId/messages
+```
+
+The thread renders:
+
+- messages in chronological response order
+- outgoing messages aligned to the right with the primary color
+- incoming messages aligned to the left with the surface color
+- message text
+- localized message time
+- loading state while the thread is fetched
+- empty-state prompt when no conversation is selected
+
+The compact conversation mode used by `/conversation` keeps the thread view without the desktop conversation list. It accepts an `initialConversationId` from the URL query string.
+
+### Sending text messages
+
+The composer uses a textarea and send button. A message can be sent only when:
+
+- a conversation is active
+- an authenticated current-user ID is available
+- the trimmed message body is not empty
+- another send operation is not already in progress
+
+Messages are submitted through:
+
+```http
+POST /conversations/:conversationId/messages
+Content-Type: application/json
+
+{
+  "message_type": "text",
+  "text_body": "Message text"
+}
+```
+
+The backend derives the sender from the authenticated bearer token; the
+frontend must not send `sender_user_id`.
+
+After a successful response, the returned message is appended to the active thread and the composer is cleared. Send failures are surfaced through the existing API notification helper and the sending state is released in a `finally` block.
+
+### Starting conversations
+
+Conversation creation is implemented in `services/conversations.ts`:
+
+```http
+POST /conversations
+Content-Type: application/json
+
+{
+  "conversation_type": "direct",
+  "seller_id": "<seller-id>",
+  "listing_id": "<listing-id>",
+  "participant_ids": ["<seller-id>"]
+}
+```
+
+The service supports the backend conversation types:
+
+- `direct`
+- `support`
+- `session_sidechat`
+
+The current UI uses `direct` conversations for buyer/seller messaging. Conversation creation returns the created conversation, which can then be opened through `/conversation?id=<conversationId>`.
+
+### Service quote to conversation flow
+
+The service detail page provides a custom quote form with:
+
+- budget
+- preferred timeline
+- project requirements
+
+Before creating the conversation, the client validates that:
+
+- the user is authenticated
+- the user is not requesting a quote from their own service
+- project requirements are present
+- an entered budget is a positive, valid number
+
+The flow then:
+
+1. Creates a direct conversation for the service seller and listing.
+2. Builds a readable opening message containing the service name, optional budget, optional timeline, and project details.
+3. Sends that opening message as a text message.
+4. Closes the quote dialog.
+5. Navigates the user to `/conversation?id=<conversationId>`.
+
+If conversation creation or the first message fails, the quote dialog remains available and an actionable error is shown.
+
+### Data types
+
+Conversation models are defined in [`types/conversation.ts`](./types/conversation.ts):
+
+```ts
+interface Conversation {
+  id: string;
+  conversationType: "direct" | "support" | "session_sidechat";
+  sellerName: string;
+  sellerId?: string;
+  listingId?: string;
+  sessionId?: string;
+  lastMessageAt?: string;
+  lastMessagePreview?: string;
+  createdAt: string;
+}
+
+interface Message {
+  id: string;
+  conversationId: string;
+  senderUserId: string;
+  messageType: "text" | "voice" | "image" | "product_share" | "system" | "offer" | "negotiation_event" | "deal_event";
+  textBody?: string | null;
+  voiceUrl?: string;
+  voiceDurationSeconds?: number;
+  sharedListingId?: string;
+  createdAt: string;
+  editedAt?: string;
+}
+```
+
+The type model recognizes voice, image, product-share, system, offer,
+negotiation-event, and deal-event messages. The composer sends text, while
+negotiation state is loaded through dedicated negotiation endpoints.
+
+### API and authentication behavior
+
+Conversation requests use the shared Axios client. The request layer attaches the stored access token to API requests and contains the existing refresh-token retry path for expired access tokens. Conversation service methods report API failures through `notifyApiError` and rethrow them so calling components can restore loading/sending state.
+
+Conversation API methods are implemented in [`services/conversations.ts`](./services/conversations.ts):
+
+- `listConversations()`
+- `createConversation(data)`
+- `listMessages(conversationId)`
+- `sendMessage(conversationId, data)`
+- `editMessage(conversationId, messageId, textBody)`
+- `deleteMessage(conversationId, messageId)`
+- `markMessageReceipt(conversationId, messageId, status)`
+- `addMessageAttachment(conversationId, messageId, data)`
+
+Negotiation methods are implemented in
+[`services/negotiations.ts`](./services/negotiations.ts):
+
+- `createNegotiation`
+- `getNegotiation`
+- `listOffers`
+- `submitOffer`
+- `counterOffer`
+- `acceptOffer`
+- `rejectOffer`
+- `withdrawOffer`
+- `getDeal`
+
+The main UI components are:
+
+- [`components/pages/MessagePage.tsx`](./components/pages/MessagePage.tsx) — conversation list, active thread, and text composer
+- [`components/pages/ConversationPage.tsx`](./components/pages/ConversationPage.tsx) — query-string wrapper for a focused conversation
+- [`components/market/sections/MarketServiceDetail.tsx`](./components/market/sections/MarketServiceDetail.tsx) — quote request and conversation handoff
+- [`app/conversation/page.tsx`](./app/conversation/page.tsx) — App Router entry point
+
+### Current limitations and next messaging work
+
+The following features are not implemented in the current conversation UI:
+
+- realtime message delivery or WebSocket subscriptions
+- automatic polling or refresh after a message is sent
+- conversation-list cursor pagination
+- conversation archive/mute controls
+- voice-note recording and playback
+- hosted attachment upload UI
+- product selector for starting a negotiation from an arbitrary conversation
+- notification badges and push notifications
+- full negotiation-room integration
+
+Read receipts, older-message pagination, message editing/deletion, structured
+offer actions, and product-detail negotiation entry are now integrated. The
+backend currently exposes per-message receipts rather than a separate
+conversation-read endpoint, so opening a thread marks loaded incoming
+messages as read individually.
+
 ### Next priorities
 
 1. **Complete the core buyer/seller journey:** verify discovery → listing detail → offer or service request → conversation, and fill gaps in state handling, feedback, and navigation.

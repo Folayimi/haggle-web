@@ -24,6 +24,8 @@ export interface BackendListing {
   delivery_duration?: string | null;
   work_place?: string | null;
   work_address?: string | null;
+  location?: string | null;
+  pickup_location?: string | null;
   lowest_amount?: string | null;
   auto_decline_amount?: string | null;
   price_currency?: string;
@@ -53,6 +55,8 @@ export interface BackendListing {
 export interface BackendListingSeller {
   full_name: string;
   avatar_url: string | null;
+  bio?: string | null;
+  sells_summary?: string | null;
 }
 
 export interface BackendRatingSummary {
@@ -323,7 +327,7 @@ export function mapThreadToNegotiation(thread: BackendNegotiationThread): Negoti
 
 // --- Seller / user mapper ----------------------------------------------
 
-interface BackendUser {
+export interface BackendUser {
   id: string;
   full_name?: string;
   username?: string;
@@ -331,13 +335,14 @@ interface BackendUser {
   avatar_url?: string;
   cover_image_url?: string;
   bio?: string;
-  city?: string;
-  state?: string;
-  country?: string;
-  location?: string;
+  sells_summary?: string;
+  website_address?: string;
   is_verified?: boolean;
   followers?: number | string;
   follower_count?: number | string;
+  is_following?: boolean;
+  following?: number | string;
+  following_count?: number | string;
   profile?: {
     full_name?: string;
     username?: string;
@@ -345,13 +350,14 @@ interface BackendUser {
     avatar_url?: string;
     cover_image_url?: string;
     bio?: string;
-    city?: string;
-    state?: string;
-    country?: string;
-    location?: string;
+    sells_summary?: string;
+    website_address?: string;
     is_verified?: boolean;
     followers?: number | string;
     follower_count?: number | string;
+    is_following?: boolean;
+    following?: number | string;
+    following_count?: number | string;
   };
 }
 
@@ -375,17 +381,11 @@ export function mapUserToSeller(user: BackendUser) {
       user.avatar_url ?? user.profile?.avatar_url ?? "/placeholder-avatar.jpg",
     coverImageUrl: user.cover_image_url ?? user.profile?.cover_image_url ?? "",
     bio: user.bio ?? user.profile?.bio ?? "",
-    location:
-      [
-        user.city ?? user.profile?.city,
-        user.state ?? user.profile?.state,
-        user.country ?? user.profile?.country,
-      ]
-        .filter(Boolean)
-        .join(", ") ||
-      user.location ||
-      user.profile?.location ||
-      "",
+    sellsSummary:
+      user.sells_summary ?? user.profile?.sells_summary ?? "",
+    websiteAddress:
+      user.website_address ?? user.profile?.website_address ?? "",
+    location: "",
     isVerified,
     badge: isVerified ? "Verified seller" : "Haggle seller",
     trustPills: isVerified ? ["Verified seller"] : [],

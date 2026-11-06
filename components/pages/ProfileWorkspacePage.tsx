@@ -13,6 +13,7 @@ import {
   Camera,
   Clock3,
   Eye,
+  Globe,
   ImagePlus,
   LoaderCircle,
   MoreHorizontal,
@@ -25,6 +26,8 @@ import {
   Star,
   Store,
   Trash2,
+  UserCheck,
+  UserPlus,
   Wrench,
   X,
 } from "lucide-react";
@@ -49,20 +52,24 @@ import {
   updateUserProfile,
   uploadImage,
 } from "@/services/request";
+import { createConversation } from "@/services/conversations";
+import { getAddresses } from "@/services/addresses";
+import { createAddress, updateAddress } from "@/services/addresses";
+import AddressFields from "@/components/AddressFields";
+import type { AddressDraft, UserAddress } from "@/types/address";
 import {
   ArchiveListingError,
   replaceWithArchivedListing,
 } from "@/services/archive-listing";
-import {
-  getSavedListings,
-  unsaveListing,
-} from "@/services/catalog";
+import { getSavedListings, unsaveListing } from "@/services/catalog";
 import { notify, notifyApiError } from "@/services/toastify";
 import {
   mapListingToProduct,
   mapListingToService,
+  type BackendUser,
   type BackendListing,
 } from "@/services/mappers";
+import { followUser, getUserById, unfollowUser } from "@/services/users";
 import {
   getApplicableCategoryTags,
   PRODUCT_CATEGORIES,
@@ -84,13 +91,10 @@ type ProfileDetailsDraft = {
   username: string;
   business_name: string;
   bio: string;
-  city: string;
-  state: string;
-  country: string;
-  postal_code: string;
+  sells_summary: string;
   email: string;
   phone: string;
-  website: string;
+  website_address: string;
 };
 type ProfileTab = "Products" | "Services" | "Favorites" | "Scheduled lives";
 const emptyMedia: ProfileMedia = { avatar: "", cover: "" };
@@ -129,6 +133,7 @@ export default function ProfileWorkspacePage({
   const router = useRouter();
   const userData = useHaggleStore((state) => state.userData);
   const setUserData = useHaggleStore((state) => state.setUserData);
+  const setActivateAuth = useHaggleStore((state) => state.setActivateAuth);
   const setSavedItem = useHaggleStore((state) => state.setSavedItem);
   const accountProfile = userData?.profile ?? {};
   const accountUsername = String(
@@ -136,8 +141,9 @@ export default function ProfileWorkspacePage({
   ).replace(/^@/, "");
   const routeUsername = String(username || "").replace(/^@/, "");
   const isOwner = Boolean(accountUsername && accountUsername === routeUsername);
-  const profile = isOwner ? accountProfile : {};
-  const ownerData = isOwner ? userData : null;
+  const [publicUser, setPublicUser] = useState<BackendUser | null>(null);
+  const profile = isOwner ? accountProfile : (publicUser?.profile ?? {});
+  const ownerData = isOwner ? userData : publicUser;
   const [media, setMedia] = useState<ProfileMedia>(emptyMedia);
   const [imagePreview, setImagePreview] = useState<{
     src: string;
@@ -145,23 +151,35 @@ export default function ProfileWorkspacePage({
   } | null>(null);
   const [uploading, setUploading] = useState<ImageSlot | null>(null);
   const [uploadMessage, setUploadMessage] = useState("");
+  const [defaultAddress, setDefaultAddress] = useState<UserAddress | null>(
+    null,
+  );
+  const [addressDraft, setAddressDraft] = useState<AddressDraft>({
+    country: "",
+    country_code: "",
+    state: "",
+    city: "",
+    line_1: "",
+    postal_code: "",
+  });
   const [profileDraft, setProfileDraft] = useState<ProfileDetailsDraft>({
     full_name: "",
     username: "",
     business_name: "",
     bio: "",
-    city: "",
-    state: "",
-    country: "",
-    postal_code: "",
+    sells_summary: "",
     email: "",
     phone: "",
-    website: "",
+    website_address: "",
   });
   const [editOpen, setEditOpen] = useState(false);
   const [profileSaving, setProfileSaving] = useState(false);
   const [profileSaveMessage, setProfileSaveMessage] = useState("");
   const [activeTab, setActiveTab] = useState<ProfileTab>("Products");
+  const [followPending, setFollowPending] = useState(false);
+  const [messagePending, setMessagePending] = useState(false);
+  const [followOverride, setFollowOverride] = useState<boolean | null>(null);
+  const [followerAdjustment, setFollowerAdjustment] = useState(0);
   const [listings, setListings] = useState<BackendListing[]>([]);
   const [listingsLoading, setListingsLoading] = useState(false);
   const [listingsError, setListingsError] = useState(false);
@@ -174,9 +192,7 @@ export default function ProfileWorkspacePage({
   const [favoritesPage, setFavoritesPage] = useState(1);
   const [favoritesTotal, setFavoritesTotal] = useState(0);
   const [favoritesTotalPages, setFavoritesTotalPages] = useState(0);
-  const [favoriteActionId, setFavoriteActionId] = useState<string | null>(
-    null,
-  );
+  const [favoriteActionId, setFavoriteActionId] = useState<string | null>(null);
   const [listingActionId, setListingActionId] = useState<string | null>(null);
   const [listingConfirmation, setListingConfirmation] = useState<{
     listing: BackendListing;
@@ -197,48 +213,90 @@ export default function ProfileWorkspacePage({
         accountProfile.business_name || userData?.business_name || "",
       ),
       bio: String(accountProfile.bio || userData?.bio || ""),
-      city: String(accountProfile.city || accountProfile.location || ""),
-      state: String(accountProfile.state || ""),
-      country: String(accountProfile.country || ""),
-      postal_code: String(
-        accountProfile.postal_code || userData?.postal_code || "",
+      sells_summary: String(
+        accountProfile.sells_summary || userData?.sells_summary || "",
       ),
       email: String(accountProfile.email || userData?.email || ""),
       phone: String(accountProfile.phone || userData?.phone || ""),
-      website: String(accountProfile.website || userData?.website || ""),
+      website_address: String(
+        accountProfile.website_address || userData?.website_address || "",
+      ),
     });
   }, [
     accountProfile.bio,
+    accountProfile.sells_summary,
     accountProfile.business_name,
-    accountProfile.city,
-    accountProfile.country,
     accountProfile.full_name,
-    accountProfile.location,
     accountProfile.username,
-    accountProfile.postal_code,
     accountProfile.email,
     accountProfile.phone,
-    accountProfile.website,
-    accountProfile.state,
+    accountProfile.website_address,
     isOwner,
     userData?.bio,
+    userData?.sells_summary,
     userData?.business_name,
     userData?.username,
     userData?.full_name,
-    userData?.postal_code,
     userData?.email,
     userData?.phone,
-    userData?.website,
+    userData?.website_address,
   ]);
 
   useEffect(() => {
+    if (!isOwner) return;
+    let active = true;
+    void getAddresses()
+      .then((addresses) => {
+        if (active) {
+          const address =
+            addresses.find((item) => item.is_default) ?? addresses[0] ?? null;
+          setDefaultAddress(address);
+          if (address) {
+            setAddressDraft({
+              country: address.country,
+              country_code: address.country_code,
+              state: address.state,
+              city: address.city,
+              line_1: address.line_1,
+              postal_code: address.postal_code,
+            });
+          }
+        }
+      })
+      .catch(() => {
+        if (active) setDefaultAddress(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isOwner]);
+
+  useEffect(() => {
+    if (isOwner || !routeUsername) return;
+    let active = true;
+    void getUserById(routeUsername)
+      .then((user) => {
+        if (active) setPublicUser(user);
+      })
+      .catch(() => {
+        if (active) setPublicUser(null);
+      });
+    return () => {
+      active = false;
+    };
+  }, [isOwner, routeUsername]);
+
+  useEffect(() => {
     setMedia(emptyMedia);
+    setFollowOverride(null);
+    setFollowerAdjustment(0);
+    if (!isOwner) setActiveTab("Products");
   }, [routeUsername]);
 
   useEffect(() => {
     const sellerId =
       ownerData?.id || ownerData?.user_id || accountProfile.user_id;
-    if (!isOwner || !sellerId) {
+    if (!sellerId) {
       setListings([]);
       setListingsLoading(false);
       setListingsError(false);
@@ -256,8 +314,7 @@ export default function ProfileWorkspacePage({
               return (
                 !status ||
                 status === "published" ||
-                status === "archived" ||
-                status === "draft"
+                (isOwner && (status === "archived" || status === "draft"))
               );
             }),
           );
@@ -283,11 +340,16 @@ export default function ProfileWorkspacePage({
     profile.full_name ||
     ownerData?.full_name ||
     (routeUsername ? `@${routeUsername}` : "Your business");
+  const profileUsername =
+    profile.username || ownerData?.username || routeUsername;
   const fullName = profile.full_name || ownerData?.full_name || displayName;
-  const bio =
-    profile.bio ||
-    ownerData?.bio ||
-    "Tell customers what you offer and what makes your business special.";
+  const bio = profile.bio || ownerData?.bio || "";
+  const sellsSummary = String(
+    profile.sells_summary || ownerData?.sells_summary || "",
+  );
+  const website = String(
+    profile.website_address || ownerData?.website_address || "",
+  ).trim();
   const avatarUrl =
     media.avatar || profile.avatar_url || ownerData?.avatar_url || "";
   const coverUrl =
@@ -295,10 +357,11 @@ export default function ProfileWorkspacePage({
   const verified = Boolean(
     profile.is_verified || ownerData?.is_verified || profile.verified,
   );
-  const location =
-    [profile.city, profile.state, profile.country].filter(Boolean).join(", ") ||
-    profile.location ||
-    "";
+  const location = defaultAddress
+    ? [defaultAddress.city, defaultAddress.state, defaultAddress.country]
+        .filter(Boolean)
+        .join(", ")
+    : "";
   const role = String(
     profile.primary_role || ownerData?.primary_role || ownerData?.role || "",
   ).toLowerCase();
@@ -312,13 +375,20 @@ export default function ProfileWorkspacePage({
     profile.follower_count ??
     ownerData?.followers ??
     ownerData?.follower_count ??
-    "—";
+    0;
   const following =
     profile.following ??
     profile.following_count ??
     ownerData?.following ??
     ownerData?.following_count ??
-    "—";
+    0;
+  const followerCount = Number(followers) || 0;
+  const isFollowing =
+    followOverride ??
+    Boolean(profile.is_following ?? ownerData?.is_following ?? false);
+  const visibleTabs = isOwner
+    ? tabs
+    : tabs.filter((tab) => tab.label !== "Favorites");
   const sellerId = String(
     ownerData?.id || ownerData?.user_id || accountProfile.user_id || "",
   );
@@ -334,6 +404,55 @@ export default function ProfileWorkspacePage({
       (item.listing_type || "").toLowerCase() === "service" ||
       (item.listing_type || "").toLowerCase() === "services",
   );
+
+  const handleFollowToggle = async () => {
+    if (followPending || !sellerId) return;
+    if (!userData?.id) {
+      setActivateAuth(true);
+      return;
+    }
+    setFollowPending(true);
+    const nextFollowing = !isFollowing;
+    try {
+      if (nextFollowing) {
+        await followUser(sellerId);
+      } else {
+        await unfollowUser(sellerId);
+      }
+      setFollowOverride(nextFollowing);
+      setFollowerAdjustment((current) => current + (nextFollowing ? 1 : -1));
+    } catch {
+      // The service notification contains the actionable API error.
+    } finally {
+      setFollowPending(false);
+    }
+  };
+
+  const handleMessageUser = async () => {
+    if (messagePending || !sellerId) return;
+    if (!userData?.id) {
+      setActivateAuth(true);
+      return;
+    }
+    if (userData.id === sellerId) return;
+    setMessagePending(true);
+    try {
+      const conversation = await createConversation({
+        conversation_type: "direct",
+        participant_ids: [sellerId],
+      });
+      if (!conversation) {
+        throw new Error("A conversation could not be created.");
+      }
+      router.push(
+        `/messages?conversationId=${encodeURIComponent(conversation.id)}`,
+      );
+    } catch (error) {
+      notifyApiError(error, "Unable to start a conversation with this user.");
+    } finally {
+      setMessagePending(false);
+    }
+  };
   useEffect(() => {
     if (activeTab !== "Favorites") return;
     if (!isOwner) return;
@@ -359,7 +478,10 @@ export default function ProfileWorkspacePage({
       .catch((error: unknown) => {
         if (!active) return;
         setFavoritesError(true);
-        notifyApiError(error, "Your favorites could not be loaded. Please try again.");
+        notifyApiError(
+          error,
+          "Your favorites could not be loaded. Please try again.",
+        );
       })
       .finally(() => {
         if (active) setFavoritesLoading(false);
@@ -368,13 +490,7 @@ export default function ProfileWorkspacePage({
     return () => {
       active = false;
     };
-  }, [
-    activeTab,
-    favoritesPage,
-    favoritesRetry,
-    isOwner,
-    setSavedItem,
-  ]);
+  }, [activeTab, favoritesPage, favoritesRetry, isOwner, setSavedItem]);
 
   const handleUnsaveFavorite = async (listingId: string) => {
     if (favoriteActionId) return;
@@ -392,7 +508,10 @@ export default function ProfileWorkspacePage({
       }
       notify("Listing removed from favorites.");
     } catch (error: unknown) {
-      notifyApiError(error, "This listing could not be removed from favorites.");
+      notifyApiError(
+        error,
+        "This listing could not be removed from favorites.",
+      );
     } finally {
       setFavoriteActionId(null);
     }
@@ -468,18 +587,48 @@ export default function ProfileWorkspacePage({
       username: profileDraft.username.trim().replace(/^@/, ""),
       business_name: profileDraft.business_name.trim(),
       bio: profileDraft.bio.trim(),
-      city: profileDraft.city.trim(),
-      state: profileDraft.state.trim(),
-      country: profileDraft.country.trim(),
-      postal_code: profileDraft.postal_code.trim(),
+      sells_summary: profileDraft.sells_summary.trim(),
       email: profileDraft.email.trim(),
       phone: profileDraft.phone.trim(),
-      website: profileDraft.website.trim(),
+      website_address: profileDraft.website_address.trim(),
     };
     const profileUpdates = nextProfile;
     setProfileSaving(true);
     setProfileSaveMessage("");
     try {
+      const hasAddress = Object.values(addressDraft).some((value) =>
+        value.trim(),
+      );
+      if (hasAddress) {
+        const missingAddressField = Object.entries(addressDraft).find(
+          ([, value]) => !value.trim(),
+        );
+        if (missingAddressField) {
+          throw new Error("Complete all address fields before saving.");
+        }
+        const addressInput = {
+          ...addressDraft,
+          label: defaultAddress?.label || "Home",
+          recipient_name:
+            defaultAddress?.recipient_name ||
+            userData?.full_name ||
+            userData?.profile?.full_name ||
+            "Account owner",
+          phone_e164:
+            defaultAddress?.phone_e164 ||
+            userData?.phone ||
+            userData?.profile?.phone ||
+            "",
+          is_default: true,
+        };
+        if (!addressInput.phone_e164) {
+          throw new Error("Add a phone number before saving your address.");
+        }
+        const savedAddress = defaultAddress
+          ? await updateAddress(defaultAddress.id, addressInput)
+          : await createAddress(addressInput);
+        setDefaultAddress(savedAddress);
+      }
       const result = await updateUserProfile(profileUpdates);
       if (!result) throw new Error("Profile update failed.");
       setUserData({
@@ -512,15 +661,14 @@ export default function ProfileWorkspacePage({
         accountProfile.business_name || userData?.business_name || "",
       ),
       bio: String(accountProfile.bio || userData?.bio || ""),
-      city: String(accountProfile.city || accountProfile.location || ""),
-      state: String(accountProfile.state || ""),
-      country: String(accountProfile.country || ""),
-      postal_code: String(
-        accountProfile.postal_code || userData?.postal_code || "",
+      sells_summary: String(
+        accountProfile.sells_summary || userData?.sells_summary || "",
       ),
       email: String(accountProfile.email || userData?.email || ""),
       phone: String(accountProfile.phone || userData?.phone || ""),
-      website: String(accountProfile.website || userData?.website || ""),
+      website_address: String(
+        accountProfile.website_address || userData?.website_address || "",
+      ),
     });
     setEditOpen(true);
   };
@@ -600,15 +748,7 @@ export default function ProfileWorkspacePage({
           ) {
             missingDetails.push("valid inventory count");
           }
-          if (
-            !String(
-              accountProfile.city ||
-                accountProfile.location ||
-                ownerData?.city ||
-                ownerData?.location ||
-                "",
-            ).trim()
-          ) {
+          if (!location.trim()) {
             missingDetails.push("seller location");
           }
         } else if (listingType === "service" || listingType === "services") {
@@ -720,7 +860,10 @@ export default function ProfileWorkspacePage({
             "Your session has expired. Sign in to archive this listing.",
           );
         } else {
-          notifyApiError(error, error.message || "Unable to archive this listing.");
+          notifyApiError(
+            error,
+            error.message || "Unable to archive this listing.",
+          );
         }
       } else {
         notifyApiError(
@@ -900,24 +1043,36 @@ export default function ProfileWorkspacePage({
                 )}
               </div>
               <p className="mt-1 text-sm text-muted">
-                @{routeUsername}
+                @{profileUsername}
                 {fullName !== displayName ? ` · ${fullName}` : ""}
               </p>
-              {profile.primary_role && (
-                <p className="mt-4 text-xs font-semibold uppercase tracking-[0.16em] text-primary">
-                  {String(profile.primary_role)}
+              {location && (
+                <p className="mt-3 inline-flex items-center gap-1.5 text-sm text-muted">
+                  <MapPin className="h-4 w-4 text-primary" />
+                  {location}
                 </p>
               )}
-              <p className="mt-4 max-w-2xl whitespace-pre-wrap text-sm leading-6 text-muted sm:text-base">
-                {bio}
-              </p>
+              {website && (
+                <a
+                  href={website}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex max-w-full items-center gap-1.5 truncate text-sm font-medium text-primary transition hover:text-primary-strong"
+                >
+                  <Globe className="h-4 w-4 shrink-0" />
+                  <span className="truncate">{website}</span>
+                </a>
+              )}
+              <div className="mt-5 max-w-2xl">
+                <h2 className="text-sm font-bold uppercase tracking-[0.16em] text-foreground">
+                  Business details
+                </h2>
+                <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-muted sm:text-base">
+                  {sellsSummary ||
+                    "Add a short summary of the products and services you offer."}
+                </p>
+              </div>
               <div className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
-                {location && (
-                  <span className="inline-flex items-center gap-1.5">
-                    <MapPin className="h-4 w-4 text-primary" />
-                    {location}
-                  </span>
-                )}
                 {(profile.average_response_time || profile.response_time) && (
                   <span className="inline-flex items-center gap-1.5">
                     <Clock3 className="h-4 w-4 text-primary" />
@@ -936,18 +1091,35 @@ export default function ProfileWorkspacePage({
               </div>
               {!isOwner && (
                 <div className="mt-4 flex flex-wrap gap-3">
-                  <Link
-                    href="/conversation"
+                  <button
+                    type="button"
+                    onClick={() => void handleMessageUser()}
+                    disabled={messagePending}
                     className="inline-flex items-center gap-2 rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-white transition hover:bg-primary-strong"
                   >
                     <MessageCircle className="h-4 w-4" />
-                    Message
-                  </Link>
+                    {messagePending ? "Opening..." : "Message"}
+                  </button>
                   <button
                     type="button"
-                    className="rounded-xl border border-border/60 px-5 py-3 text-sm font-semibold transition hover:bg-background-elevated/50"
+                    onClick={() => void handleFollowToggle()}
+                    disabled={followPending}
+                    className={`inline-flex items-center gap-2 rounded-xl border px-5 py-3 text-sm font-semibold transition disabled:cursor-wait disabled:opacity-60 ${
+                      isFollowing
+                        ? "border-primary/30 bg-primary/10 text-primary hover:bg-primary/15"
+                        : "border-border/60 hover:bg-background-elevated/50"
+                    }`}
                   >
-                    Follow
+                    {isFollowing ? (
+                      <UserCheck className="h-4 w-4" />
+                    ) : (
+                      <UserPlus className="h-4 w-4" />
+                    )}
+                    {followPending
+                      ? "Updating..."
+                      : isFollowing
+                        ? "Following"
+                        : "Follow"}
                   </button>
                 </div>
               )}
@@ -963,34 +1135,34 @@ export default function ProfileWorkspacePage({
               </h2>
               {isSeller ? (
                 <div className="mt-3 grid grid-cols-2 gap-2">
-                  <div className="rounded-2xl bg-background/60 p-4">
+                  <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-background/90 to-primary/5 p-4 shadow-sm">
                     <p className="text-xs text-muted">Rating</p>
                     <p className="mt-2 flex items-center gap-1.5 font-bold">
                       <Star className="h-4 w-4 fill-primary text-primary" />
-                      {profile.rating || profile.average_rating || "—"}
+                      {profile.rating || profile.average_rating || 0}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-background/60 p-4">
+                  <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-background/90 to-primary/5 p-4 shadow-sm">
                     <p className="text-xs text-muted">Reviews</p>
                     <p className="mt-2 font-bold">
-                      {profile.review_count ?? profile.reviews_count ?? "—"}
+                      {profile.review_count ?? profile.reviews_count ?? 0}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-background/60 p-4">
+                  <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-background/90 to-primary/5 p-4 shadow-sm">
                     <p className="text-xs text-muted">Response time</p>
                     <p className="mt-2 truncate font-bold">
                       {profile.average_response_time ||
                         profile.response_time ||
-                        "—"}
+                        "0s"}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-background/60 p-4">
+                  <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-background/90 to-primary/5 p-4 shadow-sm">
                     <p className="text-xs text-muted">Followers</p>
                     <p className="mt-2 font-bold">
-                      {profile.followers ?? profile.follower_count ?? "—"}
+                      {followerCount + followerAdjustment}
                     </p>
                   </div>
-                  <div className="rounded-2xl bg-background/60 p-3">
+                  <div className="rounded-2xl border border-primary/10 bg-gradient-to-br from-background/90 to-primary/5 p-3 shadow-sm">
                     <p className="text-xs text-muted">Following</p>
                     <p className="mt-1 font-bold">{following}</p>
                   </div>
@@ -1007,18 +1179,6 @@ export default function ProfileWorkspacePage({
                   </div>
                 </div>
               )}
-              {isSeller && (
-                <div className="mt-3 flex items-center gap-2 rounded-2xl border border-border/50 px-3 py-2.5 text-sm">
-                  {verified ? (
-                    <BadgeCheck className="h-4 w-4 text-secondary" />
-                  ) : (
-                    <Store className="h-4 w-4 text-primary" />
-                  )}
-                  <span>
-                    {verified ? "Verified business" : "Business profile"}
-                  </span>
-                </div>
-              )}
               {uploadMessage && (
                 <p className="mt-4 text-xs leading-5 text-muted" role="status">
                   {uploadMessage}
@@ -1026,6 +1186,18 @@ export default function ProfileWorkspacePage({
               )}
             </aside>
           </div>
+        </section>
+
+        <section
+          aria-labelledby="about-description"
+          className="mt-6 rounded-3xl border border-border/50 bg-background-elevated/20 p-5 sm:p-6"
+        >
+          <h2 id="about-description" className="text-base font-bold sm:text-lg">
+            About
+          </h2>
+          <p className="mt-2 max-w-4xl whitespace-pre-wrap text-sm leading-6 text-muted sm:text-base">
+            {bio || "No about information added yet."}
+          </p>
         </section>
 
         {isOwner && (
@@ -1149,58 +1321,40 @@ export default function ProfileWorkspacePage({
                         {profileDraft.bio.length}/500
                       </span>
                     </label>
+                    <label className="block space-y-1.5 text-sm">
+                      <span className="font-medium">Sells summary</span>
+                      <textarea
+                        value={profileDraft.sells_summary}
+                        onChange={(event) =>
+                          setProfileDraft((draft) => ({
+                            ...draft,
+                            sells_summary: event.target.value.slice(0, 500),
+                          }))
+                        }
+                        placeholder="Summarize the products or services you sell."
+                        maxLength={500}
+                        rows={3}
+                        className="w-full resize-y rounded-lg border border-border/70 bg-background px-3 py-2.5 leading-6 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
+                      />
+                      <span className="block text-right text-xs text-muted">
+                        {profileDraft.sells_summary.length}/500
+                      </span>
+                    </label>
                   </section>
 
                   <section
                     className="space-y-4"
-                    aria-labelledby="profile-location"
+                    aria-labelledby="profile-address"
                   >
-                    <h3
-                      id="profile-location"
-                      className="text-base font-semibold"
-                    >
-                      Location
-                    </h3>
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      {(
-                        ["city", "state", "country", "postal_code"] as const
-                      ).map((field) => (
-                        <label
-                          key={field}
-                          className="block space-y-1.5 text-sm"
-                        >
-                          <span className="font-medium">
-                            {
-                              {
-                                city: "City",
-                                state: "State / Region",
-                                country: "Country / Region",
-                                postal_code: "Postal code",
-                              }[field]
-                            }
-                          </span>
-                          <input
-                            value={profileDraft[field]}
-                            onChange={(event) =>
-                              setProfileDraft((draft) => ({
-                                ...draft,
-                                [field]: event.target.value,
-                              }))
-                            }
-                            maxLength={field === "postal_code" ? 20 : 80}
-                            autoComplete={
-                              {
-                                city: "address-level2",
-                                state: "address-level1",
-                                country: "country-name",
-                                postal_code: "postal-code",
-                              }[field]
-                            }
-                            className="w-full rounded-lg border border-border/70 bg-background px-3 py-2.5 outline-none transition focus:border-primary focus:ring-2 focus:ring-primary/15"
-                          />
-                        </label>
-                      ))}
-                    </div>
+                    <AddressFields
+                      title="Address"
+                      value={addressDraft}
+                      onChange={setAddressDraft}
+                    />
+                    <p className="text-xs text-muted">
+                      This address is used for your profile location and listing
+                      pickup or workshop details.
+                    </p>
                   </section>
 
                   <section
@@ -1256,11 +1410,11 @@ export default function ProfileWorkspacePage({
                       <span className="font-medium">Website</span>
                       <input
                         type="url"
-                        value={profileDraft.website}
+                        value={profileDraft.website_address}
                         onChange={(event) =>
                           setProfileDraft((draft) => ({
                             ...draft,
-                            website: event.target.value,
+                            website_address: event.target.value,
                           }))
                         }
                         maxLength={240}
@@ -1302,15 +1456,13 @@ export default function ProfileWorkspacePage({
         )}
 
         <section className="mt-8" aria-label="Business content">
-          <div
-            className="sticky top-0 z-30 -mx-4 border-b border-border/60 bg-background/95 px-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8"
-          >
+          <div className="sticky top-0 z-30 -mx-4 border-b border-border/60 bg-background/95 px-4 backdrop-blur-md sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8">
             <div
               className="flex gap-2 overflow-x-auto"
               role="tablist"
               aria-label="Profile content"
             >
-              {tabs.map(({ label, icon: Icon }) => (
+              {visibleTabs.map(({ label, icon: Icon }) => (
                 <button
                   key={label}
                   type="button"
@@ -1375,12 +1527,20 @@ export default function ProfileWorkspacePage({
                   </div>
                   <Link
                     href={
-                      activeTab === "Products" ? "/post-product" : "/add-service"
+                      activeTab === "Products"
+                        ? "/post-product"
+                        : "/add-service"
                     }
                     aria-label={
-                      activeTab === "Products" ? "Add a product" : "Add a service"
+                      activeTab === "Products"
+                        ? "Add a product"
+                        : "Add a service"
                     }
-                    title={activeTab === "Products" ? "Add a product" : "Add a service"}
+                    title={
+                      activeTab === "Products"
+                        ? "Add a product"
+                        : "Add a service"
+                    }
                     className="inline-flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-white shadow-sm transition hover:bg-primary-strong focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-offset-2"
                   >
                     <Plus className="h-4 w-4" />
@@ -1405,7 +1565,10 @@ export default function ProfileWorkspacePage({
             ) : activeTab === "Favorites" && favoritesLoading ? (
               <ProfileListingCardsSkeleton label="your favorites" />
             ) : activeTab === "Favorites" && favoritesError ? (
-              <div className="py-10 text-center text-sm text-muted" role="alert">
+              <div
+                className="py-10 text-center text-sm text-muted"
+                role="alert"
+              >
                 <p>Your favorites could not be loaded.</p>
                 <button
                   type="button"
@@ -1460,8 +1623,7 @@ export default function ProfileWorkspacePage({
                       type="button"
                       onClick={() => setFavoritesPage((page) => page + 1)}
                       disabled={
-                        favoritesPage >= favoritesTotalPages ||
-                        favoritesLoading
+                        favoritesPage >= favoritesTotalPages || favoritesLoading
                       }
                       className="rounded-lg border border-border px-4 py-2 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
                     >

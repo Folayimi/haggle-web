@@ -19,6 +19,7 @@ import {
 import Link from "next/link";
 import { useHaggleStore } from "@/lib/app-store";
 import { usePathname, useRouter } from "next/navigation";
+import { listConversations } from "@/services/conversations";
 
 interface SideNavUser {
   username?: string;
@@ -48,6 +49,7 @@ const SideNav = ({ userData }: { userData: SideNavUser | null }) => {
       ? localStorage.getItem("sideNavCollapsed") === "true"
       : false,
   );
+  const [unreadMessageCount, setUnreadMessageCount] = useState(0);
   const theme = useHaggleStore((state) => state.theme);
   const toggleTheme = useHaggleStore((state) => state.toggleTheme);
   const clearUserData = useHaggleStore((state) => state.clearUserData);
@@ -90,17 +92,54 @@ const SideNav = ({ userData }: { userData: SideNavUser | null }) => {
   // Profile nav item
   const profileNavItem = {
     id: "profile",
-    label:
+    label: (
       userData?.profile?.full_name ??
       userData?.data?.profile?.full_name ??
       userData?.user?.profile?.full_name ??
-      "Profile",
+      "Profile"
+    )
+      .trim()
+      .split(/\s+/)[0],
     icon: User,
     path: username ? `/profile/${encodeURIComponent(username)}` : null,
   };
 
   // Combine: all nav items including profile at the end
   const navItems = [...baseNavItems, profileNavItem];
+
+  useEffect(() => {
+    let active = true;
+
+    const refreshUnreadCount = async () => {
+      if (!localStorage.getItem("haggleAccessToken") || !userData) {
+        if (active) setUnreadMessageCount(0);
+        return;
+      }
+      try {
+        const conversations = await listConversations();
+        if (active) {
+          setUnreadMessageCount(
+            conversations.reduce(
+              (total, conversation) => total + conversation.unreadCount,
+              0,
+            ),
+          );
+        }
+      } catch {
+        if (active) setUnreadMessageCount(0);
+      }
+    };
+
+    void refreshUnreadCount();
+    const intervalId = window.setInterval(() => {
+      void refreshUnreadCount();
+    }, 30_000);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, [pathname, userData]);
 
   const isActive = (path: string) => {
     if (path === "/create") {
@@ -253,7 +292,7 @@ const SideNav = ({ userData }: { userData: SideNavUser | null }) => {
 
                   <span
                     className={`
-                      font-medium text-sm transition-all duration-300
+                      min-w-0 truncate whitespace-nowrap font-medium text-sm transition-all duration-300
                       ${active && "text-primary"}
                       ${collapsed ? "w-0 opacity-0 absolute" : "w-auto opacity-100"}
                     `}
@@ -262,12 +301,14 @@ const SideNav = ({ userData }: { userData: SideNavUser | null }) => {
                   </span>
 
                   {/* Notification badge on Messages - only if not profile */}
-                  {item.id === "message" && !collapsed && (
+                  {item.id === "message" && !collapsed && unreadMessageCount > 0 && (
                     <span className="ml-auto w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold flex items-center justify-center">
-                      3
+                      {unreadMessageCount > 99 ? "99+" : unreadMessageCount}
                     </span>
                   )}
-                  {item.id === "message" && collapsed && (
+                  {item.id === "message" &&
+                    collapsed &&
+                    unreadMessageCount > 0 && (
                     <span className="absolute -top-0.5 right-0 w-2.5 h-2.5 rounded-full bg-primary" />
                   )}
                 </button>
